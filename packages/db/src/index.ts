@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 
 export function createDatabase(connectionString: string) {
   const pool = new pg.Pool({
@@ -10,12 +10,12 @@ export function createDatabase(connectionString: string) {
     statement_timeout: 2000,
   });
   // An idle connection error must not crash a process or print credentials.
-  pool.on('error', () => console.error('Database connection unavailable'));
+  pool.on("error", () => console.error("Database connection unavailable"));
   const db = drizzle(pool);
   return {
     db,
     async probe() {
-      await pool.query('select 1');
+      await pool.query("select 1");
     },
     async close() {
       await pool.end();

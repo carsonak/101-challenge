@@ -1,8 +1,8 @@
-import { createServer } from 'node:http';
-import { parseServerConfig } from '@challenge/contracts';
-import { readiness } from '@challenge/core';
-import { createDatabase } from '@challenge/db';
-import { PgBoss } from 'pg-boss';
+import { createServer } from "node:http";
+import { parseServerConfig } from "@challenge/contracts";
+import { readiness } from "@challenge/core";
+import { createDatabase } from "@challenge/db";
+import { PgBoss } from "pg-boss";
 
 async function main() {
   const config = parseServerConfig(process.env);
@@ -15,37 +15,37 @@ async function main() {
         schema: config.QUEUE_SCHEMA,
       })
     : undefined;
-  boss?.on('error', () => console.error('Worker queue unavailable'));
+  boss?.on("error", () => console.error("Worker queue unavailable"));
   // Startup initializes only pg-boss infrastructure. Domain handlers follow F1/F2.
   try {
     await boss?.start();
   } catch {
     await database?.close();
     await boss?.stop();
-    throw new Error('Worker queue startup failed');
+    throw new Error("Worker queue startup failed");
   }
   const server = createServer(async (request, response) => {
     if (
-      request.method !== 'GET' ||
-      !['/health', '/ready'].includes(request.url ?? '')
+      request.method !== "GET" ||
+      !["/health", "/ready"].includes(request.url ?? "")
     ) {
       response.writeHead(404).end();
       return;
     }
     const result =
-      request.url === '/health'
-        ? { status: 'ok', service: 'worker' }
-        : await readiness('worker', async () => {
-            if (!database || !boss) throw new Error('Database not configured');
+      request.url === "/health"
+        ? { status: "ok", service: "worker" }
+        : await readiness("worker", async () => {
+            if (!database || !boss) throw new Error("Database not configured");
             await database.probe();
           });
-    response.writeHead(result.status === 'ok' ? 200 : 503, {
-      'content-type': 'application/json',
+    response.writeHead(result.status === "ok" ? 200 : 503, {
+      "content-type": "application/json",
     });
     response.end(JSON.stringify(result));
   });
   server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
-    console.info('Worker listening'),
+    console.info("Worker listening")
   );
   let stopping = false;
   async function shutdown() {
@@ -58,14 +58,14 @@ async function main() {
     await database?.close();
     clearTimeout(deadline);
   }
-  process.once('SIGTERM', () => {
+  process.once("SIGTERM", () => {
     void shutdown();
   });
-  process.once('SIGINT', () => {
+  process.once("SIGINT", () => {
     void shutdown();
   });
-  server.once('error', () => {
-    console.error('Worker listener failed');
+  server.once("error", () => {
+    console.error("Worker listener failed");
     void shutdown().then(() => {
       process.exitCode = 1;
     });
@@ -74,7 +74,7 @@ async function main() {
 
 main().catch(() => {
   console.error(
-    'Worker startup failed; check server configuration and database availability',
+    "Worker startup failed; check server configuration and database availability"
   );
   process.exitCode = 1;
 });

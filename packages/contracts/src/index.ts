@@ -1,35 +1,35 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const healthResponseSchema = z.object({
-  status: z.enum(['ok', 'unavailable']),
-  service: z.enum(['web', 'worker']),
+  status: z.enum(["ok", "unavailable"]),
+  service: z.enum(["web", "worker"]),
 });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
 const optionalString = z.preprocess(
-  (value) => (value === '' ? undefined : value),
-  z.string().min(1).optional(),
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional()
 );
 const databaseUrl = z.preprocess(
-  (value) => (value === '' ? undefined : value),
+  (value) => (value === "" ? undefined : value),
   z
     .url()
     .refine((value) => /^postgres(?:ql)?:\/\//.test(value))
-    .optional(),
+    .optional()
 );
 const envSchema = z.object({
   APP_DISPLAY_NAME: z
     .string()
     .min(1)
     .max(100)
-    .default('BitDevs Kisumu 101 Challenge'),
+    .default("BitDevs Kisumu 101 Challenge"),
   DATABASE_URL: databaseUrl,
   WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
-  WORKER_HOST: z.string().min(1).default('127.0.0.1'),
+  WORKER_HOST: z.string().min(1).default("127.0.0.1"),
   QUEUE_SCHEMA: z
     .string()
     .regex(/^[a-z][a-z0-9_]{0,62}$/)
-    .default('pgboss'),
+    .default("pgboss"),
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
   GOOGLE_REDIRECT_URI: optionalString,
@@ -44,7 +44,7 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
   const result = envSchema.safeParse(input);
   if (!result.success) {
     throw new Error(
-      `Invalid configuration: ${[...new Set(result.error.issues.map((issue) => issue.path.join('.')))].join(', ')}`,
+      `Invalid configuration: ${[...new Set(result.error.issues.map((issue) => issue.path.join(".")))].join(", ")}`
     );
   }
   const env = result.data;
@@ -55,12 +55,12 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     }
     return configured === values.length;
   }
-  const googleEnabled = provider('Google', [
+  const googleEnabled = provider("Google", [
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
     env.GOOGLE_REDIRECT_URI,
   ]);
-  const discordEnabled = provider('Discord OAuth', [
+  const discordEnabled = provider("Discord OAuth", [
     env.DISCORD_CLIENT_ID,
     env.DISCORD_CLIENT_SECRET,
     env.DISCORD_REDIRECT_URI,
@@ -69,14 +69,14 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     if (uri) {
       const parsed = z.url().safeParse(uri);
       if (!parsed.success || !/^https?:\/\//.test(uri))
-        throw new Error('Invalid OAuth redirect URI');
+        throw new Error("Invalid OAuth redirect URI");
     }
   }
   if (
     env.DISCORD_PUBLIC_KEY &&
     !/^[a-fA-F0-9]{64}$/.test(env.DISCORD_PUBLIC_KEY)
   ) {
-    throw new Error('Invalid Discord public key');
+    throw new Error("Invalid Discord public key");
   }
   return { ...env, googleEnabled, discordEnabled };
 }

@@ -23,7 +23,7 @@
     "dev:worker": "pnpm build:packages && node --env-file-if-exists=.env --import tsx apps/worker/src/index.ts",
     "start:web": "node --env-file-if-exists=.env scripts/web.mjs start",
     "start:worker": "node --env-file-if-exists=.env apps/worker/dist/index.js",
-    "services:up": "docker compose up -d --wait",
+    "services:up": "node scripts/services-up.mjs",
     "services:down": "docker compose down",
     "smoke": "node --env-file-if-exists=.env scripts/smoke.mjs"
   },
