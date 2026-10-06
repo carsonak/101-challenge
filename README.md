@@ -6,7 +6,7 @@ A challenge tracker tailored for BitDevs Kisumu, with independent web accounts a
 
 ## Local setup
 
-Requirements: Node 24, pnpm 10.34.6, Docker Compose (or compatible Podman Compose). Install pnpm with `npm install --global pnpm@10.34.6` if needed.
+Requirements: Node 24, pnpm 12.9.1, Docker Compose (or compatible Podman Compose). Install pnpm with `npm install --global pnpm@12.9.1` if needed.
 
 ```sh
 pnpm install --frozen-lockfile

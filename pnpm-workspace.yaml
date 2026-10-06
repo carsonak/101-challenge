@@ -1,7 +1,9 @@
 packages:
   - apps/*
   - packages/*
-onlyBuiltDependencies:
-  - "@biomejs/biome"
-  - esbuild
-  - sharp
+allowBuilds:
+  "@biomejs/biome": true
+  esbuild: true
+  sharp: true
+minimumReleaseAgeExclude:
+  - pg-boss@12.37.0

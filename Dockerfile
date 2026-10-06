@@ -1,6 +1,6 @@
 FROM node:24.18.0-bookworm-slim AS build
 WORKDIR /app
-RUN npm install --global pnpm@10.34.6
+RUN npm install --global pnpm@12.9.1
 COPY . .
 RUN pnpm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED=1

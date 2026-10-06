@@ -4,10 +4,10 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "packageManager": "pnpm@10.34.6",
+  "packageManager": "pnpm@12.9.1",
   "engines": {
     "node": ">=24.0.0 <25",
-    "pnpm": ">=10.34.6 <11"
+    "pnpm": ">=12.9.1 <13"
   },
   "scripts": {
     "build:packages": "pnpm --filter \"./packages/**\" build",
