@@ -1,6 +1,6 @@
 # carsonak's optional workflow
 
-Read the repository's own AGENTS.md before acting. When reading this file as workspace-root `AGENTS.md`, locate the active checkout using `git worktree list` from a registered checkout and read `<active-checkout>/AGENTS.md`; in the named example layout, the permanent checkout's guide is `101-challenge-main/AGENTS.md`. When reading this file at its tracked location, the guide is `../../AGENTS.md`.
+Read the repository's own AGENTS.md before acting. When reading this file as workspace-root `AGENTS.md`, locate the main worktree, the name of the directory ends with `-main`, then locate the active checkout using `git worktree list` from a registered checkout and read `<active-checkout>/AGENTS.md`; in the named example layout, the permanent checkout's guide is `101-challenge-main/AGENTS.md`. When reading this file at its tracked location, the guide is `../../AGENTS.md`.
 
 This tracked document describes a personal workflow, not required contributor setup. Its workspace-root hard link enables agent discovery without adding personal preferences to the repository guide. Apply this workflow when requested or established by the session context. The active checkout's `CONTRIBUTING.md` governs shared developer practices; its `AGENTS.md` governs agent authorization and safety. Relative Markdown links below resolve from this document's tracked location, `docs/workflows/carsonak.md`, rather than from its workspace-root hard link.
 

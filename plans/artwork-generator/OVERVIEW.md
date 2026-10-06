@@ -23,7 +23,7 @@ Generator owner: 01–03. Integration owner: shared source contracts/migrations 
 
 - [x] Accepted lifecycle, seed recipe and release gates documented.
 - [x] Fictional deterministic base-seed vectors available.
-- [ ] A0 foundation verification recorded in root README.
+- [x] A0 foundation and fictional derivation vector verified; see [root evidence](../../README.md#foundation-verification). Local lab development may begin on the artwork branch.
 - [ ] A1 actual source/credit contract and fixtures pass.
 - [ ] A2 finalization/correction/backfill races pass.
 - [ ] A3 privacy, replacement, restore and public release pass.

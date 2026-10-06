@@ -8,7 +8,7 @@ Email/password, Google and Discord are independent sign-in methods. Linking requ
 
 A user has one enrollment per season. At most one never-completed season may be active for a user. Cancellation preserves the enrollment, attempt and logs and frees the slot; resumption needs that slot again. Completion frees the slot. Restarts in previously completed seasons may run concurrently with another season. Serialize slot changes on the user, then enrollment, then attempt. One active attempt per enrollment.
 
-Published seasons accept enrollment and cancellation without enrollment windows. Recommended goals/milestones and study-session information are optional templates; custom goals are equally valid. Draft seasons are not enrollable; retirement hides new enrollment but preserves existing participation and history. No automatic archival deadline stops an ongoing attempt.
+Published seasons accept enrollment and cancellation without enrollment windows. Recommended goals/milestones and study-session information are optional templates; custom goals are equally valid. Draft seasons are not enrollable. Published seasons stay enrollable, including past seasons; admins may remove a season from featured listings without blocking direct enrollment. No archival deadline stops an ongoing attempt.
 
 ## Attempts and retained history
 
@@ -28,7 +28,7 @@ Initial goals are required. Goals are editable on active attempts for their life
 
 Private random participant and season seeds feed an attempt base seed together with initial goals, start timestamp and optional initial milestones. Freeze initial inputs and the derivation version; later edits do not alter the base seed. A restarted attempt has new initial inputs/start time and a new base seed. Never expose seeds or private seed inputs through participant/admin UI, public API, logs, or SVG. Source code is inspectable under Apache-2.0; algorithm secrecy is not a security boundary.
 
-Current streak is the trailing run when the last report is today or yesterday, otherwise zero. Longest is the maximum run. Every positive multiple of seven consecutive reporting dates grants one attempt-scoped reroll credit, keyed by earning report to avoid collisions across separate runs. Credits survive gaps, expire on restart/cancellation, and cannot transfer. v0.1 records grants/balances and selected perks; artwork release enables spending. No paid, redeemable, transferable, or external-role rewards are included.
+Current streak is the trailing run when the last report is today or yesterday, otherwise zero. Longest is the maximum run. Every positive multiple of seven consecutive reporting dates grants one attempt-scoped reroll credit, keyed by earning report to avoid collisions across separate runs. Credits survive gaps and cancellation, expire on restart, and cannot transfer. Spending is disabled while the attempt is cancelled. v0.1 records grants/balances and selected perks; artwork release enables spending. No paid, redeemable, transferable, or external-role rewards are included.
 
 ## Corrections and administration
 

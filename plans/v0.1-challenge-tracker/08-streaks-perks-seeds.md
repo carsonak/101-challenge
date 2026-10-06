@@ -12,7 +12,7 @@ Dependencies/gates: F1 source fixture agreement; report/milestone facts.
 
 ## Contracts and behavior
 
-Generate private participant and season entropy once. Derive per-attempt base seed using versioned HMAC-SHA-256/canonical initial input encoding; keep seeds server-only. Canonical source specification lives in the artwork contract plan. Track current/longest streak by local date. Grant one credit on each multiple of seven in a consecutive run; unique earningReportId + ruleVersion prevents duplicate grants while allowing a later seven-day run. Credits survive gaps; expire on cancellation/restart; resume does not restore expired credits. Catalog initially contains only streak reroll, selected by default; no monetary/external rewards.
+Generate private participant and season entropy once. Derive per-attempt base seed using versioned HMAC-SHA-256/canonical initial input encoding; keep seeds server-only. Canonical source specification lives in the artwork contract plan. Track current/longest streak by local date. Grant one credit on each multiple of seven in a consecutive run; unique earningReportId + ruleVersion prevents duplicate grants while allowing a later seven-day run. Credits survive gaps and cancellation; expire only on restart. Cancelled attempts cannot spend credits; resumption preserves their remaining balance. Catalog initially contains only streak reroll, selected by default; no monetary/external rewards.
 
 ## Implementation tasks
 
@@ -24,7 +24,7 @@ Generate private participant and season entropy once. Derive per-attempt base se
 ## Acceptance criteria
 
 - Gaps reset current streak but preserve progress and longest streak.
-- Retries grant once; two separate seven-day runs grant twice; restart/cancellation expires balances.
+- Retries grant once; two separate seven-day runs grant twice; restart expires balances while cancellation retains them.
 - Goal edits preserve base seed; restarted attempts derive new seeds; private fields never reach transport DTOs.
 
 ## Progress, risks and evolution

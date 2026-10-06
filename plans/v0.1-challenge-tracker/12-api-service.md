@@ -12,7 +12,7 @@ Dependencies/gates: F1 freeze; depends on accepted 02–09 rules, not their comp
 
 ## Contracts and behavior
 
-Commands: StartAttempt, Enroll, CancelEnrollment, ResumeEnrollment, RestartAttempt, SaveGoal, SaveMilestone, ArchiveGoal/Milestone, SubmitReport, EditReport, Issue/RevokeCorrectionGrant, CorrectReport; admin Create/Publish/RetireSeason and SaveSeasonTemplate. Identity link/unlink stays in authentication service. Queries: seasons/progress/reports/history/revisions/perks and metadata-only admin stats. Future DeleteArtwork/Reroll are absent from v0.1 endpoints. /api/v1 DTOs never accept authoritative userId/seed/mode/date. Errors: UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION, VERSION_CONFLICT, ALREADY_REPORTED, ATTEMPT_CLOSED, SEASON_UNAVAILABLE, SEASON_SLOT_OCCUPIED, MILESTONE_LOCKED, GRANT_INVALID, RATE_LIMITED, IDEMPOTENCY_CONFLICT.
+Commands: StartAttempt, Enroll, CancelEnrollment, ResumeEnrollment, RestartAttempt, SaveGoal, SaveMilestone, ArchiveGoal/Milestone, SubmitReport, EditReport, Issue/RevokeCorrectionGrant, CorrectReport; admin Create/PublishSeason, SetSeasonFeatured and SaveSeasonTemplate. Identity link/unlink stays in authentication service. Queries: seasons/progress/reports/history/revisions/perks and metadata-only admin stats. Future DeleteArtwork/Reroll are absent from v0.1 endpoints. /api/v1 DTOs never accept authoritative userId/seed/mode/date. Errors: UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION, VERSION_CONFLICT, ALREADY_REPORTED, ATTEMPT_CLOSED, SEASON_UNAVAILABLE, SEASON_SLOT_OCCUPIED, MILESTONE_LOCKED, GRANT_INVALID, RATE_LIMITED, IDEMPOTENCY_CONFLICT.
 
 ## Implementation tasks
 

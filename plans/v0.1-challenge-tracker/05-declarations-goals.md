@@ -6,7 +6,7 @@ See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and 
 
 ## Scope and dependencies
 
-Require one or more initial goals; optional declaration and milestones. No reading-only assumptions.
+Require one or more initial goals and optional milestones. No reading-only assumptions.
 
 Dependencies/gates: F1 and lifecycle; initial inputs feed 08.
 

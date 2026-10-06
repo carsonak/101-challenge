@@ -1,0 +1,17 @@
+{
+  "name": "@challenge/worker",
+  "version": "0.1.0-dev",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@challenge/contracts": "workspace:*",
+    "@challenge/core": "workspace:*",
+    "@challenge/db": "workspace:*",
+    "pg-boss": "12.37.0"
+  }
+}

@@ -1,0 +1,31 @@
+html {
+  color-scheme: light;
+  background: #f7f5ef;
+  color: #18291f;
+  font-family: system-ui, sans-serif;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 46rem;
+  margin: 10vh auto;
+  padding: 2rem;
+}
+h1 {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1.1;
+}
+p {
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+.eyebrow {
+  color: #365841;
+  font-weight: 600;
+}
+section {
+  border-top: 1px solid #a6b2a6;
+  margin-top: 3rem;
+  padding-top: 1rem;
+}
