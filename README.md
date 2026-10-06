@@ -15,7 +15,7 @@ pnpm services:up
 pnpm dev:web
 ```
 
-In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. With Podman Compose versions without `--wait`, use `docker compose up -d` and inspect `docker compose ps` for healthy services. `pnpm services:down` stops services without deleting the database volume.
+In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
 
 The web page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. No domain migrations exist yet. Auth settings may remain blank; no fake login or development authentication bypass is installed.
 
