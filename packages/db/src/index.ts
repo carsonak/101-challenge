@@ -1,6 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
+/**
+ * Create server-side PostgreSQL access for repository queries and connectivity checks.
+ * Use the returned `db` client for queries and await `close()` when the handle is
+ * no longer needed. Connections open as needed; idle connection failures write a
+ * credential-free error to stderr. Queries may read or change database state.
+ *
+ * @param connectionString PostgreSQL connection URL; keep credentials server-side.
+ * @returns A query client with connectivity and cleanup methods.
+ */
 export function createDatabase(connectionString: string) {
   const pool = new pg.Pool({
     connectionString,
@@ -13,10 +22,16 @@ export function createDatabase(connectionString: string) {
   pool.on("error", () => console.error("Database connection unavailable"));
   const db = drizzle(pool);
   return {
+    /** Query client for repository reads and writes; release its resources through `close()`. */
     db,
+    /**
+     * Check connectivity with a read-only database request before declaring readiness.
+     * Await completion; rejects if the database cannot respond successfully.
+     */
     async probe() {
       await pool.query("select 1");
     },
+    /** Release this handle's database connections; await during cleanup and do not reuse afterward. */
     async close() {
       await pool.end();
     },

@@ -1,6 +1,21 @@
+/**
+ * @file Starts the local Compose services and waits up to 120 seconds for healthy containers.
+ * Run `pnpm services:up` from the repository root with Docker or compatible Podman Compose.
+ * Compose uses the local environment and may pull images or create/recreate containers,
+ * networks and persistent volumes. Services remain running after this command finishes,
+ * including after a health-check failure; use `pnpm services:down` to stop them.
+ * Startup or health-check failures are reported with a nonzero exit status.
+ * Runs immediately when executed or imported.
+ */
+
 import { spawn } from "node:child_process";
 import { setTimeout } from "node:timers/promises";
 
+/**
+ * Run Docker arguments and reject if the command cannot start or exits unsuccessfully.
+ * Returns captured stdout, or an empty string when inheriting terminal output.
+ * Runtime errors are forwarded to the terminal; arguments may change container state.
+ */
 function docker(args, inherit = false) {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, {
@@ -27,6 +42,7 @@ function docker(args, inherit = false) {
   });
 }
 
+/** Start this checkout's Compose services and fail if they do not become healthy. */
 async function main() {
   // Both Docker Compose and Podman Compose support detached startup.
   await docker(["compose", "up", "-d"], true);

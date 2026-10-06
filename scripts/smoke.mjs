@@ -1,3 +1,14 @@
+/**
+ * @file Verifies the built web and worker services, branding, liveness and readiness.
+ * Run `pnpm smoke` from the repository root after `pnpm build`. When DATABASE_URL
+ * is configured, it must point to an isolated disposable database: worker startup
+ * can initialize queue tables. Without it, the checks expect unavailable readiness.
+ * Starts temporary loopback servers, inherits server configuration, and stops child
+ * services on success or failure. Prints captured service output on failure and
+ * exits unsuccessfully if a check fails. Database changes are not rolled back.
+ * Runs immediately when executed or imported.
+ */
+
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -5,6 +16,10 @@ import { createServer } from "node:net";
 import { once } from "node:events";
 
 // Use independent ephemeral ports; the caller supplies an isolated disposable DB.
+/**
+ * Briefly bind a loopback socket to find an available port.
+ * The port is released before return, so the caller must bind it promptly.
+ */
 async function freePort() {
   const server = createServer();
   server.listen(0, "127.0.0.1");
@@ -14,12 +29,20 @@ async function freePort() {
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
+/** Resolves dependencies installed for the web application. */
 const require = createRequire(
   new URL("../apps/web/package.json", import.meta.url)
 );
+/** Temporary loopback ports for the web and worker smoke instances. */
 const ports = [await freePort(), await freePort()];
+/** Child services to stop when the smoke checks finish. */
 const children = [];
+/** Captured service output to report if a smoke check fails. */
 let output = "";
+/**
+ * Start a Node child in the supplied directory with environment overrides.
+ * Captures output and registers the child for cleanup; callers must await startup.
+ */
 function start(args, cwd, env) {
   const child = spawn(process.execPath, args, {
     cwd,
@@ -35,11 +58,13 @@ function start(args, cwd, env) {
   children.push(child);
   return child;
 }
+/** Fetch a loopback endpoint with a five-second timeout; callers check the HTTP status. */
 async function get(port, path) {
   return fetch(`http://127.0.0.1:${port}${path}`, {
     signal: AbortSignal.timeout(5000),
   });
 }
+/** Wait up to 30 seconds for a successful HTTP response; reject on timeout or early child exit. */
 async function waitFor(port, path, child) {
   const deadline = Date.now() + 30000;
   while (Date.now() < deadline) {

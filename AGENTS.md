@@ -22,6 +22,14 @@ The optional [carsonak workflow](docs/workflows/carsonak.md) applies when reques
 - Resolve exact targets and preserve recoverability before authorized history changes or cleanup. Do not discard unrelated changes or rewrite shared history without explicit authorization. Use `--force-with-lease` for an authorized rewritten-history push.
 - Do not create settings, protections, or external resources merely because documentation describes them.
 
+## Code documentation
+
+Follow the [JSDoc guidelines](CONTRIBUTING.md#code-documentation) when adding or changing code.
+
+- Document exported symbols and public returned members with caller-focused JSDoc covering what, when, how, and notable side effects or cleanup. Keep descriptions concise and implementation notes in ordinary inline comments.
+- Document executable modules' usage and side effects; use shorter JSDoc for private helpers and meaningful constants. Skip routine locals, anonymous callbacks, and generated files.
+- Keep documentation accurate as behavior changes and verify documentation-only edits preserve executable syntax.
+
 ## Verify and communicate
 
 - Follow relevant contributor checks and acceptance criteria. Match verification to the change; documentation changes need content and link review rather than unrelated application tests.

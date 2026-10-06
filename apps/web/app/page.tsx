@@ -1,7 +1,12 @@
 import { parseServerConfig } from "@challenge/contracts";
 
+/** Next.js route policy requesting a fresh render of the landing page for each request. */
 export const dynamic = "force-dynamic";
 
+/**
+ * Landing page rendered by Next.js for `/`, using APP_DISPLAY_NAME for branding.
+ * Requires valid server configuration; invalid settings cause rendering to fail.
+ */
 export default function Home() {
   const { APP_DISPLAY_NAME } = parseServerConfig(process.env);
   return (

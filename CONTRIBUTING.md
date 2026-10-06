@@ -35,6 +35,18 @@ Test behavior and contracts with deterministic clocks and fictional fixtures. Re
 
 Concurrent checkouts or stacks must have independent ports, database names, container/Compose project names, worker queues, environment files, caches, and outputs. Discover supported configuration rather than inventing variable names. Verify database and queue targets before starting services; one stack's worker must not consume another's jobs. Apply competing migrations to separate disposable/local databases, not a shared development database. Keep test data separate from participant data.
 
+## Code documentation
+
+Use JSDoc for code documentation throughout the project. Write for a developer using the symbol: explain what it provides, when to use it, and how to use it. A short description may answer all three; prefer useful, concise prose over a fixed template.
+
+- Document every exported function, value, type, default export, and publicly accessible returned member. Include meaningful failure behavior, resource ownership, required cleanup, and notable side effects such as I/O, data changes, logging, or starting processes.
+- Use parameter, return, and error descriptions when they clarify the contract. Avoid repeating TypeScript types or requiring examples for obvious usage.
+- Give executable modules file-level JSDoc describing purpose, invocation, prerequisites, and side effects, including any work performed immediately when executed or imported.
+- Give private helpers and meaningful module-level constants shorter JSDoc. Routine local variables and anonymous callbacks do not need documentation.
+- Keep implementation details and notes for future contributors in ordinary inline comments, outside JSDoc. Public documentation describes observable behavior and caller responsibilities rather than internal algorithms or storage choices.
+- Update documentation with behavior changes. Review it against actual commands and side effects; exclude generated declarations, build output, dependencies, and files whose format cannot contain JSDoc.
+- For documentation-only edits, verify executable syntax is unchanged and run formatting, lint, and documentation-link checks. Documentation does not require new behavioral tests or tooling dependencies.
+
 ## Security and documentation
 
 Enforce resource authorization, safe response projections, and explicit confirmation for destructive user operations. Never commit credentials, tokens, private report bodies, real participant fixtures, or machine-specific environment files. Redact sensitive content in logs and keep private session details out of public issues, reviews, and PRs.

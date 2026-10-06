@@ -1,3 +1,9 @@
+/**
+ * @file Checks configuration validation and safe readiness payloads with fictional inputs.
+ * Run `pnpm test` from the repository root; no live database or provider credentials are needed.
+ * Importing this module registers and runs the tests.
+ */
+
 import assert from "node:assert/strict";
 import test from "node:test";
 import {

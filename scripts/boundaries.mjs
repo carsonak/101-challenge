@@ -1,6 +1,14 @@
+/**
+ * @file Checks application/package sources and manifests for forbidden dependencies.
+ * Run `pnpm lint` from the repository root to check architectural boundaries.
+ * Reads files and reports violations with a failing exit status; does not change files.
+ * Runs immediately when executed or imported.
+ */
+
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/** Collect absolute source and manifest paths beneath a directory for boundary checks. */
 async function walk(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -15,6 +23,7 @@ async function walk(directory) {
   }
   return files;
 }
+/** Boundary violations collected for a single failure report. */
 const errors = [];
 for (const root of ["apps", "packages"]) {
   for (const file of await walk(root)) {
