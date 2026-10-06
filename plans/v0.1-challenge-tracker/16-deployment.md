@@ -1,6 +1,6 @@
 # Deployment and external readiness
 
-Status: requirements accepted; feature implementation not started. Owner role: Release/operations owner.
+Status: foundation deployment tooling verified; live deployment not started. Owner role: Release/operations owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,7 +16,7 @@ Separate local/staging/production databases, credentials and queue namespaces. E
 
 ## Implementation tasks
 
-- [ ] Build containers, local Compose and CI with no OAuth or hosting dependency.
+- [x] Add foundation containers, local Compose and CI with no OAuth or hosting dependency. Web image build and both non-root entrypoints verified; feature-ready release validation remains below.
 - [ ] When email is ready verify sender, delivery, verification and recovery flows.
 - [ ] When portals are ready register exact callbacks, provider secrets and Discord guild commands.
 - [ ] Choose host/region/budget when provisioning; deploy staging, run migration once, then compatible web/worker.
@@ -30,6 +30,6 @@ Separate local/staging/production databases, credentials and queue namespaces. E
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Foundation evidence: clean web image build, non-root web/worker entrypoint smoke, PostgreSQL 17.11 and Mailpit 1.31.2 health passed. CI is configured but has not run remotely; no live deployment evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

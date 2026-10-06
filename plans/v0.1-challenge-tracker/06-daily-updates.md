@@ -12,7 +12,7 @@ Dependencies/gates: F1, active attempt, goal revisions; 08/09 in the same transa
 
 ## Contracts and behavior
 
-SubmitReport uses attemptId/body/goalValues/expectedAttemptVersion; server supplies date. EditReport uses reportId/body/goalValues/expectedReportVersion; server checks owner/local date. Body 1..4000 trimmed characters. A same-day 101st report may be edited after completion. All other closed-attempt or historical edits require a grant. Corrections only replace existing text/values, never date/count. Store latest body and timestamps only; bump sourceVersion, preserve frozen milestone facts for that reporting index, and emit metadata-only invalidation.
+SubmitReport uses attemptId/body/goalValues/milestoneAchievements?/expectedAttemptVersion; milestoneAchievements contains only same-attempt manual milestone IDs whose target equals the new reporting index; server supplies date. EditReport uses reportId/body/goalValues/expectedReportVersion; server checks owner/local date. Body 1..4000 trimmed characters. A same-day 101st report may be edited after completion. All other closed-attempt or historical edits require a grant. Corrections only replace existing text/values, never date/count. Store latest body and timestamps only; bump sourceVersion, preserve frozen milestone facts for that reporting index, and emit metadata-only invalidation.
 
 ## Implementation tasks
 

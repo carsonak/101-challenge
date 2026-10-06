@@ -1,6 +1,6 @@
 # Architecture
 
-Status: requirements accepted; feature implementation not started. Owner role: Foundation owner.
+Status: foundation implemented and verified; domain features not started. Owner role: Foundation owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,8 +16,8 @@ Clock and timezone ports belong in core; contracts contain Zod DTOs and typed er
 
 ## Implementation tasks
 
-- [ ] Create executable web/worker entrypoints, shared package exports, workspace checks and CI.
-- [ ] Add local PostgreSQL/mail catcher, environment examples, production builds and health/readiness separation.
+- [x] Create executable web/worker entrypoints, shared package exports, workspace checks and CI.
+- [x] Add local PostgreSQL/mail catcher, environment examples, production builds and health/readiness separation.
 - [ ] Freeze F1 contracts with fixtures; implement enroll/setup/report/progress vertical slice before wider adapter integration.
 
 ## Acceptance criteria
@@ -27,6 +27,6 @@ Clock and timezone ports belong in core; contracts contain Zod DTOs and typed er
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Foundation evidence: frozen installation, checks/build, and web/worker smoke with and without PostgreSQL passed; Mailpit health passed. No domain feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

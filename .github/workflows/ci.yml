@@ -1,0 +1,34 @@
+name: Foundation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: docker.io/library/postgres:17.11-alpine
+        env:
+          POSTGRES_USER: challenge
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_DB: challenge_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U challenge -d challenge_ci"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgresql://challenge:ci_only@127.0.0.1:5432/challenge_ci
+      QUEUE_SCHEMA: pgboss_ci
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm smoke

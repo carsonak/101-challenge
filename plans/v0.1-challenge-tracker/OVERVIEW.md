@@ -28,6 +28,7 @@ The integration owner coordinates contracts/migrations. Role names are responsib
 
 - [x] Product policies reconciled; missing historical source is provenance only.
 - [x] Component tasks, ownership roles and external gates defined.
+- [x] F0 foundation: frozen installation, workspace checks, production build, PostgreSQL/Mailpit startup and web/worker smoke verified; see [root evidence](../../README.md#foundation-verification).
 - [ ] F1 command/schema implementation and review.
 - [ ] F2/F3 feature and integration tests.
 - [ ] External service gates, pilot, restore and release.

@@ -1,0 +1,25 @@
+{
+  "name": "@challenge/web",
+  "version": "0.1.0-dev",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@challenge/contracts": "workspace:*",
+    "@challenge/core": "workspace:*",
+    "@challenge/db": "workspace:*",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3"
+  }
+}
