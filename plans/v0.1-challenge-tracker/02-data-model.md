@@ -16,9 +16,9 @@ Tables: users/private participant seed; credentials and identities UNIQUE(provid
 
 ## Implementation tasks
 
-- [ ] Create initial migration in dependency order, indexed owner queries and cursor columns.
-- [ ] Constrain report-goal ownership and active-attempt uniqueness; serialize user slot claims transactionally.
-- [ ] Store grant token hashes, expiry, revocation/use metadata; ensure grant use and correction are atomic.
+- [x] Create initial migration in dependency order, indexed owner queries and cursor columns.
+- [x] Constrain report-goal ownership and active-attempt uniqueness; serialize user slot claims transactionally.
+- [x] Store grant token hashes, expiry, revocation/use metadata; ensure grant use and correction are atomic.
 - [ ] Use a restricted app role for completion facts and a separate privileged erasure path. No progress cascade on ordinary restart/cancel.
 
 ## Acceptance criteria
@@ -29,6 +29,6 @@ Tables: users/private participant seed; credentials and identities UNIQUE(provid
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Implemented a clean typed-column PostgreSQL migration, Drizzle transaction repository, owner indexes, composite revision/report ownership, slot/active-attempt uniqueness and grant expiry/use storage. Real PostgreSQL integration tests cover rollback, cross-attempt references, slot races, retained restarts and immutable completion under corrections. Application-role and privileged erasure work remains with identity/privacy. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

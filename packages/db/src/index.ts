@@ -37,3 +37,5 @@ export function createDatabase(connectionString: string) {
     },
   };
 }
+
+export * from "./repository.js";

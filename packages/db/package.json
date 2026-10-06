@@ -11,7 +11,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "migrations"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -19,7 +20,8 @@
   },
   "dependencies": {
     "drizzle-orm": "0.45.3",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "@challenge/core": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "8.23.1"

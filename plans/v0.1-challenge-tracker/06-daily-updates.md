@@ -29,6 +29,6 @@ SubmitReport uses attemptId/body/goalValues/milestoneAchievements?/expectedAttem
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Core lifecycle, setup/revisions, reporting/milestone locks, attempt-v1 seeds, streak credits, atomic completion and correction services are implemented. Deterministic unit tests and real PostgreSQL transaction/race tests provide domain evidence; browser/Discord integration and identity/privacy remain pending. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

@@ -9,10 +9,20 @@ import {
 const seed = z.string().regex(/^[a-f0-9]{64}$/);
 /** Private versioned report facts supporting future deterministic backfill. */
 const reportSource = ownerReportSchema.extend({
+  applicableGoalRevisionIds: z.array(z.uuid()).max(20),
+  goalRevisionFacts: z.array(
+    z.strictObject({ revisionId: z.uuid(), input: initialGoalSchema })
+  ),
   streakAtReport: z.number().int().min(1).max(101),
   selectedPerks: z.array(z.literal("streak_reroll")),
   milestoneFacts: z.array(
-    z.strictObject({ revisionId: z.uuid(), achieved: z.boolean() })
+    z.strictObject({
+      revisionId: z.uuid(),
+      achieved: z.boolean(),
+      input: initialMilestoneSchema
+        .omit({ goalIndex: true })
+        .extend({ goalId: z.uuid().optional() }),
+    })
   ),
 });
 /** Server-only source projection, read consistently and reauthorized for each use. */
