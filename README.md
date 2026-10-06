@@ -2,11 +2,11 @@
 
 A challenge tracker tailored for BitDevs Kisumu, with independent web accounts and optional Discord convenience features. Participants work toward 101 reporting days at their own pace.
 
-**Current state:** runnable foundation and accepted feature plans. Accounts, challenge tracking, domain migrations and artwork are not implemented yet. The landing page states this explicitly.
+**Current state:** runnable foundation, shared contracts, transactional tracker and identity/privacy services. Browser/Discord adapters are still being implemented; no artwork runtime is included.
 
 ## Local setup
 
-Requirements: Node 24, pnpm 12.9.1, Docker Compose (or compatible Podman Compose). Install pnpm with `npm install --global pnpm@12.9.1` if needed.
+Requirements: Node 24.7 or newer within the Node 24 line, pnpm 12.9.1, Docker Compose (or compatible Podman Compose). Install pnpm with `npm install --global pnpm@12.9.1` if needed.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -17,7 +17,7 @@ pnpm dev:web
 
 In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
 
-The web page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. No domain migrations exist yet. Auth settings may remain blank; no fake login or development authentication bypass is installed.
+The web page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. Apply the tracked migrations with `pnpm database:migrate` using local schema-owner credentials. Auth provider settings may remain blank; no fake login or development authentication bypass is installed. See [authentication and privacy](docs/authentication.md) for runtime/operator role separation.
 
 For concurrent checkouts use unique COMPOSE_PROJECT_NAME, POSTGRES_DB, POSTGRES_PORT, PORT, WORKER_PORT, QUEUE_SCHEMA and Mailpit ports in separate ignored `.env` files. Update DATABASE_URL to match that checkout's database and port. Never point smoke tests or experimental workers at participant databases.
 

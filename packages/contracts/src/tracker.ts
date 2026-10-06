@@ -14,7 +14,7 @@ export const decimalValueSchema = z
 /** Initial custom goal; targets must be positive when supplied. */
 export const initialGoalSchema = z.strictObject({
   title: z.string().trim().min(1).max(200),
-  description: body.optional(),
+  description: z.string().max(4000).optional(),
   kind: z.enum(["qualitative", "count", "duration", "quantity"]),
   unit: z.string().trim().min(1).max(40).optional(),
   target: decimalValueSchema.refine((value) => /[1-9]/.test(value)).optional(),
@@ -22,7 +22,7 @@ export const initialGoalSchema = z.strictObject({
 /** Optional initial milestone; a goal index refers to the submitted goal list. */
 export const initialMilestoneSchema = z.strictObject({
   title: z.string().trim().min(1).max(200),
-  description: body.optional(),
+  description: z.string().max(4000).optional(),
   targetReportingDay: z.number().int().min(1).max(101),
   goalIndex: z.number().int().nonnegative().optional(),
   achievementKind: z.enum(["manual", "reporting_count"]),
@@ -186,7 +186,7 @@ export const correctReportSchema = editReportSchema.extend({
 export const createSeasonSchema = z.strictObject({
   command: z.literal("CreateSeason"),
   title: z.string().trim().min(1).max(200),
-  description: body.optional(),
+  description: z.string().max(4000).optional(),
 });
 /** Publish never imposes an enrollment deadline. */
 export const publishSeasonSchema = z.strictObject({

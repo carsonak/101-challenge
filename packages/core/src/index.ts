@@ -25,3 +25,4 @@ export async function readiness(
 export * from "./model.js";
 export * from "./rules.js";
 export * from "./tracker.js";
+export * from "./auth.js";

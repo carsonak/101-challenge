@@ -28,13 +28,27 @@ const errors = [];
 for (const root of ["apps", "packages"]) {
   for (const file of await walk(root)) {
     const text = await readFile(file, "utf8");
+    const modules = file.endsWith("/package.json")
+      ? Object.keys({
+          ...JSON.parse(text).dependencies,
+          ...JSON.parse(text).devDependencies,
+          ...JSON.parse(text).peerDependencies,
+          ...JSON.parse(text).optionalDependencies,
+        })
+      : [
+          ...text.matchAll(
+            /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)['"]([^'"]+)['"]/g
+          ),
+        ].map((match) => match[1]);
     if (
       file.includes("/packages/core/") ||
       file.includes("/packages/contracts/")
     ) {
       if (
-        /['"](?:next(?:\/[^'"]*)?|react(?:-dom)?|discord[^'"]*|pg(?:-boss)?|drizzle-orm[^'"]*|@challenge\/(?:db|web|worker))['"]/.test(
-          text
+        modules.some((name) =>
+          /^(?:next(?:\/|$)|react(?:-dom)?$|discord|pg(?:-boss)?$|drizzle-orm|@challenge\/(?:db|web|worker))/.test(
+            name
+          )
         )
       )
         errors.push(`${file}: forbidden domain dependency`);

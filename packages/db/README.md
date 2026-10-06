@@ -6,4 +6,4 @@ Call `migrate()` using the schema owner before starting application traffic. The
 
 `TRACKER_TEST_DATABASE_URL` enables real transaction tests and must name a disposable database ending in `_test` or `_ci`. Tests create fictional accounts and never target participant data. Missing configuration skips this suite; release evidence requires an explicit passing database run.
 
-Application-role restrictions and privileged erasure are established alongside the identity/privacy feature. Ordinary repository operations reject entitlement/revision updates. Credentials and migrations must remain server-only.
+Identity migration adds the restricted application role, independent credentials/provider subjects, sessions and one-use proofs. Privileged erasure validates an owner request and records content-free tombstones; restore replays them before traffic. See [authentication/privacy](../../docs/authentication.md). Ordinary repository operations reject entitlement/revision updates. Credentials and migrations must remain server-only.

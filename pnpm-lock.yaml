@@ -165,6 +165,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@challenge/db':
+        specifier: workspace:*
+        version: link:packages/db
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.15

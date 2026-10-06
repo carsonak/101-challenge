@@ -1,4 +1,5 @@
 import pg from "pg";
+import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { columns } from "./columns.js";
@@ -105,6 +106,11 @@ function transactionPort(client: pg.PoolClient): Transaction {
       if (result.rowCount !== 1) throw new Error("Missing repository record");
       if (table === "reports") await reportValues(row as Report);
     },
+    async serializeKey(key) {
+      await db.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},101))`
+      );
+    },
     async remove(table, id) {
       await db.execute(
         sql`DELETE FROM ${sql.identifier(table)} WHERE id=${id}`
@@ -113,7 +119,10 @@ function transactionPort(client: pg.PoolClient): Transaction {
   };
 }
 /** PostgreSQL repository with atomic rollback and bounded deadlock/serialization retries. */
-export function createRepository(connectionString: string) {
+export function createRepository(
+  connectionString: string,
+  applicationRole = false
+) {
   const pool = new pg.Pool({
     connectionString,
     max: 10,
@@ -129,6 +138,8 @@ export function createRepository(connectionString: string) {
         const client = await pool.connect();
         try {
           await client.query("BEGIN");
+          if (applicationRole)
+            await client.query("SET LOCAL ROLE challenge_tracker_app");
           const result = await callback(transactionPort(client));
           await client.query("COMMIT");
           return result;
@@ -149,6 +160,10 @@ export function createRepository(connectionString: string) {
     repository,
     /** Apply the initial migration once under a database advisory lock; requires schema ownership. */
     async migrate() {
+      if (applicationRole)
+        throw Object.assign(new Error("Migration credentials required"), {
+          code: "42501",
+        });
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -156,19 +171,100 @@ export function createRepository(connectionString: string) {
         await client.query(
           "CREATE TABLE IF NOT EXISTS tracker_migrations(version integer PRIMARY KEY)"
         );
-        if (
-          !(
+        for (const [version, file] of [
+          [1, "0001_tracker.sql"],
+          [2, "0002_identity.sql"],
+        ] as const) {
+          if (
+            !(
+              await client.query(
+                "SELECT version FROM tracker_migrations WHERE version=$1",
+                [version]
+              )
+            ).rowCount
+          ) {
             await client.query(
-              "SELECT version FROM tracker_migrations WHERE version=1"
-            )
-          ).rowCount
-        ) {
-          const sql = await readFile(
-            new URL("../migrations/0001_tracker.sql", import.meta.url),
-            "utf8"
-          );
-          await client.query(sql);
-          await client.query("INSERT INTO tracker_migrations VALUES(1)");
+              await readFile(
+                new URL(`../migrations/${file}`, import.meta.url),
+                "utf8"
+              )
+            );
+            await client.query("INSERT INTO tracker_migrations VALUES($1)", [
+              version,
+            ]);
+          }
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    /** Execute only an owner-confirmed erasure request using privileged database credentials. */
+    async eraseAccount(
+      userId: string,
+      requestId: string,
+      queueSchema?: string
+    ) {
+      if (applicationRole)
+        throw Object.assign(new Error("Erasure credentials required"), {
+          code: "42501",
+        });
+      await pool.query("SELECT erase_tracker_account($1,$2,$3)", [
+        userId,
+        requestId,
+        queueSchema ?? null,
+      ]);
+    },
+    /** Content-free deletion ledger for trusted backup/restore tooling; never expose as an API. */
+    async deletionLedger() {
+      if (applicationRole)
+        throw Object.assign(new Error("Ledger credentials required"), {
+          code: "42501",
+        });
+      return (
+        await pool.query(
+          'SELECT "userId", "erasedAt" FROM deletion_ledger ORDER BY "userId"'
+        )
+      ).rows as { userId: string; erasedAt: Date }[];
+    },
+    /** Replay a trusted content-free deletion ledger after restore, before serving traffic. */
+    async replayErasures(userIds: string[], queueSchema?: string) {
+      if (applicationRole)
+        throw Object.assign(new Error("Restore credentials required"), {
+          code: "42501",
+        });
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        for (const userId of userIds) {
+          if (!/^[a-f0-9-]{36}$/.test(userId))
+            throw new Error("Invalid deletion ledger");
+          if (
+            (
+              await client.query(
+                "SELECT id FROM users WHERE id=$1 FOR UPDATE",
+                [userId]
+              )
+            ).rowCount
+          ) {
+            const requestId = randomUUID();
+            await client.query(
+              'INSERT INTO erasure_requests(id,"userId","requestedAt","processedAt") VALUES($1,$2,clock_timestamp(),NULL)',
+              [requestId, userId]
+            );
+            await client.query("SELECT erase_tracker_account($1,$2,$3)", [
+              userId,
+              requestId,
+              queueSchema ?? null,
+            ]);
+          } else
+            await client.query(
+              'INSERT INTO deletion_ledger VALUES($1,clock_timestamp()) ON CONFLICT("userId") DO NOTHING',
+              [userId]
+            );
         }
         await client.query("COMMIT");
       } catch (error) {

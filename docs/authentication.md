@@ -1,0 +1,15 @@
+# Authentication and privacy
+
+Email credentials require delivery-based verification before password login. Passwords use salted Argon2id with a versioned 64 MiB, three-pass, four-lane profile following [RFC 9106](https://www.rfc-editor.org/rfc/rfc9106.html). Native asynchronous [Node Argon2](https://nodejs.org/download/release/v24.16.0/docs/api/crypto.html#cryptoargon2algorithm-parameters-callback) requires Node 24.7 or newer. Passwords and private proof values never enter logs or public projections.
+
+Sessions, verification/recovery keys and browser OAuth state are opaque and hashed at rest. Verification expires after 24 hours, recovery after one hour, sessions after 30 days and OAuth state after ten minutes. Verification/recovery and callback state are consumed atomically. Password recovery and unlinking revoke sessions. Sensitive account changes require authentication within ten minutes and session-bound CSRF proof.
+
+Provider transports prove stable Google/Discord subjects. Email claims never merge accounts. Linking requires a recent authenticated target session plus a fresh provider proof; a subject already owned by another account rejects. Provider-only accounts can add independently verified email credentials. Unlinking leaves at least one usable method. Optional providers remain disabled until fully configured.
+
+`challenge_tracker_app` can append completion facts and retained revisions but cannot change them, promote users or access the deletion ledger. Local runtime selects this role through the repository's application-role mode. Deployments need a separate login inheriting this role without migration ownership or erasure privileges. Migration credentials require schema and role-management privileges; never give the public runtime a superuser login.
+
+Owner-confirmed erasure requests require recent authentication. A separate privileged `eraseAccount(userId, requestId, queueSchema)` repository path validates that request and removes private inputs, histories, sign-in methods, sessions, grants and scoped jobs/events atomically. It records only a random account UUID and erasure timestamp. No email/provider fingerprint survives. Cancellation/restart never invokes erasure. The application-role repository refuses privileged privacy operations.
+
+Trusted recovery tooling reads `deletionLedger()` from a separate privileged connection and preserves the content-free ledger independently of backups. Before restored traffic, `replayErasures(userIds, queueSchema)` removes resurrected accounts even if their requests were absent from the older snapshot. Replay is idempotent. Operational logs/backups default to 30-day retention; participant history otherwise persists until erasure. Encrypt private backups and limit operator access.
+
+`pnpm database:migrate` applies tracked schema before local traffic. Administrator provisioning and live operator access remain deployment setup; no public role-promotion endpoint exists. Inspect private seeds only through controlled server-side database access; there is no seed debug route.

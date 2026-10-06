@@ -123,3 +123,4 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
 }
 
 export * from "./tracker.js";
+export * from "./auth.js";

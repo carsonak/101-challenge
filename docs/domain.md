@@ -1,6 +1,6 @@
 # Challenge domain
 
-Status: accepted requirements, 2026-10-06. These rules describe intended behavior, not implemented features. They supersede the initial proposals for destructive resets, Discord-only identity, enrollment-level seeds, and unconditional artwork immutability.
+Status: accepted requirements, 2026-10-06. These rules are authoritative; implementation evidence is recorded with the tracker plans and tests. They supersede the initial proposals for destructive resets, Discord-only identity, enrollment-level seeds, and unconditional artwork immutability.
 
 ## Accounts and participation
 

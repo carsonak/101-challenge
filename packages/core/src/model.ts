@@ -276,6 +276,18 @@ export interface Tables {
   outbox: Outbox;
   /** Persisted audit for this record. */
   audit: Audit;
+  /** Private credentials records for authentication/privacy services. */
+  credentials: Credential;
+  /** Private identities records for authentication/privacy services. */
+  identities: Identity;
+  /** Private sessions records for authentication/privacy services. */
+  sessions: Session;
+  /** Private auth tokens records for authentication/privacy services. */
+  auth_tokens: AuthToken;
+  /** Private oauth states records for authentication/privacy services. */
+  oauth_states: OAuthState;
+  /** Private erasure requests records for authentication/privacy services. */
+  erasure_requests: ErasureRequest;
 }
 /** Repository transaction port; implementations own persistence, SQL and rollback. */
 export interface Transaction {
@@ -295,10 +307,99 @@ export interface Transaction {
   /** Replace a mutable record already locked by the domain service. */
   save<K extends keyof Tables>(table: K, row: Tables[K]): Promise<void>;
   /** Remove only ephemeral slots or expired replay records during domain operations. */
-  remove(table: "slots" | "replays", id: string): Promise<void>;
+  remove(
+    table:
+      | "slots"
+      | "replays"
+      | "credentials"
+      | "identities"
+      | "sessions"
+      | "auth_tokens"
+      | "oauth_states",
+    id: string
+  ): Promise<void>;
+  /** Serialize provisioning by normalized identity key without taking another user lock. */
+  serializeKey(key: string): Promise<void>;
 }
 /** Database transaction owner; every rejected callback rolls back all writes. */
 export interface Repository {
   /** Execute a callback atomically, retrying serialization/deadlock failures with bounded attempts. */
   transaction<T>(callback: (tx: Transaction) => Promise<T>): Promise<T>;
+}
+
+/** Private email credential; ID equals user ID and address uniqueness is database-enforced. */
+export interface Credential extends Row {
+  /** Account owning this independently verified sign-in method. */
+  userId: string;
+  /** Normalized private delivery/sign-in address. */
+  email: string;
+  /** Versioned salted Argon2id hash; never transport this field. */
+  passwordHash: string;
+  /** Verification proof is required before password login. */
+  verified: boolean;
+}
+/** Provider identity ownership is unique by provider and stable subject, never by email. */
+export interface Identity extends Row {
+  /** Owning independent account. */
+  userId: string;
+  /** Provider issuing the subject identifier. */
+  provider: "google" | "discord";
+  /** Opaque stable provider subject; Discord snowflakes remain strings. */
+  subject: string;
+}
+/** Opaque hashed authentication session and bound CSRF proof. */
+export interface Session extends Row {
+  /** Authenticated independent account. */
+  userId: string;
+  /** Hash of the opaque HttpOnly session cookie. */
+  tokenHash: string;
+  /** Hash of the CSRF secret returned to the authenticated browser. */
+  csrfHash: string;
+  /** Last successful authentication instant for sensitive operations. */
+  authenticatedAt: string;
+  /** Absolute session expiry instant. */
+  expiresAt: string;
+  /** Explicit logout/recovery/unlink revocation instant. */
+  revokedAt: string | null;
+}
+/** One-use verification or recovery proof, hashed at rest and bound to its account. */
+export interface AuthToken extends Row {
+  /** Account receiving proof through its private delivery address. */
+  userId: string;
+  /** Verification and password recovery cannot redeem each other's keys. */
+  kind: "verify" | "recover";
+  /** Opaque key hash; plaintext exists only during delivery. */
+  tokenHash: string;
+  /** Absolute expiry; redemption checks time while locked. */
+  expiresAt: string;
+  /** Atomic redemption marker. */
+  usedAt: string | null;
+}
+/** Browser-bound one-use OAuth authorization state; private and short-lived. */
+export interface OAuthState extends Row {
+  /** Provider selected when authorization began. */
+  provider: "google" | "discord";
+  /** Linking target; null means an independent login/signup. */
+  userId: string | null;
+  /** Hash of browser-visible state. */
+  stateHash: string;
+  /** Hash of the separate HttpOnly browser binding secret. */
+  browserHash: string;
+  /** Nonce sent to Google and required in its verified ID token. */
+  nonce: string;
+  /** Short-lived PKCE verifier for providers supporting it. */
+  verifier: string;
+  /** Expiring authorization proof. */
+  expiresAt: string;
+  /** Callback replay marker. */
+  usedAt: string | null;
+}
+/** Owner-confirmed account deletion request; execution is a separate privileged path. */
+export interface ErasureRequest extends Row {
+  /** Account to erase, established from a recent authenticated session. */
+  userId: string;
+  /** Time of explicit owner confirmation. */
+  requestedAt: string;
+  /** Privileged completion timestamp, null until processed. */
+  processedAt: string | null;
 }

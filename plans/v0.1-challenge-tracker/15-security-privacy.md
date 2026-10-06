@@ -18,9 +18,9 @@ Server-only owner projections include private text, not seeds; admin projections
 
 - [ ] Implement projection allowlists and authorization tests for every resource.
 - [ ] Implement owner export and authenticated erasure request with audited privileged execution, session revocation and deletion ledger.
-- [ ] Ensure same-day edits/corrections overwrite bodies without alternate application history.
-- [ ] Document seed access for developers only through controlled server diagnostics; no seed debug endpoint.
-- [ ] Publish retention/visibility explanations and prepare restore/incident procedures.
+- [x] Ensure same-day edits/corrections overwrite bodies without alternate application history.
+- [x] Document seed access for developers only through controlled server diagnostics; no seed debug endpoint.
+- [x] Document retention/visibility explanations and prepare restore/incident procedures.
 
 ## Acceptance criteria
 
@@ -30,6 +30,6 @@ Server-only owner projections include private text, not seeds; admin projections
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Restricted database application privileges, authenticated owner erasure requests, privileged graph erasure/session revocation and content-free deletion-ledger replay are implemented and tested with completed fictional accounts. Authentication/retention/operator separation is documented in `docs/authentication.md`. Owner export endpoints and browser visibility explanations remain adapter work. No broad operator CLI or public role-promotion endpoint is added. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.
