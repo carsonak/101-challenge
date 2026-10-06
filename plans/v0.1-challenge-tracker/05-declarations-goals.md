@@ -1,6 +1,6 @@
 # Initial goals and revisions
 
-Status: requirements accepted; feature implementation not started. Owner role: Goals owner.
+Status: local implementation verified; external release gates remain. Owner role: Goals owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,9 +16,9 @@ StartAttempt atomically saves initial goal/milestone revisions and seed inputs. 
 
 ## Implementation tasks
 
-- [ ] Implement setup draft in the UI; submit initial inputs once to create started attempt.
-- [ ] Implement active-attempt goal revisions and explicit template-copy on restart.
-- [ ] Reference applicable goal revisions from reports, preserving historical definitions.
+- [x] Implement setup draft in the UI; submit initial inputs once to create started attempt.
+- [x] Implement active-attempt goal revisions and explicit template-copy on restart.
+- [x] Reference applicable goal revisions from reports, preserving historical definitions.
 
 ## Acceptance criteria
 
@@ -28,6 +28,6 @@ StartAttempt atomically saves initial goal/milestone revisions and seed inputs. 
 
 ## Progress, risks and evolution
 
-Core lifecycle, setup/revisions, reporting/milestone locks, attempt-v1 seeds, streak credits, atomic completion and correction services are implemented. Deterministic unit tests and real PostgreSQL transaction/race tests provide domain evidence; browser/Discord integration and identity/privacy remain pending. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Core lifecycle, setup/revisions, reporting/milestone locks, attempt-v1 seeds, streak credits, atomic completion and correction services are implemented. Deterministic unit tests and real PostgreSQL transaction/race tests provide domain evidence; browser/Discord integration and identity/privacy are verified at F3. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

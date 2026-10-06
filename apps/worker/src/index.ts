@@ -2,7 +2,7 @@
  * @file Runs the worker queue connection and HTTP health service.
  * Use `pnpm dev:worker` during development or `pnpm start:worker` after building.
  * The commands load the root .env. When DATABASE_URL is configured, startup can
- * create queue tables and requires access to that database. Without it, liveness
+ * create queue tables and requires applied tracker migrations and database access. Without it, liveness
  * remains available but readiness returns 503. The listener uses WORKER_HOST and
  * WORKER_PORT; startup failures are reported with a nonzero exit status.
  * Opens long-lived connections and a listener, logs status/errors, and closes
@@ -13,14 +13,15 @@
 import { createServer } from "node:http";
 import { parseServerConfig } from "@challenge/contracts";
 import { readiness } from "@challenge/core";
-import { createDatabase } from "@challenge/db";
+import { createJobStore } from "@challenge/db";
+import { startJobs } from "./jobs.js";
 import { PgBoss } from "pg-boss";
 
 /** Start the configured queue connection and HTTP health listener. */
 async function main() {
   const config = parseServerConfig(process.env);
   const database = config.DATABASE_URL
-    ? createDatabase(config.DATABASE_URL)
+    ? createJobStore(config.DATABASE_URL)
     : undefined;
   const boss = config.DATABASE_URL
     ? new PgBoss({
@@ -29,14 +30,7 @@ async function main() {
       })
     : undefined;
   boss?.on("error", () => console.error("Worker queue unavailable"));
-  // Startup initializes only pg-boss infrastructure. Domain handlers follow F1/F2.
-  try {
-    await boss?.start();
-  } catch {
-    await database?.close();
-    await boss?.stop();
-    throw new Error("Worker queue startup failed");
-  }
+  let stopJobs: (() => Promise<void>) | undefined;
   const server = createServer(async (request, response) => {
     if (
       request.method !== "GET" ||
@@ -50,24 +44,24 @@ async function main() {
         ? { status: "ok", service: "worker" }
         : await readiness("worker", async () => {
             if (!database || !boss) throw new Error("Database not configured");
-            await database.probe();
+            await database.ready();
           });
     response.writeHead(result.status === "ok" ? 200 : 503, {
       "content-type": "application/json",
     });
     response.end(JSON.stringify(result));
   });
-  server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
-    console.info("Worker listening")
-  );
   let stopping = false;
+  let startup: Promise<void> | undefined;
   /** Close the listener and service connections once; exit unsuccessfully if cleanup exceeds its deadline. */
   async function shutdown() {
     if (stopping) return;
     stopping = true;
     const deadline = setTimeout(() => process.exit(1), 10000).unref();
+    await startup?.catch(() => {});
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await stopJobs?.();
     await boss?.stop();
     await database?.close();
     clearTimeout(deadline);
@@ -84,6 +78,25 @@ async function main() {
       process.exitCode = 1;
     });
   });
+  // Signal/listener cleanup exists before any handlers are registered.
+  startup = (async () => {
+    await database?.ready();
+    if (stopping) return;
+    await boss?.start();
+    if (stopping) return;
+    if (database && boss) stopJobs = await startJobs(boss, database);
+  })();
+  try {
+    await startup;
+  } catch {
+    await shutdown();
+    throw new Error("Worker queue startup failed");
+  }
+  if (!stopping) {
+    server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
+      console.info("Worker listening")
+    );
+  }
 }
 
 main().catch(() => {

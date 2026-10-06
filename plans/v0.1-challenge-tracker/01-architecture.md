@@ -1,6 +1,6 @@
 # Architecture
 
-Status: foundation implemented and verified; domain features not started. Owner role: Foundation owner.
+Status: foundation and integrated tracker verified locally. Owner role: Foundation owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -18,7 +18,7 @@ Clock and timezone ports belong in core; contracts contain Zod DTOs and typed er
 
 - [x] Create executable web/worker entrypoints, shared package exports, workspace checks and CI.
 - [x] Add local PostgreSQL/mail catcher, environment examples, production builds and health/readiness separation.
-- [ ] Freeze F1 contracts with fixtures; implement enroll/setup/report/progress vertical slice before wider adapter integration.
+- [x] Freeze F1 contracts with fixtures; implement enroll/setup/report/progress vertical slice before wider adapter integration.
 
 ## Acceptance criteria
 

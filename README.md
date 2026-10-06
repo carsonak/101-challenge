@@ -2,7 +2,7 @@
 
 A challenge tracker tailored for BitDevs Kisumu, with independent web accounts and optional Discord convenience features. Participants work toward 101 reporting days at their own pace.
 
-**Current state:** runnable foundation, shared contracts, transactional tracker and identity/privacy services. Browser/Discord adapters are still being implemented; no artwork runtime is included.
+**Current state:** local tracker with independent accounts, browser and signed Discord adapters, retained transactional history and retrying workers. No artwork runtime is included. Live providers, production email and deployment remain gated.
 
 ## Local setup
 
@@ -12,12 +12,13 @@ Requirements: Node 24.7 or newer within the Node 24 line, pnpm 12.9.1, Docker Co
 pnpm install --frozen-lockfile
 cp .env.example .env
 pnpm services:up
+pnpm database:migrate
 pnpm dev:web
 ```
 
 In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
 
-The web page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. Apply the tracked migrations with `pnpm database:migrate` using local schema-owner credentials. Auth provider settings may remain blank; no fake login or development authentication bypass is installed. See [authentication and privacy](docs/authentication.md) for runtime/operator role separation.
+The web landing page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. Apply the tracked migrations with `pnpm database:migrate` using local schema-owner credentials. Auth provider settings may remain blank; no fake login or development authentication bypass is installed. See [authentication and privacy](docs/authentication.md) for runtime/operator role separation.
 
 For concurrent checkouts use unique COMPOSE_PROJECT_NAME, POSTGRES_DB, POSTGRES_PORT, PORT, WORKER_PORT, QUEUE_SCHEMA and Mailpit ports in separate ignored `.env` files. Update DATABASE_URL to match that checkout's database and port. Never point smoke tests or experimental workers at participant databases.
 
@@ -31,7 +32,7 @@ For concurrent checkouts use unique COMPOSE_PROJECT_NAME, POSTGRES_DB, POSTGRES_
 | `pnpm format`                          | Format source and documentation                                                          |
 | `pnpm start:web` / `pnpm start:worker` | Run production builds with root `.env`                                                   |
 
-Run build before smoke/start. Without DATABASE_URL, smoke verifies readiness is unavailable; with an isolated database it verifies connectivity and worker queue initialization. CI supplies PostgreSQL and runs check, build and smoke. `GET /api/health` and worker `GET /health` are liveness; `/api/ready` and worker `/ready` require database connectivity. Future readiness also checks applied domain migrations.
+Run build before smoke/start. Without DATABASE_URL, smoke verifies readiness is unavailable; with an isolated database it verifies connectivity and worker queue initialization. Set TRACKER_TEST_DATABASE_URL to a disposable database ending in `_test` or `_ci` to run the transaction/adapter/worker suite; absent configuration explicitly skips those tests. CI supplies PostgreSQL, migrates it and runs the real suite, build and smoke. `GET /api/health` and worker `GET /health` are liveness; `/api/ready` and worker `/ready` require database connectivity. Readiness also requires all applied tracker migrations; the worker checks them before handlers start. See the [operations runbook](docs/operations.md).
 
 `apps/web` owns the browser/API adapters; `apps/worker` owns async execution. `packages/contracts` owns transport schemas, `packages/core` framework-independent services and `packages/db` persistence. Shared packages compile before app development; rerun their build after editing their sources. [Contributor guidance](CONTRIBUTING.md) describes coordination and verification.
 
@@ -57,6 +58,14 @@ Dependency choices were checked against official [Next.js installation](https://
 ## Foundation verification
 
 Verified on 2026-10-06 with Node 24.18.0 and pnpm 10.34.6: frozen-lockfile installation, `pnpm check`, production build, and web/worker smoke checks both without database configuration and against isolated PostgreSQL 17.11. Mailpit 1.31.2 health also passed. The web container image built from a clean dependency install, and both non-root web/worker entrypoints passed HTTP smoke checks using that image. These checks verify the skeleton only; feature acceptance tests remain unchecked in the plans. Live OAuth/email delivery and deployment were not configured or tested.
+
+## Local tracker verification
+
+F0–F3 verified with Node 24.18.0, pnpm 12.9.1 and PostgreSQL 17.11: `pnpm check` passed all 29 tests with no skips on a fresh disposable database, `pnpm build` passed, and built web/worker smoke passed both with migrated PostgreSQL and without database configuration. CI now enables the same real database suite instead of silently skipping integration tests.
+
+Production-browser checks with fictional accounts passed signup and local SMTP verification/recovery, login, custom setup, reporting/editing, stale-version text retention and focused errors, cancellation/resumption/restart, admin season/template controls, one-use correction issuance/redemption, owner export, keyboard navigation and mobile widths down to 320 pixels without horizontal overflow. Provider doubles verify actual Google JWT signatures/claims and Discord stable subjects; signed guild fixtures cover private modals, actor/expiry binding, retries and failed delivery. Isolated pg-boss checks cover two workers, queue outages, publish/mark recovery, deduplication, stale projections and housekeeping. Completed-account erasure removes new adapter/worker metadata and prevents replay from restoring it.
+
+These are local implementation checks. Live Google/Discord portals and guild registration, production sender delivery, staging load/pilot, hosted backups and a production restore remain unchecked external release gates. The [operations runbook](docs/operations.md) describes those boundaries; no deployment or artwork runtime is claimed.
 
 ## License and identity
 

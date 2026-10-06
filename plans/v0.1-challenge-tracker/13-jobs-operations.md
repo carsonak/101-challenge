@@ -1,6 +1,6 @@
 # Worker and operations
 
-Status: requirements accepted; feature implementation not started. Owner role: Operations owner.
+Status: local implementation verified; external release gates remain. Owner role: Operations owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,10 +16,10 @@ Events contain eventId/type/schemaVersion/aggregateId/sourceVersion/occurredAt a
 
 ## Implementation tasks
 
-- [ ] Build worker lifecycle, database readiness and shutdown before registering handlers.
-- [ ] Add outbox publisher, retry/backoff limits and terminal failure inspection.
-- [ ] Implement idempotent housekeeping and projection checks; keep completion synchronous.
-- [ ] Write redaction, restore/deletion-ledger and incident runbooks.
+- [x] Build worker lifecycle, database readiness and shutdown before registering handlers.
+- [x] Add outbox publisher, retry/backoff limits and terminal failure inspection.
+- [x] Implement idempotent housekeeping and projection checks; keep completion synchronous.
+- [x] Write redaction, restore/deletion-ledger and incident runbooks.
 
 ## Acceptance criteria
 
@@ -29,6 +29,6 @@ Events contain eventId/type/schemaVersion/aggregateId/sourceVersion/occurredAt a
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Migration 4 adds delivery leases, receipt deduplication and content-free current projections. Real isolated PostgreSQL/pg-boss tests cover queue outages, publish-before-mark crashes, duplicate receipt processing, stale source events, repeated housekeeping and two workers. Application readiness requires all migrations; worker cleanup is installed before registering handlers. Erasure tests remove forms/projections/receipts and ignore a subsequently replayed erased event. Redaction, retention, terminal inspection and restore/incident procedures are in `docs/operations.md`; production restore infrastructure remains an external gate.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

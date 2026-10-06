@@ -29,7 +29,11 @@ export function createDatabase(connectionString: string) {
      * Await completion; rejects if the database cannot respond successfully.
      */
     async probe() {
-      await pool.query("select 1");
+      const result = await pool.query(
+        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4)"
+      );
+      if (result.rows[0]?.count !== 4)
+        throw new Error("Tracker migrations required");
     },
     /** Release this handle's database connections; await during cleanup and do not reuse afterward. */
     async close() {
@@ -39,3 +43,5 @@ export function createDatabase(connectionString: string) {
 }
 
 export * from "./repository.js";
+
+export * from "./jobs.js";

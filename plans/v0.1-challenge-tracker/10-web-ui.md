@@ -1,6 +1,6 @@
 # Browser flows
 
-Status: requirements accepted; feature implementation not started. Owner role: Web owner.
+Status: local implementation verified; external release gates remain. Owner role: Web owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,10 +16,10 @@ Routes: /login, /signup, /account, /seasons, /seasons/[id], /challenge/[enrollme
 
 ## Implementation tasks
 
-- [ ] Build accessible setup, optional template selection, reports and same-day editing.
-- [ ] Add goal/milestone revision views, cancellation/resume and retained restart confirmation.
-- [ ] Add email verification/recovery, OAuth/linking and account settings.
-- [ ] Add admin season/template controls and correction-key issuance/revocation; user key redemption.
+- [x] Build accessible setup, optional template selection, reports and same-day editing.
+- [x] Add goal/milestone revision views, cancellation/resume and retained restart confirmation.
+- [x] Add email verification/recovery, OAuth/linking and account settings.
+- [x] Add admin season/template controls and correction-key issuance/revocation; user key redemption.
 
 ## Acceptance criteria
 
@@ -29,6 +29,6 @@ Routes: /login, /signup, /account, /seasons, /seasons/[id], /challenge/[enrollme
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Browser routes implement the participant/account/admin flows with explicit confirmations, retained revisions and owner corrections. Production-browser checks passed local SMTP verification/recovery, signup/login, custom setup, reports and edits, conflict text retention and focused errors, cancel/resume/restart, admin season/template/grant controls, owner key redemption, private export and keyboard/mobile interaction. Provider buttons remain configuration-dependent; live provider delivery and deployment are separate gates.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

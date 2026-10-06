@@ -130,6 +130,23 @@ export function createRepository(
     statement_timeout: 10000,
   });
   pool.on("error", () => console.error("Tracker database unavailable"));
+  /** Execute adapter metadata access under the same restricted application role. */
+  async function adapterQuery(text: string, values: unknown[]) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      if (applicationRole)
+        await client.query("SET LOCAL ROLE challenge_tracker_app");
+      const result = await client.query(text, values);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
   const repository: Repository = {
     async transaction<T>(
       callback: (tx: Transaction) => Promise<T>
@@ -158,6 +175,58 @@ export function createRepository(
   return {
     /** Transaction owner to inject into the framework-independent tracker service. */
     repository,
+    /** Recover the original enrollment version for a duplicate signed resume interaction without reading its private hash. */
+    async resumeVersion(userId: string, key: string, enrollmentId: string) {
+      const row = (
+        await adapterQuery(
+          `SELECT version FROM replays WHERE "userId"=$1 AND command='ResumeEnrollment' AND key=$2 AND "resourceId"=$3 AND "expiresAt">now()`,
+          [userId, key, enrollmentId]
+        )
+      ).rows[0];
+      return row ? Number(row.version) - 1 : undefined;
+    },
+    /** Create a ten-minute actor-bound interaction form with resource/version metadata only. */
+    async interactionForm(input: {
+      userId: string;
+      kind: "setup" | "update" | "edit" | "cancel" | "restart";
+      resourceId: string;
+      version: number;
+      enrollmentId: string;
+      enrollmentVersion: number;
+    }) {
+      const id = randomUUID();
+      await adapterQuery(
+        `INSERT INTO adapter_confirmations VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '10 minutes')`,
+        [
+          id,
+          input.userId,
+          input.kind,
+          input.resourceId,
+          input.version,
+          input.enrollmentId,
+          input.enrollmentVersion,
+        ]
+      );
+      return id;
+    },
+    /** Resolve only an unexpired form owned by the authenticated actor; submitted bodies remain transient. */
+    async interactionContext(id: string, userId: string) {
+      return (
+        await adapterQuery(
+          'SELECT * FROM adapter_confirmations WHERE id=$1 AND "userId"=$2 AND "expiresAt">now()',
+          [id, userId]
+        )
+      ).rows[0] as
+        | {
+            id: string;
+            kind: "setup" | "update" | "edit" | "cancel" | "restart";
+            resourceId: string;
+            version: number;
+            enrollmentId: string;
+            enrollmentVersion: number;
+          }
+        | undefined;
+    },
     /** Apply the initial migration once under a database advisory lock; requires schema ownership. */
     async migrate() {
       if (applicationRole)
@@ -174,6 +243,8 @@ export function createRepository(
         for (const [version, file] of [
           [1, "0001_tracker.sql"],
           [2, "0002_identity.sql"],
+          [3, "0003_adapters.sql"],
+          [4, "0004_jobs.sql"],
         ] as const) {
           if (
             !(

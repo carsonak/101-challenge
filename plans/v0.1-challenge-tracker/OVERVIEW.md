@@ -1,6 +1,6 @@
 # v0.1 implementation overview
 
-Baseline: 2026-10-06. Contracts, transactional domain and identity/privacy services implemented; browser/Discord and worker integration pending. The repository foundation is tracked separately in the root README. [Domain rules](../../docs/domain.md) are authoritative.
+Baseline: 2026-10-06. Contracts, transactional domain, identity/privacy, browser/Discord adapters and workers implemented; F0–F3 verified locally; live release gates remain. The repository foundation is tracked separately in the root README. [Domain rules](../../docs/domain.md) are authoritative.
 
 ## Dependency gates
 
@@ -31,7 +31,7 @@ The integration owner coordinates contracts/migrations. Role names are responsib
 - [x] F0 foundation: frozen installation, workspace checks, production build, PostgreSQL/Mailpit startup and web/worker smoke verified; see [root evidence](../../README.md#foundation-verification).
 - [x] F1 command/schema implementation, lifecycle matrix, fictional fixtures and boundary review.
 - [x] F2 domain/identity/privacy services with clean PostgreSQL migrations and real transaction/race tests.
-- [ ] F3 browser/Discord parity, live local mail, worker retries and integration smoke tests.
+- [x] F3 browser/Discord parity, live local mail, worker retries and integration smoke tests; see [local evidence](../../README.md#local-tracker-verification).
 - [ ] External service gates, pilot, restore and release.
 
 Risks: safe account linking, cross-season slot races, same-day 101st-report edits, hidden seed leakage, expiring grant races, and artwork source sufficiency. Tests must cover these before dependent releases. Each component records actual evidence when implemented; no checked planning task implies working application code.

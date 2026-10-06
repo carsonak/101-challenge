@@ -13,7 +13,7 @@ import {
   verifyPassword,
   type AuthMail,
 } from "../packages/core/src/index.js";
-import { createRepository } from "../packages/db/src/index.js";
+import { createRepository, createJobStore } from "../packages/db/src/index.js";
 
 /** Explicit test target; real participant databases are rejected. */
 const url = process.env.TRACKER_TEST_DATABASE_URL;
@@ -320,6 +320,7 @@ test(
   { skip: !url },
   async () => {
     const f = await fixture();
+    const jobs = createJobStore(required(url));
     try {
       const owner = await f.signup(),
         actor = await f.auth.authenticate(owner.token);
@@ -401,6 +402,35 @@ test(
       } finally {
         await app.close();
       }
+      const event = required(
+        (
+          await f.db.repository.transaction((tx) =>
+            tx.list("outbox", { aggregateId: started.resourceId })
+          )
+        )
+          .sort((a, b) => b.sourceVersion - a.sourceVersion)
+          .at(0)
+      );
+      await jobs.process({
+        eventId: event.id,
+        type: event.type,
+        schemaVersion: 1,
+        aggregateId: event.aggregateId,
+        sourceVersion: event.sourceVersion,
+        occurredAt: event.occurredAt,
+      });
+      assert.equal(
+        required(await jobs.projection(started.resourceId)).reportingDays,
+        101
+      );
+      const form = await f.db.interactionForm({
+        userId: actor.userId,
+        kind: "edit",
+        resourceId: started.resourceId,
+        version: 0,
+        enrollmentId: enrollment.resourceId,
+        enrollmentVersion: 0,
+      });
       const request = await f.auth.execute(
         { action: "request_erasure", confirmed: true },
         owner.token,
@@ -412,6 +442,22 @@ test(
         code: "42501",
       });
       await f.db.eraseAccount(actor.userId, requestId);
+      assert.equal(await jobs.projection(started.resourceId), undefined);
+      assert.equal(
+        await f.db.interactionContext(form, actor.userId),
+        undefined
+      );
+      assert.equal(
+        await jobs.process({
+          eventId: event.id,
+          type: event.type,
+          schemaVersion: 1,
+          aggregateId: event.aggregateId,
+          sourceVersion: event.sourceVersion,
+          occurredAt: event.occurredAt,
+        }),
+        "ignored"
+      );
       await assert.rejects(f.auth.authenticate(owner.token), {
         code: "UNAUTHENTICATED",
       });
@@ -452,6 +498,7 @@ test(
         actor.userId
       );
     } finally {
+      await jobs.close();
       await f.db.close();
     }
   }

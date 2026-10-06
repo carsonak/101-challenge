@@ -297,6 +297,8 @@ export const ownerReportSchema = z.strictObject({
   reportingIndex: z.number().int().min(1).max(101),
   body,
   goalValues,
+  /** Revision identifiers frozen when this reporting day was accepted. */
+  applicableGoalRevisionIds: z.array(resourceId).max(20).default([]),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   version,

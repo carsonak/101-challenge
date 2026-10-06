@@ -1,6 +1,6 @@
 # Verification and release evidence
 
-Status: requirements accepted; feature implementation not started. Owner role: Test/integration owner.
+Status: local implementation verified; external release gates remain. Owner role: Test/integration owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,10 +16,10 @@ Use deterministic clocks, fictional participants and actual PostgreSQL for const
 
 ## Implementation tasks
 
-- [ ] Run workspace install/type/lint/unit/build and web/worker smoke checks for foundation.
-- [ ] Add two-connection races for season slot, completion/restart, milestone/report, correction expiry and one-use keys.
-- [ ] Test email and OAuth linking, cookie CSRF, signed Discord fixtures and adapter parity.
-- [ ] Verify admin/private/public DTO boundaries, same-day final-report editing, retained history and rollback.
+- [x] Run workspace install/type/lint/unit/build and web/worker smoke checks for foundation.
+- [x] Add two-connection races for season slot, completion/restart, milestone/report, correction expiry and one-use keys.
+- [x] Test email and OAuth linking, cookie CSRF, signed Discord fixtures and adapter parity.
+- [x] Verify admin/private/public DTO boundaries, same-day final-report editing, retained history and rollback.
 - [ ] Perform live provider smoke tests, staging load trial (100 participants/10 concurrent writes), restore and erasure replay before release.
 
 ## Acceptance criteria
@@ -30,6 +30,6 @@ Use deterministic clocks, fictional participants and actual PostgreSQL for const
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+The complete local suite passes 29 tests with PostgreSQL enabled and no skips. Coverage includes clean migrations, slots/restart/completion/milestone/one-use races, exact grant/proof expiry boundaries, sparse 101 dates, final-day editing, retained facts/history, rollback, independent authentication/linking, cookie CSRF, provider proof validation, signed guild parity, privacy/erasure and worker recovery. Production-browser verification uses fictional accounts and a separate local SMTP catcher. Worker maintenance/retry scenarios each create and remove a separate disposable database. Final production build/smoke evidence is recorded in the root README. Live provider/load/production restore checks remain unchecked.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

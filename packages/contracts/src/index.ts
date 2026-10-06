@@ -29,6 +29,23 @@ const databaseUrl = z.preprocess(
 );
 /** Server settings and defaults accepted during service configuration. */
 const envSchema = z.object({
+  /** Canonical browser origin for CSRF and exact OAuth callback allowlists. */
+  APP_ORIGIN: z.url().default("http://localhost:3000"),
+  /** Local Mailpit or verified sender transport; never send SMTP settings to a browser. */
+  SMTP_HOST: z.string().min(1).default("127.0.0.1"),
+  /** SMTP listener port; local Mailpit defaults to 1025. */
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  /** Sender address; a verified production sender belongs to the email release gate. */
+  SMTP_FROM: z.email().default("challenge@example.invalid"),
+  /** Optional authenticated SMTP username. */
+  SMTP_USER: optionalString,
+  /** Optional authenticated SMTP password; keep server-side. */
+  SMTP_PASSWORD: optionalString,
+  /** Use implicit TLS for port 465; STARTTLS otherwise protects non-loopback transport. */
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   /** Display name for server-rendered application branding. */
   APP_DISPLAY_NAME: z
     .string()
@@ -82,6 +99,18 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     );
   }
   const env = result.data;
+  const origin = new URL(env.APP_ORIGIN);
+  if (
+    origin.origin !== env.APP_ORIGIN ||
+    !/^https?:$/.test(origin.protocol) ||
+    origin.username ||
+    origin.password ||
+    (origin.protocol !== "https:" &&
+      !["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname))
+  )
+    throw new Error("Invalid application origin");
+  if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD))
+    throw new Error("Incomplete SMTP configuration");
   /** Return whether a provider is fully configured; reject partial configuration. */
   function provider(name: string, values: (string | undefined)[]) {
     const configured = values.filter(Boolean).length;
@@ -100,10 +129,16 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     env.DISCORD_CLIENT_SECRET,
     env.DISCORD_REDIRECT_URI,
   ]);
-  for (const uri of [env.GOOGLE_REDIRECT_URI, env.DISCORD_REDIRECT_URI]) {
+  for (const [providerName, uri] of [
+    ["google", env.GOOGLE_REDIRECT_URI],
+    ["discord", env.DISCORD_REDIRECT_URI],
+  ] as const) {
     if (uri) {
       const parsed = z.url().safeParse(uri);
-      if (!parsed.success || !/^https?:\/\//.test(uri))
+      if (
+        !parsed.success ||
+        uri !== `${env.APP_ORIGIN}/api/auth/${providerName}/callback`
+      )
         throw new Error("Invalid OAuth redirect URI");
     }
   }

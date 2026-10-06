@@ -18,10 +18,19 @@ export default function Home() {
         the community.
       </p>
       <section aria-labelledby="status">
-        <h2 id="status">Getting ready</h2>
+        <h2 id="status">Make a little progress, one report at a time</h2>
         <p>
-          The challenge tracker is under development. Account creation and
-          challenge enrollment will be available in a future update.
+          Join a published season, choose your goals, and record 101 reporting
+          days. Your reports and retained history stay private.
+        </p>
+        <p>
+          <a className="button" href="/seasons">
+            Explore seasons
+          </a>{" "}
+          <a className="button secondary" href="/signup">
+            Create account
+          </a>{" "}
+          <a href="/login">Sign in</a>
         </p>
       </section>
     </main>

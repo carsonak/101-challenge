@@ -14,11 +14,14 @@
     "@challenge/contracts": "workspace:*",
     "@challenge/core": "workspace:*",
     "@challenge/db": "workspace:*",
+    "jose": "6.2.12",
     "next": "16.3.8",
+    "nodemailer": "10.0.15",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@types/nodemailer": "8.0.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.2.3"
   }

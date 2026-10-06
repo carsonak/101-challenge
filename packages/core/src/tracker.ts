@@ -891,6 +891,15 @@ export function createTracker(
             hasCompleted: e.hasCompleted,
             version: e.version,
           }),
+          completion:
+            (await tx.list("entitlements", { enrollmentId: e.id })).map(
+              (entitlement) => ({
+                id: entitlement.id,
+                attemptId: entitlement.attemptId,
+                completedAt: entitlement.completedAt,
+                reportingDates: entitlement.reportingDates,
+              })
+            )[0] ?? null,
           attempts: await mapInOrder(
             await tx.list("attempts", { enrollmentId: e.id }),
             async (a) => {
@@ -920,6 +929,7 @@ export function createTracker(
                   version: a.version,
                 }),
                 startedAt: a.startedAt,
+                today: reportingDate(clock(), e.timezone ?? "UTC"),
                 goals: await tx.list("goals", { attemptId: a.id }),
                 goalRevisions: await tx.list("goal_revisions", {
                   attemptId: a.id,
@@ -938,6 +948,7 @@ export function createTracker(
                     reportingIndex: r.reportingIndex,
                     body: r.body,
                     goalValues: r.goalValues,
+                    applicableGoalRevisionIds: r.applicableGoalRevisionIds,
                     createdAt: r.createdAt,
                     updatedAt: r.updatedAt,
                     version: r.version,
@@ -954,6 +965,49 @@ export function createTracker(
       return repository.transaction(async (tx) => {
         requireRule((await actor(tx, userId)).admin, "FORBIDDEN");
         return {
+          attempts: await mapInOrder(
+            await tx.list("attempts", {}),
+            async (a) => {
+              const owner = await tx.get("enrollments", a.enrollmentId);
+              requireRule(owner, "NOT_FOUND");
+              const reports = await tx.list("reports", { attemptId: a.id });
+              const run = streaks(
+                reports.map((r) => r.reportingDate),
+                reportingDate(clock(), owner.timezone ?? "UTC")
+              );
+              return {
+                id: a.id,
+                enrollmentId: a.enrollmentId,
+                status: a.status,
+                mode: a.mode,
+                startedAt: a.startedAt,
+                createdAt: a.createdAt,
+                updatedAt: a.updatedAt,
+                reportingDays: reports.length,
+                currentStreak: run.current,
+                longestStreak: run.longest,
+                selectedPerks: ["streak_reroll"],
+                rerollCredits: (
+                  await tx.list("credits", { attemptId: a.id, expired: false })
+                ).length,
+              };
+            }
+          ),
+          goals: (await tx.list("goals", {})).map((g) => ({
+            id: g.id,
+            attemptId: g.attemptId,
+            createdAt: g.createdAt,
+            updatedAt: g.updatedAt,
+            archived: g.archived,
+          })),
+          milestones: (await tx.list("milestones", {})).map((m) => ({
+            id: m.id,
+            attemptId: m.attemptId,
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt,
+            archived: m.archived,
+            locked: m.locked,
+          })),
           reports: (await tx.list("reports", {})).map((r) =>
             adminReportSchema.parse({
               id: r.id,

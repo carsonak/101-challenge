@@ -21,7 +21,8 @@
   "dependencies": {
     "drizzle-orm": "0.45.3",
     "pg": "8.23.1",
-    "@challenge/core": "workspace:*"
+    "@challenge/core": "workspace:*",
+    "@challenge/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "8.23.1"

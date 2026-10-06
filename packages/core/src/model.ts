@@ -230,6 +230,10 @@ export interface Outbox extends Row {
   publishedAt: string | null;
   /** Persisted deliveries for this record. */
   deliveries: number;
+  /** Worker lease expiry; absent on freshly inserted domain events. */
+  leasedUntil?: string | null;
+  /** Safe failure timestamp without exception content. */
+  lastFailureAt?: string | null;
 }
 /** Content-free audit record. */
 export interface Audit extends Row {

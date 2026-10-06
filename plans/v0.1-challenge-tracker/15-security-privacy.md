@@ -1,6 +1,6 @@
 # Security, privacy and administrative grants
 
-Status: requirements accepted; feature implementation not started. Owner role: Security owner.
+Status: local implementation verified; external release gates remain. Owner role: Security owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,8 +16,8 @@ Server-only owner projections include private text, not seeds; admin projections
 
 ## Implementation tasks
 
-- [ ] Implement projection allowlists and authorization tests for every resource.
-- [ ] Implement owner export and authenticated erasure request with audited privileged execution, session revocation and deletion ledger.
+- [x] Implement projection allowlists and authorization tests for every resource.
+- [x] Implement owner export and authenticated erasure request with audited privileged execution, session revocation and deletion ledger.
 - [x] Ensure same-day edits/corrections overwrite bodies without alternate application history.
 - [x] Document seed access for developers only through controlled server diagnostics; no seed debug endpoint.
 - [x] Document retention/visibility explanations and prepare restore/incident procedures.
@@ -30,6 +30,6 @@ Server-only owner projections include private text, not seeds; admin projections
 
 ## Progress, risks and evolution
 
-Restricted database application privileges, authenticated owner erasure requests, privileged graph erasure/session revocation and content-free deletion-ledger replay are implemented and tested with completed fictional accounts. Authentication/retention/operator separation is documented in `docs/authentication.md`. Owner export endpoints and browser visibility explanations remain adapter work. No broad operator CLI or public role-promotion endpoint is added. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Projection allowlists, owner export, recent-authenticated erasure requests, restricted runtime privileges and privileged deletion-ledger replay are implemented and verified. Completed-account erasure also removes the new actor-bound forms, outbox receipts and source projections; replayed erased events are ignored. Browser account/retention explanations, no-store queries and no-referrer headers are implemented. Runbooks live in `docs/authentication.md` and `docs/operations.md`. No broad operator CLI or public role-promotion endpoint is included; live provisioning remains an external gate.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

@@ -19,6 +19,7 @@ jobs:
           --health-interval 2s --health-timeout 3s --health-retries 30
     env:
       DATABASE_URL: postgresql://challenge:ci_only@127.0.0.1:5432/challenge_ci
+      TRACKER_TEST_DATABASE_URL: postgresql://challenge:ci_only@127.0.0.1:5432/challenge_ci
       QUEUE_SCHEMA: pgboss_ci
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
@@ -29,6 +30,7 @@ jobs:
           node-version: "24"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm database:migrate
       - run: pnpm check
       - run: pnpm build
       - run: pnpm smoke

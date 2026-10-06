@@ -1,6 +1,6 @@
 # Seasons and enrollment
 
-Status: requirements accepted; feature implementation not started. Owner role: Lifecycle owner.
+Status: local implementation verified; external release gates remain. Owner role: Lifecycle owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,10 +16,10 @@ Season states draft/published; published seasons remain enrollable, including pa
 
 ## Implementation tasks
 
-- [ ] Implement admin publish/featured/template changes with metadata audit.
-- [ ] Implement enroll/start/cancel/resume and slot transfer rules with user-first locking.
-- [ ] Present optional recommended plan or custom goals; freeze enrollment timezone on first start.
-- [ ] Provide owner history and metadata-only admin queries.
+- [x] Implement admin publish/featured/template changes with metadata audit.
+- [x] Implement enroll/start/cancel/resume and slot transfer rules with user-first locking.
+- [x] Present optional recommended plan or custom goals; freeze enrollment timezone on first start.
+- [x] Provide owner history and metadata-only admin queries.
 
 ## Acceptance criteria
 
@@ -29,6 +29,6 @@ Season states draft/published; published seasons remain enrollable, including pa
 
 ## Progress, risks and evolution
 
-Core lifecycle, setup/revisions, reporting/milestone locks, attempt-v1 seeds, streak credits, atomic completion and correction services are implemented. Deterministic unit tests and real PostgreSQL transaction/race tests provide domain evidence; browser/Discord integration and identity/privacy remain pending. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Core lifecycle, setup/revisions, reporting/milestone locks, attempt-v1 seeds, streak credits, atomic completion and correction services are implemented. Deterministic unit tests and real PostgreSQL transaction/race tests provide domain evidence; browser/Discord integration and identity/privacy are verified at F3. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

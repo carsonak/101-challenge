@@ -149,6 +149,8 @@ export const columns = {
     occurredAt: "instant",
     publishedAt: "instant?",
     deliveries: "integer",
+    leasedUntil: "instant?",
+    lastFailureAt: "instant?",
   },
   audit: {
     id: "uuid",

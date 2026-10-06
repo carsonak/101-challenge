@@ -1,6 +1,6 @@
 # Data model
 
-Status: requirements accepted; feature implementation not started. Owner role: Database/integration owner.
+Status: local implementation verified; external release gates remain. Owner role: Database/integration owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 

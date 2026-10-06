@@ -14,7 +14,7 @@ Consult [architecture decisions](docs/adr/README.md) and [domain rules](docs/dom
 | `packages/core`      | Authorization and domain services                   |
 | `packages/db`        | Database schema, repositories, and migrations       |
 
-The runnable foundation implements these package boundaries; domain features remain planned. Inspect the active checkout's manifests, configuration, component documentation, and CI for setup and verification commands. Check official documentation when selecting dependency versions or implementing external protocols.
+The local tracker implements these package boundaries; live service and release evidence remains gated. Inspect the active checkout's manifests, configuration, component documentation, and CI for setup and verification commands. Check official documentation when selecting dependency versions or implementing external protocols.
 
 Adapters authenticate and validate; domain services authorize and enforce lifecycle rules; repositories persist. Coordinate shared contracts and migration changes before dependent work, and review their combined effect during integration. Domain services must remain independent of web and Discord framework types.
 

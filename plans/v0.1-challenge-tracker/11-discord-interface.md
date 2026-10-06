@@ -1,6 +1,6 @@
 # Discord guild convenience adapter
 
-Status: requirements accepted; feature implementation not started. Owner role: Discord owner.
+Status: local implementation verified; external release gates remain. Owner role: Discord owner.
 
 See [overview and gates](OVERVIEW.md), [domain rules](../../docs/domain.md) and [component index](README.md).
 
@@ -16,9 +16,9 @@ Commands cover join/setup/update/edit/progress/goals/milestones/streak/perks/sea
 
 ## Implementation tasks
 
-- [ ] Define command payloads/response fixtures; validate against current official Discord protocol.
-- [ ] Implement signed fixture tests, private modals and actor-bound expiring confirmations.
-- [ ] Defer slow responses within official deadlines; delivery failure cannot undo domain success.
+- [x] Define command payloads/response fixtures; validate against current official Discord protocol.
+- [x] Implement signed fixture tests, private modals and actor-bound expiring confirmations.
+- [x] Defer slow responses within official deadlines; delivery failure cannot undo domain success.
 - [ ] After portal setup register guild commands and perform live signature/OAuth smoke tests.
 
 ## Acceptance criteria
@@ -29,6 +29,6 @@ Commands cover join/setup/update/edit/progress/goals/milestones/streak/perks/sea
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Signed guild fixtures validate the current official interaction protocol, private deferred replies/modals, forged/stale signature rejection, DM rejection, expired and cross-account form rejection, command parity and duplicate report/setup/resume delivery. Failed private delivery leaves domain success intact. A duplicate signed resume reuses its original version. Actor-bound form metadata is migration 3; no report bodies or interaction tokens are retained there. The command manifest is exported without remote registration. Live guild installation remains E-Discord.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.
