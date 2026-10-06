@@ -1,0 +1,30 @@
+{
+  "fixtureOnly": true,
+  "seedVersion": "attempt-v1",
+  "seasonSeed": "2222222222222222222222222222222222222222222222222222222222222222",
+  "initial": {
+    "version": 1,
+    "participantSeed": "1111111111111111111111111111111111111111111111111111111111111111",
+    "startedAt": "2026-10-06T06:00:00.000Z",
+    "goals": [
+      {
+        "title": "Study Bitcoin",
+        "description": null,
+        "metricKind": "duration",
+        "unit": "minutes",
+        "target": "30"
+      }
+    ],
+    "milestones": [
+      {
+        "title": "Explain a transaction",
+        "description": null,
+        "targetReportingDay": 7,
+        "goalIndex": 0
+      }
+    ]
+  },
+  "canonicalInitialJSON": "{\"goals\":[{\"description\":null,\"metricKind\":\"duration\",\"target\":\"30\",\"title\":\"Study Bitcoin\",\"unit\":\"minutes\"}],\"milestones\":[{\"description\":null,\"goalIndex\":0,\"targetReportingDay\":7,\"title\":\"Explain a transaction\"}],\"participantSeed\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"startedAt\":\"2026-10-06T06:00:00.000Z\",\"version\":1}",
+  "initialInputDigest": "3229161be25bf044d5677cda5d308fbd6a26bc2e6c862c9e562277992807b5a7",
+  "baseSeed": "3107d8f90908ed53b62623bde3c0f8b7bf3ff1f34162a8ba4a3bbff6647d6030"
+}
