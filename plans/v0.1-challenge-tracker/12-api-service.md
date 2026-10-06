@@ -16,7 +16,7 @@ Commands: StartAttempt, Enroll, CancelEnrollment, ResumeEnrollment, RestartAttem
 
 ## Implementation tasks
 
-- [ ] Implement Zod schemas, safe result DTOs and deterministic fictional fixtures before adapter work.
+- [x] Implement Zod command schemas, safe result/owner/admin DTOs and deterministic fictional fixtures before adapter work.
 - [ ] Use actor+command+idempotency key with request hash and safe result reference in same transaction; default 30-day retention.
 - [ ] Reauthorize replay; mismatched payload rejects; never store raw text in replay records/outbox.
 - [ ] Implement stable cursor pagination, CSRF for cookie mutations, payload/rate limits and version conflicts.
@@ -29,6 +29,6 @@ Commands: StartAttempt, Enroll, CancelEnrollment, ResumeEnrollment, RestartAttem
 
 ## Progress, risks and evolution
 
-No feature implementation evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+F1 command registry covers all planned v0.1 tracker mutations. Safe result references, metadata events, owner/admin projections, private source schema and deterministic fixtures are implemented; the lifecycle matrix is in `docs/lifecycle.md`. Workspace checks and production build validate the package boundary. Transactional replay, pagination, adapters and domain enforcement remain F2/F3 work. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.
