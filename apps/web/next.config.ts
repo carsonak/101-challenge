@@ -1,7 +1,7 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const config: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ['pg'],
+  serverExternalPackages: ["pg"],
 };
 export default config;

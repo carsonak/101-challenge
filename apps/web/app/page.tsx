@@ -1,6 +1,6 @@
-import { parseServerConfig } from '@challenge/contracts';
+import { parseServerConfig } from "@challenge/contracts";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   const { APP_DISPLAY_NAME } = parseServerConfig(process.env);
