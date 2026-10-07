@@ -12,10 +12,13 @@
 
 import { createServer } from "node:http";
 import { parseServerConfig } from "@challenge/contracts";
-import { readiness, logBackend } from "@challenge/core";
+import { readiness, logBackend, type BackendDetails } from "@challenge/core";
 import { createJobStore } from "@challenge/db";
 import { startJobs } from "./jobs.js";
 import { PgBoss } from "pg-boss";
+
+/** Current startup operation, retained for failures before cleanup. */
+let startupStage: BackendDetails["stage"] = "configuration";
 
 /** Start the configured queue connection and HTTP health listener. */
 async function main() {
@@ -82,17 +85,22 @@ async function main() {
   });
   // Signal/listener cleanup exists before any handlers are registered.
   startup = (async () => {
+    startupStage = "database_readiness";
     await database?.ready();
     if (stopping) return;
+    startupStage = "queue_start";
     await boss?.start();
     if (stopping) return;
+    startupStage = "job_registration";
     if (database && boss) stopJobs = await startJobs(boss, database);
   })();
   try {
     await startup;
   } catch (error) {
+    logBackend("worker", "startup_failed", { stage: startupStage }, error);
     await shutdown();
-    throw error;
+    process.exitCode = 1;
+    return;
   }
   if (!stopping) {
     server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
@@ -102,6 +110,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  logBackend("worker", "startup_failed", {}, error);
+  logBackend("worker", "startup_failed", { stage: startupStage }, error);
   process.exitCode = 1;
 });

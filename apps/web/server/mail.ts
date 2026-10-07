@@ -75,7 +75,10 @@ export function createMailer(
         logBackend(
           "web",
           "mail_failed",
-          { durationMs: performance.now() - started },
+          {
+            durationMs: performance.now() - started,
+            redact: [mail.recipient, mail.token, config.SMTP_PASSWORD ?? ""],
+          },
           error
         );
         throw error;

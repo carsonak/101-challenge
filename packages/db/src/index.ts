@@ -33,7 +33,9 @@ export function createDatabase(connectionString: string) {
         "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4,5,6)"
       );
       if (result.rows[0]?.count !== 6)
-        throw new Error("Tracker migrations required");
+        throw Object.assign(new Error("Tracker migrations required"), {
+          code: "MIGRATIONS_REQUIRED",
+        });
     },
     /** Release this handle's database connections; await during cleanup and do not reuse afterward. */
     async close() {

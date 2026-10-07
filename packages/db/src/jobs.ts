@@ -22,7 +22,9 @@ export function createJobStore(
         "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4,5,6)"
       );
       if (r.rows[0]?.count !== 6)
-        throw new Error("Tracker migrations required");
+        throw Object.assign(new Error("Tracker migrations required"), {
+          code: "MIGRATIONS_REQUIRED",
+        });
     },
     /** Claim pending events with leases; publish failures retain metadata and bounded backoff. */
     async publish(publish: (event: Event) => Promise<void>) {

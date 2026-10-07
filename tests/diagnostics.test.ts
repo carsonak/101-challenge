@@ -1,4 +1,4 @@
-/** @file Verifies backend diagnostics cannot serialize private requests or error content. */
+/** @file Verifies backend diagnostics cannot serialize private requests while preserving operator exception details. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -80,7 +80,7 @@ test("HTTP diagnostics correlate safe client errors and never trust a supplied r
       body: "private report",
     }),
     async (recordError) => {
-      recordError({ code: "FORBIDDEN", message: "private email" });
+      recordError({ code: "FORBIDDEN", message: "private@example.test" });
       return Response.json({ code: "FORBIDDEN" }, { status: 403 });
     }
   );
@@ -149,5 +149,49 @@ test("Unexpected API database errors produce a correlated 503 diagnostic and saf
   assert.equal(record.errorCode, "42P01");
   assert.equal(record.requestId, response.headers.get("x-request-id"));
   assert.equal(record.route, "/api/v1/seasons");
-  assert.ok(!lines.join().includes("private"));
+  assert.equal(record.error.message, "private SQL and report");
+  assert.match(record.error.stack, /diagnostics.test/);
+});
+
+test("Startup diagnostics expose nested failures and safe recovery hints", () => {
+  const secret = "postgres://private:password@example.test/private";
+  const connection = Object.assign(new Error(secret), { code: "ECONNREFUSED" });
+  const errors: unknown[] = [connection];
+  const aggregate = new AggregateError(errors, secret);
+  errors.push(aggregate);
+  const lines: string[] = [];
+  logBackend(
+    "worker",
+    "startup_failed",
+    { stage: "database_readiness" },
+    new Error(secret, { cause: aggregate }),
+    (line) => lines.push(line)
+  );
+  const record = JSON.parse(required(lines[0]));
+  assert.equal(record.errorCode, "ECONNREFUSED");
+  assert.equal(record.stage, "database_readiness");
+  assert.match(record.hint, /pnpm services:up/);
+  assert.ok(!lines.join().includes(secret));
+  logBackend(
+    "worker",
+    "startup_failed",
+    { stage: "database_readiness" },
+    { code: "MIGRATIONS_REQUIRED" },
+    (line) => lines.push(line)
+  );
+  assert.match(JSON.parse(required(lines[1])).hint, /pnpm database:migrate/);
+});
+
+test("Operator diagnostics preserve messages, custom codes, causes and stacks", () => {
+  const lines: string[] = [];
+  const cause = Object.assign(new Error("Queue schema initialization failed"), {
+    code: "CUSTOM_QUEUE_CODE",
+  });
+  const error = new Error("Cannot start worker", { cause });
+  logBackend("worker", "startup_failed", {}, error, (line) => lines.push(line));
+  const record = JSON.parse(required(lines[0]));
+  assert.equal(record.error.message, error.message);
+  assert.equal(record.error.stack, error.stack);
+  assert.equal(record.error.cause.message, cause.message);
+  assert.equal(record.error.cause.code, "CUSTOM_QUEUE_CODE");
 });
