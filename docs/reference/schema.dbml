@@ -20,6 +20,8 @@ Table profiles {
   }
 }
 
+Ref: profiles.id > users.id [delete: cascade]
+
 Table notifications {
   "id" uuid [pk, not null]
   "userId" uuid [not null]
@@ -33,6 +35,8 @@ Table notifications {
   }
 }
 
+Ref: notifications."userId" > users.id [delete: cascade]
+
 Table account_mail {
   "id" uuid [pk, not null]
   "userId" uuid [not null]
@@ -44,6 +48,9 @@ Table account_mail {
     "requestId" [unique]
   }
 }
+
+Ref: account_mail."userId" > users.id [delete: cascade]
+Ref: account_mail."requestId" > erasure_requests.id [delete: cascade]
 
 Table users {
   "id" uuid [pk, not null]
@@ -103,10 +110,18 @@ Table enrollments {
   }
 }
 
+Ref: enrollments."userId" > users.id
+Ref: enrollments."seasonId" > seasons.id
+// DEFERRABLE INITIALLY DEFERRED.
+Ref: enrollments.("currentAttemptId", id) > attempts.(id, "enrollmentId")
+
 Table slots {
   "id" uuid [pk, not null]
   "enrollmentId" uuid [not null]
 }
+
+Ref: slots.id > users.id
+Ref: slots.("enrollmentId", id) > enrollments.(id, "userId")
 
 Table attempts {
   "streakBreaks" jsonb [not null, default: `'[]'::jsonb`]
@@ -145,6 +160,8 @@ Table attempts {
   }
 }
 
+Ref: attempts."enrollmentId" > enrollments.id
+
 Table goals {
   "id" uuid [pk, not null]
   "attemptId" uuid [not null]
@@ -157,6 +174,10 @@ Table goals {
     ("attemptId", id) [name: 'goals_owner']
   }
 }
+
+Ref: goals."attemptId" > attempts.id
+// DEFERRABLE INITIALLY DEFERRED.
+Ref: goals.("currentRevisionId", id) > goal_revisions.(id, "goalId")
 
 Table goal_revisions {
   "id" uuid [pk, not null]
@@ -172,6 +193,8 @@ Table goal_revisions {
   }
 }
 
+Ref: goal_revisions.("goalId", "attemptId") > goals.(id, "attemptId")
+
 Table milestones {
   "id" uuid [pk, not null]
   "attemptId" uuid [not null]
@@ -186,6 +209,10 @@ Table milestones {
   }
 }
 
+Ref: milestones."attemptId" > attempts.id
+// DEFERRABLE INITIALLY DEFERRED.
+Ref: milestones.("currentRevisionId", id) > milestone_revisions.(id, "milestoneId")
+
 Table milestone_revisions {
   "id" uuid [pk, not null]
   "milestoneId" uuid [not null]
@@ -199,6 +226,8 @@ Table milestone_revisions {
     ("attemptId", id) [name: 'milestone_revisions_owner']
   }
 }
+
+Ref: milestone_revisions.("milestoneId", "attemptId") > milestones.(id, "attemptId")
 
 Table reports {
   "id" uuid [pk, not null]
@@ -228,6 +257,8 @@ Table reports {
   }
 }
 
+Ref: reports."attemptId" > attempts.id
+
 Table credits {
   "id" uuid [pk, not null]
   "attemptId" uuid [not null]
@@ -243,6 +274,9 @@ Table credits {
   }
 }
 
+Ref: credits."attemptId" > attempts.id
+Ref: credits.("earningReportId", "attemptId") > reports.(id, "attemptId")
+
 Table entitlements {
   Note: 'Completion facts are immutable. UPDATE is always rejected; DELETE requires authorized privileged erasure.'
   "id" uuid [pk, not null]
@@ -257,6 +291,9 @@ Table entitlements {
     `jsonb_array_length("reportingDates") = 101`
   }
 }
+
+Ref: entitlements."enrollmentId" > enrollments.id
+Ref: entitlements.("attemptId", "enrollmentId") > attempts.(id, "enrollmentId")
 
 Table grants {
   "id" uuid [pk, not null]
@@ -279,6 +316,9 @@ Table grants {
   }
 }
 
+Ref: grants."userId" > users.id
+Ref: grants.("reportId", "attemptId") > reports.(id, "attemptId")
+
 Table replays {
   Note: 'Polymorphic resourceId has no SQL foreign key.'
   "id" uuid [pk, not null]
@@ -296,6 +336,8 @@ Table replays {
     `"version" >= 0`
   }
 }
+
+Ref: replays."userId" > users.id
 
 Table outbox {
   Note: 'Polymorphic aggregateId has no SQL foreign key.'
@@ -341,6 +383,9 @@ Table credentials {
   }
 }
 
+Ref: credentials."userId" > users.id
+Ref: credentials.id > users.id
+
 Table identities {
   "id" uuid [pk, not null]
   "userId" uuid [not null]
@@ -355,6 +400,8 @@ Table identities {
     `length(subject) BETWEEN 1 AND 255`
   }
 }
+
+Ref: identities."userId" > users.id
 
 Table sessions {
   "device" text [not null, default: 'Unknown browser']
@@ -371,6 +418,8 @@ Table sessions {
   }
 }
 
+Ref: sessions."userId" > users.id
+
 Table auth_tokens {
   "id" uuid [pk, not null]
   "userId" uuid [not null]
@@ -385,6 +434,8 @@ Table auth_tokens {
     `kind IN ('verify','recover','recovery_email')`
   }
 }
+
+Ref: auth_tokens."userId" > users.id
 
 Table oauth_states {
   "id" uuid [pk, not null]
@@ -404,6 +455,8 @@ Table oauth_states {
   }
 }
 
+Ref: oauth_states."userId" > users.id
+
 Table erasure_requests {
   "deleteAfter" timestamptz [not null, default: `now() + interval '7 days'`]
   "cancelledAt" timestamptz [null]
@@ -412,6 +465,8 @@ Table erasure_requests {
   "requestedAt" timestamptz [not null]
   "processedAt" timestamptz [null]
 }
+
+Ref: erasure_requests."userId" > users.id
 
 Table report_goal_values {
   Note: 'Normalized report values coexist with reports.goalValues JSON.'
@@ -426,6 +481,9 @@ Table report_goal_values {
     `value >= 0 AND scale(value) <= 6 AND length(replace(value::text,'.','')) <= 18`
   }
 }
+
+Ref: report_goal_values.(report_id, attempt_id) > reports.(id, "attemptId")
+Ref: report_goal_values.(goal_revision_id, attempt_id) > goal_revisions.(id, "attemptId")
 
 Table deletion_ledger {
   Note: 'Content-free UUID tombstones intentionally have no users foreign key; they survive account erasure.'
@@ -450,10 +508,14 @@ Table adapter_confirmations {
   }
 }
 
+Ref: adapter_confirmations."userId" > users.id [delete: cascade]
+
 Table event_receipts {
   "id" uuid [pk, not null]
   "processedAt" timestamptz [not null]
 }
+
+Ref: event_receipts.id > outbox.id [delete: cascade]
 
 Table source_projections {
   "attemptId" uuid [pk, not null]
@@ -463,45 +525,9 @@ Table source_projections {
   "checkedAt" timestamptz [not null]
 }
 
+Ref: source_projections."attemptId" > attempts.id [delete: cascade]
+
 Table tracker_migrations {
   Note: 'Created by the migration runner before numbered migrations.'
   "version" integer [pk, not null]
 }
-
-// Current-attempt and current-revision composite references are DEFERRABLE INITIALLY DEFERRED.
-Ref: enrollments."userId" > users.id
-Ref: grants."userId" > users.id
-Ref: replays."userId" > users.id
-Ref: credentials."userId" > users.id
-Ref: identities."userId" > users.id
-Ref: sessions."userId" > users.id
-Ref: auth_tokens."userId" > users.id
-Ref: oauth_states."userId" > users.id
-Ref: erasure_requests."userId" > users.id
-Ref: adapter_confirmations."userId" > users.id [delete: cascade]
-Ref: notifications."userId" > users.id [delete: cascade]
-Ref: account_mail."userId" > users.id [delete: cascade]
-Ref: goals."attemptId" > attempts.id
-Ref: milestones."attemptId" > attempts.id
-Ref: reports."attemptId" > attempts.id
-Ref: credits."attemptId" > attempts.id
-Ref: enrollments."seasonId" > seasons.id
-Ref: slots.id > users.id
-Ref: slots.("enrollmentId", id) > enrollments.(id, "userId")
-Ref: attempts."enrollmentId" > enrollments.id
-Ref: enrollments.("currentAttemptId", id) > attempts.(id, "enrollmentId")
-Ref: goal_revisions.("goalId", "attemptId") > goals.(id, "attemptId")
-Ref: goals.("currentRevisionId", id) > goal_revisions.(id, "goalId")
-Ref: milestone_revisions.("milestoneId", "attemptId") > milestones.(id, "attemptId")
-Ref: milestones.("currentRevisionId", id) > milestone_revisions.(id, "milestoneId")
-Ref: report_goal_values.(report_id, attempt_id) > reports.(id, "attemptId")
-Ref: report_goal_values.(goal_revision_id, attempt_id) > goal_revisions.(id, "attemptId")
-Ref: credits.("earningReportId", "attemptId") > reports.(id, "attemptId")
-Ref: entitlements."enrollmentId" > enrollments.id
-Ref: entitlements.("attemptId", "enrollmentId") > attempts.(id, "enrollmentId")
-Ref: grants.("reportId", "attemptId") > reports.(id, "attemptId")
-Ref: credentials.id > users.id
-Ref: profiles.id > users.id [delete: cascade]
-Ref: account_mail."requestId" > erasure_requests.id [delete: cascade]
-Ref: event_receipts.id > outbox.id [delete: cascade]
-Ref: source_projections."attemptId" > attempts.id [delete: cascade]
