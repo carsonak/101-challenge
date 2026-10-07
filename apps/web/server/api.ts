@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { randomBytes } from "node:crypto";
 import {
   authCommandSchema,
@@ -171,7 +172,7 @@ export function createWebApi(deps: ApiDependencies) {
             if (!token)
               return json({ account: null, csrf: null, providers: flags });
             const proof = cookie(request, cookieNames.csrf);
-            await auth.authenticate(token, proof);
+
             return json({
               account: await auth.account(token),
               csrf: proof,
@@ -189,6 +190,14 @@ export function createWebApi(deps: ApiDependencies) {
             );
             if (!season) throw new DomainError("NOT_FOUND");
             return json(season);
+          }
+          if (request.method === "GET" && path === "/api/v1/sessions") {
+            await auth.authenticate(token);
+            return json(await auth.sessions(token));
+          }
+          if (request.method === "GET" && path === "/api/v1/notifications") {
+            await auth.authenticate(token);
+            return json(await auth.notifications(token));
           }
           if (request.method === "GET" && path === "/api/v1/history") {
             const actor = await auth.authenticate(token);
@@ -228,7 +237,32 @@ export function createWebApi(deps: ApiDependencies) {
             const input = await payload(request);
             const c = authCommandSchema.safeParse(input);
             if (!c.success) throw new DomainError("VALIDATION");
-            const result = await auth.execute(c.data, token, csrf);
+            if (c.data.action === "set_avatar" && c.data.avatar) {
+              const match =
+                /^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
+                  c.data.avatar
+                );
+              if (!match) throw new DomainError("VALIDATION");
+              try {
+                const clean = await sharp(
+                  Buffer.from(match[1] ?? "", "base64"),
+                  {
+                    limitInputPixels: 16000000,
+                    animated: false,
+                  }
+                )
+                  .rotate()
+                  .resize(256, 256, { fit: "cover", withoutEnlargement: true })
+                  .webp({ quality: 80 })
+                  .toBuffer();
+                c.data.avatar = `data:image/webp;base64,${clean.toString("base64")}`;
+              } catch {
+                throw new DomainError("VALIDATION");
+              }
+            }
+            const ua = request.headers.get("user-agent") ?? "";
+            const device = `${/Firefox/i.test(ua) ? "Firefox" : /Edg/i.test(ua) ? "Edge" : /Chrome/i.test(ua) ? "Chrome" : /Safari/i.test(ua) ? "Safari" : "Browser"} on ${/Android/i.test(ua) ? "Android" : /iPhone|iPad/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac/i.test(ua) ? "macOS" : "desktop"}`;
+            const result = await auth.execute(c.data, token, csrf, device);
             const response = json({
               accepted: result.accepted,
               ...("requestId" in result ? { requestId: result.requestId } : {}),
@@ -243,7 +277,11 @@ export function createWebApi(deps: ApiDependencies) {
                 token: result.token,
                 csrf: result.csrf,
               });
-            if (["logout", "unlink", "reset"].includes(c.data.action)) {
+            if (
+              ["logout", "unlink", "reset", "request_erasure"].includes(
+                c.data.action
+              )
+            ) {
               setCookie(response, cookieNames.session, "", secure, true, 0);
               setCookie(response, cookieNames.csrf, "", secure, false, 0);
             }

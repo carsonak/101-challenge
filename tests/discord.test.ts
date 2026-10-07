@@ -48,7 +48,11 @@ test(
     });
     const season = await tracker.execute(
       admin,
-      { command: "CreateSeason", title: "Fictional guild fixture" },
+      {
+        command: "CreateSeason",
+        slug: randomUUID(),
+        title: "Fictional guild fixture",
+      },
       randomUUID()
     );
     await tracker.execute(
@@ -219,23 +223,13 @@ test(
         type: 2,
         data: { name: "cancel", options: [{ name: "id", value: e.id }] },
       });
-      const cancel = delivered.at(-1) as typeof setup;
-      await invoke(
-        {
-          type: 3,
-          data: { custom_id: cancel.components[0].components[0].custom_id },
-        },
-        otherSubject
-      );
+      assert.match(String(delivered.at(-1)?.content), /Confirm cancellation/);
       assert.equal((await tracker.history(owner))[0].participation, "active");
       await invoke({
-        type: 3,
-        data: { custom_id: cancel.components[0].components[0].custom_id },
+        type: 2,
+        data: { name: "pause", options: [{ name: "id", value: e.id }] },
       });
-      assert.equal(
-        (await tracker.history(owner))[0].participation,
-        "cancelled"
-      );
+      assert.equal((await tracker.history(owner))[0].participation, "paused");
       assert.ok(
         delivered.every(
           (d) =>
@@ -285,7 +279,7 @@ test(
         })
       );
       assert.equal(resumes.length, 1);
-      assert.equal(guildCommands.length, 13);
+      assert.equal(guildCommands.length, 14);
     } finally {
       await db.close();
     }

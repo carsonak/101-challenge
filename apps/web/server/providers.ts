@@ -122,7 +122,14 @@ export function createProviders(
             !payload.sub
           )
             throw new Error("Invalid proof");
-          return { provider: "google", subject: payload.sub };
+          return {
+            provider: "google",
+            subject: payload.sub,
+            ...(typeof payload.picture === "string" &&
+            /^https:\/\/[^/]+\.googleusercontent\.com\//.test(payload.picture)
+              ? { avatar: payload.picture }
+              : {}),
+          };
         }
         if (
           typeof tokens.access_token !== "string" ||
@@ -134,10 +141,26 @@ export function createProviders(
           signal: AbortSignal.timeout(5000),
         });
         if (!profile.ok) throw new Error("Invalid proof");
-        const identity = (await profile.json()) as { id?: unknown };
+        const identity = (await profile.json()) as {
+          id?: unknown;
+          username?: unknown;
+          avatar?: unknown;
+        };
         if (typeof identity.id !== "string" || !/^\d{1,30}$/.test(identity.id))
           throw new Error("Invalid proof");
-        return { provider: "discord", subject: identity.id };
+        return {
+          provider: "discord",
+          subject: identity.id,
+          ...(typeof identity.username === "string"
+            ? { username: identity.username }
+            : {}),
+          ...(typeof identity.avatar === "string" &&
+          /^[a-zA-Z0-9_]+$/.test(identity.avatar)
+            ? {
+                avatar: `https://cdn.discordapp.com/avatars/${identity.id}/${identity.avatar}.png`,
+              }
+            : {}),
+        };
       } catch {
         throw new DomainError("UNAUTHENTICATED");
       }

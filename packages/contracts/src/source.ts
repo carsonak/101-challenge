@@ -13,7 +13,7 @@ const reportSource = ownerReportSchema.extend({
   goalRevisionFacts: z.array(
     z.strictObject({ revisionId: z.uuid(), input: initialGoalSchema })
   ),
-  streakAtReport: z.number().int().min(1).max(101),
+  streakAtReport: z.number().int().min(0).max(101),
   selectedPerks: z.array(z.literal("streak_reroll")),
   milestoneFacts: z.array(
     z.strictObject({
@@ -33,7 +33,7 @@ export const attemptSourceV1Schema = z.strictObject({
   seasonId: z.uuid(),
   attemptId: z.uuid(),
   attemptMode: z.enum(["qualifying", "progress_only"]),
-  status: z.enum(["active", "cancelled", "restarted", "completed"]),
+  status: z.enum(["active", "paused", "cancelled", "restarted", "completed"]),
   timezone: z.string(),
   startedAt: z.iso.datetime(),
   baseSeed: seed,

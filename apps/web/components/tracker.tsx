@@ -4,14 +4,18 @@ import {
   useEffect,
   useRef,
   useState,
-  useId,
   useCallback,
   type FormEvent,
-  cloneElement,
-  type ReactElement,
 } from "react";
 import type { createTracker, GoalInput, MilestoneInput } from "@challenge/core";
-import type { accountSchema } from "@challenge/contracts";
+import {
+  initialGoalSchema,
+  initialMilestoneSchema,
+  type accountSchema,
+} from "@challenge/contracts";
+import { Field, PasswordInput, Toast, Help } from "./ui";
+import AccountScreen from "./account-screen";
+import HomeScreen from "./home-screen";
 
 /** Safe query types inferred from owner/admin service projections; all imports are type-only. */
 type History = Awaited<ReturnType<ReturnType<typeof createTracker>["history"]>>;
@@ -58,22 +62,6 @@ const errorMessages: Record<string, string> = {
     "This retry differs from the original request. Review the latest progress.",
   RATE_LIMITED: "Too many requests. Please wait before trying again.",
 };
-/** Named field with an accessible label; descriptions remain visible beside inputs. */
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactElement<{ id?: string }>;
-}) {
-  const id = useId();
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {cloneElement(children, { id })}
-    </div>
-  );
-}
 /** Custom goal editor preserving decimal strings and explicit save boundaries. */
 function GoalFields({
   value,
@@ -233,13 +221,15 @@ function Setup({
   season?: Season;
   run: (payload: unknown) => Promise<boolean>;
 }) {
-  const [goals, setGoals] = useState<GoalInput[]>([{ ...emptyGoal }]),
-    [milestones, setMilestones] = useState<MilestoneInput[]>([]),
-    [zone, setZone] = useState(
-      enrollment.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  const [goals, setGoals] = useState<GoalInput[]>(
+      season?.goals.length
+        ? season.goals.map((g) => ({ ...g }))
+        : [{ ...emptyGoal }]
+    ),
+    [milestones, setMilestones] = useState<MilestoneInput[]>(
+      season?.milestones.map((m) => ({ ...m })) ?? []
     ),
     [confirmed, setConfirmed] = useState(false);
-  const listId = useId();
   /** Submit the explicit form draft without clearing it on errors. */
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -247,7 +237,7 @@ function Setup({
       command: attempt ? "RestartAttempt" : "StartAttempt",
       enrollmentId: enrollment.id,
       expectedEnrollmentVersion: enrollment.version,
-      timezone: zone,
+
       goals,
       milestones,
       ...(attempt
@@ -277,7 +267,7 @@ function Setup({
             setMilestones(season.milestones.map((m) => ({ ...m })));
           }}
         >
-          Copy the recommended plan
+          Apply season plan
         </button>
       )}
       {attempt && (
@@ -310,13 +300,26 @@ function Setup({
               setGoals(goals.map((g, i) => (i === index ? updated : g)))
             }
           />
-          {goals.length > 1 && (
+          {goals.length > 0 && (
             <button
               type="button"
               className="secondary"
-              onClick={() => setGoals(goals.filter((_, i) => i !== index))}
+              onClick={() => {
+                setGoals(goals.filter((_, i) => i !== index));
+                setMilestones(
+                  milestones.map((m) => ({
+                    ...m,
+                    goalIndex:
+                      m.goalIndex === index
+                        ? undefined
+                        : m.goalIndex !== undefined && m.goalIndex > index
+                          ? m.goalIndex - 1
+                          : m.goalIndex,
+                  }))
+                );
+              }}
             >
-              Remove goal {index + 1}
+              Remove
             </button>
           )}
         </fieldset>
@@ -329,26 +332,6 @@ function Setup({
       >
         Add another goal
       </button>
-      <Field label="Reporting timezone">
-        <input
-          required
-          readOnly={Boolean(enrollment.timezone)}
-          list={listId}
-          value={zone}
-          onChange={(e) => setZone(e.target.value)}
-        />
-      </Field>
-      <datalist id={listId}>
-        {[
-          "Africa/Nairobi",
-          "UTC",
-          "America/New_York",
-          "Europe/London",
-          "Asia/Tokyo",
-        ].map((z) => (
-          <option key={z} value={z} />
-        ))}
-      </datalist>
       <details>
         <summary>Initial milestones (optional)</summary>
         {milestones.map((m, index) => (
@@ -400,9 +383,25 @@ function Setup({
           I confirm this new attempt and the expiry of previous credits.
         </label>
       )}
-      <button type="submit">
-        {attempt ? "Restart with these goals" : "Start my challenge"}
-      </button>
+      <div title="Add at least one goal and fill all required fields.">
+        <button
+          type="submit"
+          disabled={
+            !goals.length ||
+            !goals.every((g) => initialGoalSchema.safeParse(g).success) ||
+            !milestones.every(
+              (m) => initialMilestoneSchema.safeParse(m).success
+            ) ||
+            (Boolean(attempt) && !confirmed)
+          }
+        >
+          {attempt ? "Restart with these goals" : "Start my challenge"}
+        </button>
+        <Help>
+          Add at least one goal and fill all required fields to start. Confirm
+          the restart when beginning another attempt.
+        </Help>
+      </div>
     </form>
   );
 }
@@ -411,13 +410,18 @@ function ReportForm({
   attempt,
   report,
   correction = false,
+  backfill = false,
+  earliest,
   run,
 }: {
   attempt: Attempt;
   report?: Attempt["reports"][number];
   correction?: boolean;
+  backfill?: boolean;
+  earliest?: string;
   run: (payload: unknown) => Promise<boolean>;
 }) {
+  const [date, setDate] = useState(report?.reportingDate ?? "");
   const [body, setBody] = useState(report?.body ?? ""),
     [key, setKey] = useState(""),
     [values, setValues] = useState<Record<string, string>>(
@@ -443,10 +447,13 @@ function ReportForm({
           command: correction ? "CorrectReport" : "EditReport",
           reportId: report.id,
           expectedReportVersion: report.version,
-          ...(correction ? { key } : {}),
+          ...(correction
+            ? { ...(key ? { key } : {}), reportingDate: date }
+            : {}),
         }
       : {
-          command: "SubmitReport",
+          command: backfill ? "BackfillReport" : "SubmitReport",
+          ...(backfill ? { reportingDate: date } : {}),
           attemptId: attempt.attemptId,
           expectedAttemptVersion: attempt.version,
           milestoneAchievements: achieved,
@@ -475,12 +482,58 @@ function ReportForm({
           ? correction
             ? "Correct this report with a key"
             : "Edit today’s report"
-          : "Today’s report"}
+          : backfill
+            ? "Fill a skipped date"
+            : "Today’s report"}
       </h3>
-      <p>
+      <Help>
         A truthful report counts even when you did not work on your goals.
         Reports use your fixed local date.
-      </p>
+      </Help>
+      {(correction || backfill) && (
+        <Field label="Reporting date">
+          <select
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          >
+            <option value="">Choose an available date</option>
+            {Array.from(
+              {
+                length: Math.max(
+                  0,
+                  Math.min(
+                    36600,
+                    Math.floor(
+                      (Date.parse(attempt.today) -
+                        Date.parse(
+                          earliest ?? attempt.startedAt.slice(0, 10)
+                        )) /
+                        86400000
+                    ) + 1
+                  )
+                ),
+              },
+              (_, i) =>
+                new Date(
+                  Date.parse(earliest ?? attempt.startedAt.slice(0, 10)) +
+                    i * 86400000
+                )
+                  .toISOString()
+                  .slice(0, 10)
+            )
+              .filter(
+                (d) =>
+                  !attempt.reports.some(
+                    (r) => r.id !== report?.id && r.reportingDate === d
+                  )
+              )
+              .map((d) => (
+                <option key={d}>{d}</option>
+              ))}
+          </select>
+        </Field>
+      )}
       <Field label="Your private report">
         <textarea
           required
@@ -517,7 +570,10 @@ function ReportForm({
           .filter(
             ({ revision }) =>
               revision?.input.targetReportingDay ===
-                attempt.reportingDays + 1 &&
+                (backfill
+                  ? attempt.reports.filter((r) => r.reportingDate < date)
+                      .length + 1
+                  : attempt.reportingDays + 1) &&
               revision.input.achievementKind === "manual"
           )
           .map(({ m, revision }) => (
@@ -536,21 +592,29 @@ function ReportForm({
               I achieved: {revision?.input.title}
             </label>
           ))}
-      {correction && (
-        <Field label="Correction key">
-          <input
-            required
-            type="password"
-            autoComplete="off"
-            minLength={64}
-            maxLength={64}
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-        </Field>
-      )}
+      {correction &&
+        !(
+          attempt.backfillUntil &&
+          Date.parse(attempt.backfillUntil) > Date.now()
+        ) && (
+          <Field label="Correction key">
+            <PasswordInput
+              required
+
+              autoComplete="off"
+              minLength={64}
+              maxLength={64}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+          </Field>
+        )}
       <button type="submit">
-        {report ? "Save report changes" : "Submit today’s report"}
+        {report
+          ? "Save report changes"
+          : backfill
+            ? "Save backdated report"
+            : "Submit today’s report"}
       </button>
     </form>
   );
@@ -745,10 +809,11 @@ function Challenge({
   const current = enrollment.attempts.find(
     (a) => a.attemptId === enrollment.currentAttemptId
   );
-  const [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const [cancelName, setCancelName] = useState("");
+  const [erase, setErase] = useState(false);
   const today = current?.reports.find((r) => r.reportingDate === current.today);
   return (
-    <>
+    <div className="challenge-layout">
       <h2>{season?.title ?? "Your challenge"}</h2>
       <p>
         Participation: <strong>{enrollment.participation}</strong> · Timezone:{" "}
@@ -775,10 +840,10 @@ function Challenge({
         </div>
       )}
       {current && (
-        <p>
+        <Help>
           Streak perk: every seven consecutive reporting days earns a credit.
-          Earned credits survive gaps and cancellation.
-        </p>
+          Earned credits survive gaps. Pausing or cancelling removes them.
+        </Help>
       )}
       {current?.attemptState === "completed" && (
         <p className="notice">
@@ -802,42 +867,129 @@ function Challenge({
             run={run}
           />
         ))}
+      {current?.backfillDeadline && (
+        <section className="card">
+          <h3>Backdated reports</h3>
+          <p>
+            Window ends {new Date(current.backfillDeadline).toLocaleString()}.
+            Unfilled dates are skipped and do not count toward completion.
+          </p>
+          <details>
+            <summary>Skipped dates (not counted)</summary>
+            <ul>
+              {Array.from(
+                {
+                  length: Math.max(
+                    0,
+                    Math.min(
+                      36600,
+                      Math.floor(
+                        (Date.parse(current.backfillThrough) -
+                          Date.parse(enrollment.earliestReportingDate)) /
+                          86400000
+                      ) + 1
+                    )
+                  ),
+                },
+                (_, i) =>
+                  new Date(
+                    Date.parse(enrollment.earliestReportingDate) + i * 86400000
+                  )
+                    .toISOString()
+                    .slice(0, 10)
+              )
+                .filter(
+                  (d) => !current.reports.some((r) => r.reportingDate === d)
+                )
+                .map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+            </ul>
+          </details>
+          {current.backfillUntil &&
+            Date.parse(current.backfillUntil) > Date.now() &&
+            current.attemptState === "active" && (
+              <ReportForm
+                key={current.version}
+                attempt={current}
+                backfill
+                earliest={enrollment.earliestReportingDate}
+                run={run}
+              />
+            )}
+        </section>
+      )}
       {current?.attemptState === "completed" && today && (
         <ReportForm key={today.id} attempt={current} report={today} run={run} />
       )}
-      {enrollment.participation === "active" && (
-        <form
-          className="card"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (cancelConfirmed)
+      {current && enrollment.participation === "active" && (
+        <section className="card">
+          <h3>Pause season</h3>
+          <p>
+            Pausing resets your streak and removes credits and active perks
+            immediately. Another unfinished season can start on the next
+            reporting day.
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
               void run({
-                command: "CancelEnrollment",
+                command: "PauseEnrollment",
                 enrollmentId: enrollment.id,
                 expectedEnrollmentVersion: enrollment.version,
-              });
+              })
+            }
+          >
+            Pause
+          </button>
+        </section>
+      )}
+      {current && ["active", "paused"].includes(enrollment.participation) && (
+        <form
+          className="card danger-zone"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run({
+              command: "CancelEnrollment",
+              enrollmentId: enrollment.id,
+              expectedEnrollmentVersion: enrollment.version,
+              seasonSlug: cancelName,
+              erase,
+            });
           }}
         >
-          <h3>Pause participation</h3>
+          <h3>Cancel this attempt</h3>
           <p>
-            Cancellation retains your reports and credits and frees your
-            unfinished-season slot. Resume continues the same attempt.
+            Cancellation is immediate and cannot be undone. Incomplete artwork
+            progress is removed. Earlier attempts and completed seasonal artwork
+            are retained.
           </p>
+          <Field label={`Type ${season?.slug} to confirm cancellation`}>
+            <input
+              required
+              value={cancelName}
+              onChange={(e) => setCancelName(e.target.value)}
+            />
+          </Field>
           <label className="check">
             <input
               type="checkbox"
-              required
-              checked={cancelConfirmed}
-              onChange={(e) => setCancelConfirmed(e.target.checked)}
+              checked={erase}
+              onChange={(e) => setErase(e.target.checked)}
             />
-            Cancel this enrollment and retain its history.
+            Also erase this attempt’s logs, goals and milestones
           </label>
-          <button className="secondary" type="submit">
-            Cancel enrollment
+          <button
+            type="submit"
+            className="danger"
+            disabled={cancelName !== season?.slug}
+          >
+            Cancel season
           </button>
         </form>
       )}
-      {enrollment.participation === "cancelled" && (
+      {enrollment.participation === "paused" && (
         <button
           type="button"
           onClick={() =>
@@ -853,7 +1005,8 @@ function Challenge({
       )}
       {current &&
         (current.attemptState === "active" ||
-          current.attemptState === "completed") && (
+          current.attemptState === "completed" ||
+          current.attemptState === "cancelled") && (
           <details className="card">
             <summary>Restart with new initial goals</summary>
             <Setup
@@ -889,9 +1042,11 @@ function Challenge({
                       <p>{r.input.description}</p>
                     </div>
                   ))}
-                {current.attemptState === "active" && !g.archived && (
-                  <GoalEditor attempt={current} goalId={g.id} run={run} />
-                )}
+                {(current.attemptState === "active" ||
+                  Boolean(current.backfillUntil)) &&
+                  !g.archived && (
+                    <GoalEditor attempt={current} goalId={g.id} run={run} />
+                  )}
               </details>
             ))}
             {current.attemptState === "active" && current.goals.length < 20 && (
@@ -900,10 +1055,10 @@ function Challenge({
           </section>
           <section>
             <h3>Milestones</h3>
-            <p>
+            <Help>
               Milestones lock when their reporting day is accepted, rather than
               on a calendar deadline.
-            </p>
+            </Help>
             {current.milestones.map((m) => (
               <details key={m.id} className="card">
                 <summary>
@@ -922,8 +1077,13 @@ function Challenge({
                       {r.input.title} · {r.createdAt}
                     </p>
                   ))}
-                {current.attemptState === "active" &&
-                  !m.locked &&
+                {(current.attemptState === "active" ||
+                  Boolean(current.backfillUntil)) &&
+                  (!m.locked ||
+                    Boolean(
+                      current.backfillUntil &&
+                      Date.parse(current.backfillUntil) > Date.now()
+                    )) &&
                   !m.archived && (
                     <MilestoneEditor
                       attempt={current}
@@ -941,36 +1101,44 @@ function Challenge({
           </section>
         </>
       )}
-      <section>
-        <h3>Retained attempt history</h3>
-        {[...enrollment.attempts]
-          .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-          .map((a) => (
-            <details key={a.attemptId} className="card">
-              <summary>
-                {a.startedAt.slice(0, 10)} · {a.attemptState} ·{" "}
-                {a.reportingDays} reports ·{" "}
-                {a.mode === "progress_only" ? "Progress only" : "Qualifying"}
-              </summary>
-              {a.reports.map((r) => (
-                <article key={r.id} className="report">
-                  <h4>
-                    Day {r.reportingIndex} · {r.reportingDate}
-                  </h4>
-                  <p className="private-text">{r.body}</p>
-                  <small>
-                    Saved {r.createdAt} · Updated {r.updatedAt}
-                  </small>
-                  <details>
-                    <summary>Use a correction key for this report</summary>
-                    <ReportForm attempt={a} report={r} correction run={run} />
-                  </details>
-                </article>
-              ))}
-            </details>
-          ))}
-      </section>
-    </>
+      {current && (
+        <section className="attempt-sidebar">
+          <h3>Previous attempts and logs</h3>
+          {[...enrollment.attempts]
+            .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+            .map((a) => (
+              <details key={a.attemptId} className="card">
+                <summary>
+                  {a.startedAt.slice(0, 10)} · {a.attemptState} ·{" "}
+                  {a.reportingDays} reports ·{" "}
+                  {a.mode === "progress_only" ? "Progress only" : "Qualifying"}
+                </summary>
+                {a.reports.map((r) => (
+                  <article key={r.id} className="report">
+                    <h4>
+                      Day {r.reportingIndex} · {r.reportingDate}
+                    </h4>
+                    <p className="private-text">{r.body}</p>
+                    <small>
+                      Saved {r.createdAt} · Updated {r.updatedAt}
+                    </small>
+                    <details>
+                      <summary>Use a correction key for this report</summary>
+                      <ReportForm
+                        attempt={a}
+                        report={r}
+                        correction
+                        earliest={enrollment.earliestReportingDate}
+                        run={run}
+                      />
+                    </details>
+                  </article>
+                ))}
+              </details>
+            ))}
+        </section>
+      )}
+    </div>
   );
 }
 /** Browser account and participant/admin flows; private values are never persisted in browser storage. */
@@ -981,6 +1149,9 @@ export default function TrackerScreen({
   view:
     | "login"
     | "signup"
+    | "setup"
+    | "home"
+    | "notifications"
     | "account"
     | "seasons"
     | "season"
@@ -990,6 +1161,15 @@ export default function TrackerScreen({
     | "admin-corrections";
   id?: string;
 }) {
+  const [notifications, setNotifications] = useState<
+    {
+      id: string;
+      message: string;
+      href: string;
+      createdAt: string;
+      readAt: string | null;
+    }[]
+  >([]);
   const [account, setAccount] = useState<Account | null>(null),
     [csrf, setCsrf] = useState<string | undefined>(),
     [providers, setProviders] = useState({ google: false, discord: false }),
@@ -1000,9 +1180,7 @@ export default function TrackerScreen({
     [error, setError] = useState(false),
     [busy, setBusy] = useState(false),
     [loaded, setLoaded] = useState(false),
-    [rawKey, setRawKey] = useState(""),
-    [query, setQuery] = useState(new URLSearchParams());
-  const notice = useRef<HTMLDivElement>(null);
+    [rawKey, setRawKey] = useState("");
   const pending = useRef<{ body: string; key: string } | null>(null);
   /** Load every stable page without sharing private responses through application caches. */
   const pages = useCallback(async <T,>(url: string): Promise<T[]> => {
@@ -1026,17 +1204,39 @@ export default function TrackerScreen({
       await fetch("/api/v1/session", { cache: "no-store" })
     );
     setAccount(context.account);
+    window.dispatchEvent(new Event("account-changed"));
     setCsrf(context.csrf ?? undefined);
     setProviders(context.providers);
-    setSeasons(
-      await pages<Season>(
-        context.account?.admin && view === "admin-seasons"
-          ? "/api/v1/admin/seasons"
-          : "/api/v1/seasons"
-      )
-    );
+    if (!["account", "notifications"].includes(view))
+      setSeasons(
+        await pages<Season>(
+          context.account?.admin && view === "admin-seasons"
+            ? "/api/v1/admin/seasons"
+            : "/api/v1/seasons"
+        )
+      );
+    if (context.account?.deletion) {
+      setLoaded(true);
+      if (view !== "account") window.location.replace("/account");
+      return;
+    }
+    if (context.account?.provisional && view !== "account") {
+      window.location.replace("/account");
+      return;
+    }
+    if (!context.account && ["home", "notifications"].includes(view)) {
+      window.location.replace("/login");
+      return;
+    }
     if (context.account) {
-      setHistory(await pages<Enrollment>("/api/v1/history"));
+      if (view === "notifications")
+        setNotifications(
+          await readResponse(
+            await fetch("/api/v1/notifications", { cache: "no-store" })
+          )
+        );
+      if (["home", "challenge", "season", "setup", "history"].includes(view))
+        setHistory(await pages<Enrollment>("/api/v1/history"));
       if (context.account.admin && view === "admin-corrections")
         setStats(
           await readResponse(
@@ -1050,16 +1250,12 @@ export default function TrackerScreen({
     setLoaded(true);
   }, [pages, view]);
   useEffect(() => {
-    setQuery(new URLSearchParams(window.location.search));
     void refresh().catch(() => {
       setError(true);
       setMessage("The service is unavailable. Please try again shortly.");
       setLoaded(true);
     });
   }, [refresh]);
-  useEffect(() => {
-    if (message) notice.current?.focus();
-  }, [message]);
   /** Execute one idempotent command; text remains in child forms when a request fails. */
   async function run(payload: unknown): Promise<boolean> {
     if (busy) return false;
@@ -1082,6 +1278,10 @@ export default function TrackerScreen({
         })
       );
       pending.current = null;
+      if ((payload as { command?: string }).command === "CreateSeason") {
+        window.location.assign(`/admin/seasons/${result.resourceId}`);
+        return true;
+      }
       setError(false);
       setMessage("Saved.");
       if (result.rawKey) setRawKey(result.rawKey);
@@ -1115,11 +1315,19 @@ export default function TrackerScreen({
           body: JSON.stringify(payload),
         })
       );
+      if ((payload as { action?: string }).action === "reauthenticate")
+        return true;
+      if (result.requestId) {
+        window.location.assign("/login");
+        return true;
+      }
       setError(false);
       setMessage(
-        result.requestId
-          ? "Your account erasure request has been recorded."
-          : "Request accepted. Check your private email when a verification or recovery link is needed."
+        ["add_email", "recovery_email"].includes(
+          (payload as { action: string }).action
+        )
+          ? "Check your email for the verification link."
+          : "Saved."
       );
       await refresh();
       return true;
@@ -1155,192 +1363,31 @@ export default function TrackerScreen({
       );
     }
   }
+  useEffect(() => {
+    const match = seasons.find((s) => s.id === id);
+    if (view === "season" && match)
+      window.location.replace(`/seasons/${match.slug}`);
+  }, [seasons, id, view]);
+  const dismiss = useCallback(() => setMessage(""), []);
   const chosen = history.find((e) => e.id === id);
-  const season = seasons.find((s) => s.id === id);
+  const season = seasons.find((s) => s.id === id || s.slug === id);
   return (
     <main className="tracker">
-      <nav aria-label="Challenge navigation">
-        <a href="/">Home</a>
-        <a href="/seasons">Seasons</a>
-        {account ? (
-          <>
-            <a href="/history">History</a>
-            <a href="/account">Account</a>
-            {account.admin && (
-              <>
-                <a href="/admin/seasons">Manage seasons</a>
-                <a href="/admin/corrections">Correction grants</a>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <a href="/login">Sign in</a>
-            <a href="/signup">Create account</a>
-          </>
-        )}
-      </nav>
-      <div
-        ref={notice}
-        tabIndex={-1}
-        role={error ? "alert" : "status"}
-        aria-live={error ? "assertive" : "polite"}
-        className={message ? (error ? "notice error" : "notice") : ""}
-      >
-        {message}
-      </div>
+      <Toast message={message} error={error} dismiss={dismiss} />
       <fieldset className="screen" disabled={busy}>
         <legend className="sr-only">Challenge controls</legend>
-        {(view === "login" || view === "signup") && (
-          <>
-            <h1>{view === "signup" ? "Create your account" : "Sign in"}</h1>
-            {account ? (
-              <p>
-                You are signed in. <a href="/account">Open account settings</a>.
-              </p>
-            ) : (
-              <>
-                <form
-                  className="card"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const data = new FormData(e.currentTarget);
-                    if (
-                      await authAction({
-                        action: view,
-                        email: data.get("email"),
-                        password: data.get("password"),
-                      })
-                    ) {
-                      if (view === "login") window.location.assign("/history");
-                    }
-                  }}
-                >
-                  <Field label="Email address">
-                    <input
-                      required
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      maxLength={254}
-                    />
-                  </Field>
-                  <Field label="Password">
-                    <input
-                      required
-                      name="password"
-                      type="password"
-                      minLength={12}
-                      maxLength={128}
-                      autoComplete={
-                        view === "signup" ? "new-password" : "current-password"
-                      }
-                    />
-                  </Field>
-                  <button type="submit">
-                    {view === "signup" ? "Create account" : "Sign in"}
-                  </button>
-                </form>
-                {providers.google && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => oauth("google", false)}
-                  >
-                    Continue with Google
-                  </button>
-                )}
-                {providers.discord && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => oauth("discord", false)}
-                  >
-                    Continue with Discord
-                  </button>
-                )}
-                <details className="card">
-                  <summary>Recover your password</summary>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void authAction({
-                        action: "recover",
-                        email: new FormData(e.currentTarget).get("email"),
-                      });
-                    }}
-                  >
-                    <Field label="Recovery email address">
-                      <input
-                        required
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                      />
-                    </Field>
-                    <button type="submit">Send recovery link</button>
-                  </form>
-                </details>
-              </>
-            )}
-            {query.get("verify") && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (
-                    await authAction({
-                      action: "verify",
-                      token: query.get("verify"),
-                    })
-                  )
-                    window.history.replaceState(null, "", "/login");
-                }}
-              >
-                Verify my email
-              </button>
-            )}
-            {query.get("recover") && (
-              <form
-                className="card"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (
-                    await authAction({
-                      action: "reset",
-                      token: query.get("recover"),
-                      password: new FormData(e.currentTarget).get("password"),
-                    })
-                  )
-                    window.history.replaceState(null, "", "/login");
-                }}
-              >
-                <Field label="New password">
-                  <input
-                    required
-                    name="password"
-                    type="password"
-                    minLength={12}
-                    maxLength={128}
-                    autoComplete="new-password"
-                  />
-                </Field>
-                <button type="submit">Set new password</button>
-              </form>
-            )}
-          </>
-        )}
         {view === "seasons" && (
           <>
             <h1>Choose a season</h1>
-            <p>
+            <Help>
               Work toward 101 reporting days at your pace. Gaps affect streaks,
               rather than your total progress. You can keep one unfinished
               season active.
-            </p>
+            </Help>
             {seasons.map((s) => (
               <article className="card" key={s.id}>
                 <h2>
-                  <a href={`/seasons/${s.id}`}>{s.title}</a>
+                  <a href={`/seasons/${s.slug}`}>{s.title}</a>
                   {s.featured && <span className="badge">Featured</span>}
                 </h2>
                 <p>{s.description}</p>
@@ -1356,10 +1403,10 @@ export default function TrackerScreen({
             <>
               <h1>{season.title}</h1>
               <p>{season.description}</p>
-              <p>
+              <Help>
                 Enrollment stays available, including for past seasons.
                 Recommended goals are optional.
-              </p>
+              </Help>
               {season.goals.length > 0 && (
                 <ul>
                   {season.goals.map((g, i) => (
@@ -1378,7 +1425,12 @@ export default function TrackerScreen({
                   type="button"
                   onClick={async () => {
                     const owned = history.find((e) => e.seasonId === season.id);
-                    if (owned) window.location.assign(`/challenge/${owned.id}`);
+                    if (owned)
+                      window.location.assign(
+                        ["completed", "cancelled"].includes(owned.participation)
+                          ? `/seasons/${season.slug}/setup`
+                          : `/challenge/${owned.id}`
+                      );
                     else if (
                       await run({ command: "Enroll", seasonId: season.id })
                     ) {
@@ -1388,11 +1440,18 @@ export default function TrackerScreen({
                         (e) => e.seasonId === season.id
                       );
                       if (found)
-                        window.location.assign(`/challenge/${found.id}`);
+                        window.location.assign(`/seasons/${season.slug}/setup`);
                     }
                   }}
                 >
-                  Join or continue this season
+                  {history.some((e) => e.seasonId === season.id)
+                    ? ["cancelled", "completed"].includes(
+                        history.find((e) => e.seasonId === season.id)
+                          ?.participation ?? ""
+                      )
+                      ? "Retry"
+                      : "Continue"
+                    : "Join"}
                 </button>
               ) : (
                 <a className="button" href="/signup">
@@ -1442,155 +1501,84 @@ export default function TrackerScreen({
               </p>
             )
           ))}
-        {view === "account" && (
-          <>
-            <h1>Account and privacy</h1>
-            {account ? (
+        {view === "account" &&
+          (account ? (
+            <AccountScreen
+              account={account}
+              providers={providers}
+              act={authAction}
+              oauth={oauth}
+            />
+          ) : (
+            loaded && <a href="/login">Log in to view your account</a>
+          ))}
+        {view === "setup" &&
+          season &&
+          account &&
+          (() => {
+            const e = history.find((e) => e.seasonId === season.id);
+            const a = e?.attempts.find(
+              (a) => a.attemptId === e.currentAttemptId
+            );
+            return e ? (
               <>
-                <p>
-                  {account.email ?? "Provider account"}
-                  {account.emailVerified ? " · Email verified" : ""}
-                </p>
-                <p>
-                  Your reports, goals and milestones are private, including from
-                  administrators. Administrators see timestamps, counts, streaks
-                  and selected perks. History persists until account erasure;
-                  operational logs and backups default to 30-day retention.
-                </p>
-                <p>
-                  <a className="button secondary" href="/api/v1/export">
-                    Export my history
-                  </a>
-                </p>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => authAction({ action: "logout" })}
-                >
-                  Sign out
-                </button>
-                <details className="card">
-                  <summary>Confirm a recent sign-in</summary>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void authAction({
-                        action: "reauthenticate",
-                        password: new FormData(e.currentTarget).get("password"),
-                      });
-                    }}
-                  >
-                    <Field label="Current password">
-                      <input
-                        required
-                        name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        minLength={12}
-                        maxLength={128}
-                      />
-                    </Field>
-                    <button type="submit">Confirm password</button>
-                  </form>
-                  <p>
-                    For a provider-only account, sign in again with the provider
-                    before changing sign-in methods.
-                  </p>
-                </details>
-                {!account.email && (
-                  <form
-                    className="card"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const data = new FormData(e.currentTarget);
-                      void authAction({
-                        action: "add_email",
-                        email: data.get("email"),
-                        password: data.get("password"),
-                      });
-                    }}
-                  >
-                    <h2>Add email sign-in</h2>
-                    <Field label="New email address">
-                      <input
-                        required
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                      />
-                    </Field>
-                    <Field label="Create password">
-                      <input
-                        required
-                        name="password"
-                        type="password"
-                        minLength={12}
-                        maxLength={128}
-                        autoComplete="new-password"
-                      />
-                    </Field>
-                    <button type="submit">Add and verify email</button>
-                  </form>
-                )}
-                {providers.google && !account.providers.includes("google") && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => oauth("google", true)}
-                  >
-                    Link Google
-                  </button>
-                )}
-                {providers.discord &&
-                  !account.providers.includes("discord") && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => oauth("discord", true)}
-                    >
-                      Link Discord
-                    </button>
-                  )}
-                {[
-                  ...(account.email ? ["email" as const] : []),
-                  ...account.providers,
-                ].map((provider) => (
-                  <button
-                    type="button"
-                    key={provider}
-                    className="secondary"
-                    onClick={() => authAction({ action: "unlink", provider })}
-                  >
-                    Unlink {provider}
-                  </button>
-                ))}
-                <form
-                  className="card"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void authAction({
-                      action: "request_erasure",
-                      confirmed: true,
-                    });
+                <h1>{season.title}: your plan</h1>
+                <Setup
+                  key={e.id}
+                  enrollment={e}
+                  attempt={a}
+                  season={season}
+                  run={async (payload) => {
+                    const ok = await run(payload);
+                    if (ok) window.location.assign(`/challenge/${e.id}`);
+                    return ok;
                   }}
-                >
-                  <h2>Request full account erasure</h2>
-                  <p>
-                    This removes private history and sign-in methods after the
-                    request is processed. Cancellation and restart retain your
-                    history.
-                  </p>
-                  <label className="check">
-                    <input type="checkbox" required />I confirm removal of this
-                    account and all its private history.
-                  </label>
-                  <button className="danger" type="submit">
-                    Request account erasure
-                  </button>
-                </form>
+                />
               </>
             ) : (
-              loaded && <a href="/login">Sign in to view your account</a>
+              <a href={`/seasons/${season.slug}`}>Join this season first</a>
+            );
+          })()}
+        {view === "home" && account && (
+          <HomeScreen history={history} seasons={seasons} />
+        )}
+        {view === "notifications" && (
+          <>
+            <h1>Notifications</h1>
+            {notifications.length ? (
+              notifications.map((n) => (
+                <article className="card" key={n.id}>
+                  <a href={n.href}>{n.message}</a>
+                  <p>
+                    {new Date(n.createdAt).toLocaleString()}
+                    {!n.readAt && " · Unread"}
+                  </p>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      void authAction({ action: "notification", id: n.id })
+                    }
+                  >
+                    Mark read
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      void authAction({
+                        action: "notification",
+                        id: n.id,
+                        dismiss: true,
+                      })
+                    }
+                  >
+                    Dismiss
+                  </button>
+                </article>
+              ))
+            ) : (
+              <p>You’re all caught up.</p>
             )}
           </>
         )}
@@ -1607,10 +1595,19 @@ export default function TrackerScreen({
                     void run({
                       command: "CreateSeason",
                       title: data.get("title"),
+                      slug: data.get("slug"),
                       description: data.get("description") || undefined,
                     });
                   }}
                 >
+                  <Field label="Season URL identifier">
+                    <input
+                      required
+                      name="slug"
+                      pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                      maxLength={80}
+                    />
+                  </Field>
                   <Field label="Season title">
                     <input required name="title" maxLength={200} />
                   </Field>
@@ -1619,45 +1616,117 @@ export default function TrackerScreen({
                   </Field>
                   <button type="submit">Create draft season</button>
                 </form>
-                {seasons.map((s) => (
-                  <article className="card" key={s.id}>
-                    <h2>{s.title}</h2>
-                    <p>
-                      {s.state} · {s.featured ? "Featured" : "Not featured"}
-                    </p>
-                    {s.state === "draft" && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          run({
-                            command: "PublishSeason",
-                            seasonId: s.id,
-                            expectedSeasonVersion: s.version,
-                          })
-                        }
-                      >
-                        Publish {s.title}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() =>
-                        run({
-                          command: "SetSeasonFeatured",
-                          seasonId: s.id,
-                          expectedSeasonVersion: s.version,
-                          featured: !s.featured,
-                        })
-                      }
-                    >
-                      {s.featured
-                        ? "Remove from featured"
-                        : "Feature this season"}
-                    </button>
-                    <SeasonTemplate key={s.id} season={s} run={run} />
-                  </article>
-                ))}
+                <div className="columns">
+                  <aside className="sidebar" aria-label="Season editor list">
+                    {seasons.map((s) => (
+                      <a key={s.id} href={`/admin/seasons/${s.id}`}>
+                        {s.title} · {s.state}
+                        {s.featured ? " · Featured" : ""}
+                      </a>
+                    ))}
+                  </aside>
+                  <div>
+                    {seasons
+                      .filter((s) => s.id === id)
+                      .map((s) => (
+                        <article className="card" key={s.id}>
+                          <h2>{s.title}</h2>
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const d = new FormData(e.currentTarget);
+                              void run({
+                                command: "SaveSeason",
+                                seasonId: s.id,
+                                expectedSeasonVersion: s.version,
+                                title: d.get("title"),
+                                description: d.get("description"),
+                                slug: d.get("slug"),
+                                ...(!s.publishedAt &&
+                                s.state === "published" &&
+                                d.get("publishedAt")
+                                  ? {
+                                      publishedAt: new Date(
+                                        String(d.get("publishedAt"))
+                                      ).toISOString(),
+                                    }
+                                  : {}),
+                              });
+                            }}
+                          >
+                            <Field label="Season title">
+                              <input
+                                required
+                                name="title"
+                                defaultValue={s.title}
+                                maxLength={200}
+                              />
+                            </Field>
+                            <Field label="Description">
+                              <textarea
+                                name="description"
+                                defaultValue={s.description ?? ""}
+                                maxLength={4000}
+                              />
+                            </Field>
+                            <Field label="URL identifier">
+                              <input
+                                required
+                                name="slug"
+                                defaultValue={s.slug}
+                                readOnly={s.state === "published"}
+                                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                              />
+                            </Field>
+                            {!s.publishedAt && s.state === "published" && (
+                              <Field label="Verified first publication instant (UTC)">
+                                <input
+                                  type="datetime-local"
+                                  name="publishedAt"
+                                />
+                              </Field>
+                            )}
+                            <button type="submit">Save season details</button>
+                          </form>
+                          <p>
+                            {s.state} ·{" "}
+                            {s.featured ? "Featured" : "Not featured"}
+                          </p>
+                          {s.state === "draft" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                run({
+                                  command: "PublishSeason",
+                                  seasonId: s.id,
+                                  expectedSeasonVersion: s.version,
+                                })
+                              }
+                            >
+                              Publish {s.title}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() =>
+                              run({
+                                command: "SetSeasonFeatured",
+                                seasonId: s.id,
+                                expectedSeasonVersion: s.version,
+                                featured: !s.featured,
+                              })
+                            }
+                          >
+                            {s.featured
+                              ? "Remove from featured"
+                              : "Feature this season"}
+                          </button>
+                          <SeasonTemplate key={s.id} season={s} run={run} />
+                        </article>
+                      ))}
+                  </div>
+                </div>
               </>
             ) : (
               loaded && <p>Administrator permission is required.</p>
@@ -1668,12 +1737,54 @@ export default function TrackerScreen({
           <>
             <h1>Correction grants</h1>
             <p>
-              Grant keys let owners correct existing reports. They never change
-              reporting dates, counts or completion. Private text is excluded
-              from this view.
+              Grant keys let owners correct existing reports and eligible dates.
+              Existing completion entitlements remain fixed.
             </p>
             {account?.admin && stats ? (
               <>
+                <form
+                  className="card"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const d = new FormData(e.currentTarget);
+                    void run({
+                      command: "BackdateEnrollment",
+                      userId: d.get("userId"),
+                      seasonId: d.get("seasonId"),
+                      registeredDate: d.get("date"),
+                    });
+                  }}
+                >
+                  <h2>Backdated participation</h2>
+                  <Field label="Participant">
+                    <select name="userId" required>
+                      {stats.users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.username}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Season">
+                    <select required name="seasonId">
+                      {seasons
+                        .filter((s) => s.publishedAt)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.title}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                  <Field label="Effective registration date">
+                    <input required name="date" type="date" />
+                  </Field>
+                  <p>
+                    The participant has 24 hours to fill missing reports.
+                    Unfilled dates do not count.
+                  </p>
+                  <button type="submit">Create backdated participation</button>
+                </form>
                 <form
                   className="card"
                   onSubmit={(e) => {
@@ -1812,6 +1923,7 @@ function SeasonTemplate({
           });
         }}
       >
+        <h3>Goals</h3>
         {goals.map((goal, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Controlled template rows have no independent state.
           <fieldset key={i}>
@@ -1825,9 +1937,22 @@ function SeasonTemplate({
             <button
               type="button"
               className="secondary"
-              onClick={() => setGoals(goals.filter((_, index) => index !== i))}
+              onClick={() => {
+                setGoals(goals.filter((_, index) => index !== i));
+                setMilestones(
+                  milestones.map((m) => ({
+                    ...m,
+                    goalIndex:
+                      m.goalIndex === i
+                        ? undefined
+                        : m.goalIndex !== undefined && m.goalIndex > i
+                          ? m.goalIndex - 1
+                          : m.goalIndex,
+                  }))
+                );
+              }}
             >
-              Remove recommended goal {i + 1}
+              Remove
             </button>
           </fieldset>
         ))}
@@ -1839,6 +1964,8 @@ function SeasonTemplate({
         >
           Add recommended goal
         </button>
+        <h3>Milestones</h3>
+        {!milestones.length && <p>No recommended milestones yet.</p>}
         {milestones.map((m, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Controlled form rows have no independent state.
           <fieldset key={`${season.id}-milestone-${i}`}>
@@ -1859,7 +1986,7 @@ function SeasonTemplate({
                 setMilestones(milestones.filter((_, index) => index !== i))
               }
             >
-              Remove recommended milestone {i + 1}
+              Remove
             </button>
           </fieldset>
         ))}

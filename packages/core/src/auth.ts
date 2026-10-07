@@ -70,7 +70,7 @@ export interface AuthMail {
   /** Private recipient that must never enter logs or public responses. */
   recipient: string;
   /** Owner action encoded by the one-use key. */
-  kind: "verify" | "recover";
+  kind: "verify" | "recover" | "recovery_email" | "deletion";
   /** Opaque key included in a private verification/recovery link. */
   token: string;
 }
@@ -80,6 +80,10 @@ export interface ProviderProof {
   provider: "google" | "discord";
   /** Stable verified subject; matching email never establishes ownership. */
   subject: string;
+  /** Optional provider-owned profile defaults; never identity proof. */
+  username?: string;
+  /** HTTPS picture from a trusted provider host. */
+  avatar?: string;
 }
 /** Authentication dependencies are injected for local mail and OAuth doubles. */
 export interface AuthOptions {
@@ -118,13 +122,22 @@ export function createAuth(repository: Repository, options: AuthOptions) {
     return { user, saved };
   }
   /** Create a fresh opaque session after a successful independent proof. */
-  async function issueSession(tx: Transaction, userId: string) {
+  async function issueSession(
+    tx: Transaction,
+    userId: string,
+    device = "Unknown browser"
+  ) {
+    const deletion = (
+      await tx.list("erasure_requests", { userId, processedAt: null })
+    ).find((r) => !r.cancelledAt);
+    ensure(!deletion || (deletion.deleteAfter ?? "") > clock().toISOString());
     const token = opaque(),
       csrf = opaque(),
       now = clock().toISOString();
     const saved: Session = {
       id: randomUUID(),
       userId,
+      device,
       tokenHash: digest(token),
       csrfHash: digest(csrf),
       authenticatedAt: now,
@@ -155,7 +168,11 @@ export function createAuth(repository: Repository, options: AuthOptions) {
     return { recipient: credential.email, kind, token };
   }
   /** Provision account identity inside the same transaction as its first usable proof. */
-  async function newUser(tx: Transaction): Promise<User> {
+  async function newUser(
+    tx: Transaction,
+    username?: string,
+    avatar?: string
+  ): Promise<User> {
     const now = clock().toISOString();
     const row: User = {
       id: randomUUID(),
@@ -165,6 +182,21 @@ export function createAuth(repository: Repository, options: AuthOptions) {
       updatedAt: now,
     };
     await tx.insert("users", row);
+    const handle =
+      username ?? `user-${row.id.replaceAll("-", "").slice(0, 26)}`;
+    await tx.serializeKey(`username:${handle}`);
+    ensure(
+      !(await tx.list("profiles", { username: handle })).length,
+      "VALIDATION"
+    );
+    await tx.insert("profiles", {
+      id: row.id,
+      username: handle,
+      provisional: !username,
+      avatar: avatar ?? null,
+      recoveryEmail: null,
+      pendingEmail: null,
+    });
     return row;
   }
   /** Revoke all sessions after recovery or a sensitive credential change. */
@@ -179,6 +211,15 @@ export function createAuth(repository: Repository, options: AuthOptions) {
     async authenticate(token?: string, csrf?: string, recent = false) {
       return repository.transaction(async (tx) => {
         const { user, saved } = await session(tx, token, csrf, recent);
+        ensure(
+          !(
+            await tx.list("erasure_requests", {
+              userId: user.id,
+              processedAt: null,
+            })
+          ).some((r) => !r.cancelledAt),
+          "FORBIDDEN"
+        );
         return { userId: user.id, admin: user.admin, sessionId: saved.id };
       });
     },
@@ -188,7 +229,25 @@ export function createAuth(repository: Repository, options: AuthOptions) {
         const { user } = await session(tx, token);
         const credential = await tx.get("credentials", user.id);
         const identities = await tx.list("identities", { userId: user.id });
+        const profile = await tx.get("profiles", user.id);
+        ensure(profile);
+        const deletion = (
+          await tx.list("erasure_requests", {
+            userId: user.id,
+            processedAt: null,
+          })
+        ).find((r) => !r.cancelledAt);
         return accountSchema.parse({
+          username: profile.username,
+          provisional: profile.provisional,
+          avatar: profile.avatar,
+          recoveryEmail: profile.recoveryEmail,
+          deletion: deletion
+            ? {
+                requestedAt: deletion.requestedAt,
+                deleteAfter: deletion.deleteAfter,
+              }
+            : null,
           id: user.id,
           email: credential?.email ?? null,
           emailVerified: credential?.verified ?? false,
@@ -198,7 +257,12 @@ export function createAuth(repository: Repository, options: AuthOptions) {
       });
     },
     /** Execute validated email/account commands; private mail delivery occurs after commit. */
-    async execute(input: unknown, token?: string, csrf?: string) {
+    async execute(
+      input: unknown,
+      token?: string,
+      csrf?: string,
+      device = "Unknown browser"
+    ) {
       const parsed = authCommandSchema.safeParse(input);
       ensure(parsed.success, "VALIDATION");
       const c: AuthCommand = parsed.data;
@@ -216,7 +280,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
             await tx.list("credentials", { email: c.email })
           )[0];
           if (c.action === "signup" && !credential) {
-            const user = await newUser(tx);
+            const user = await newUser(tx, c.username);
             ensure(computedHash, "VALIDATION");
             credential = {
               id: user.id,
@@ -250,7 +314,32 @@ export function createAuth(repository: Repository, options: AuthOptions) {
             credential?.verified &&
               credential.passwordHash === found.passwordHash
           );
-          return { accepted: true, ...(await issueSession(tx, user.id)) };
+          return {
+            accepted: true,
+            ...(await issueSession(tx, user.id, device)),
+          };
+        }
+        if (c.action === "verify_recovery_email") {
+          const found = (
+            await tx.list("auth_tokens", {
+              tokenHash: digest(c.token),
+              kind: "recovery_email",
+            })
+          )[0];
+          ensure(found);
+          ensure(await tx.get("users", found.userId, true));
+          const proof = await tx.get("auth_tokens", found.id, true);
+          ensure(
+            proof && !proof.usedAt && proof.expiresAt > clock().toISOString()
+          );
+          const profile = await tx.get("profiles", found.userId, true);
+          ensure(profile?.pendingEmail);
+          profile.recoveryEmail = profile.pendingEmail;
+          profile.pendingEmail = null;
+          proof.usedAt = clock().toISOString();
+          await tx.save("profiles", profile);
+          await tx.save("auth_tokens", proof);
+          return { accepted: true };
         }
         if (c.action === "verify" || c.action === "reset") {
           const found = (
@@ -277,6 +366,11 @@ export function createAuth(repository: Repository, options: AuthOptions) {
           proof.usedAt = now;
           await tx.save("auth_tokens", proof);
           await tx.save("credentials", credential);
+          const profile = await tx.get("profiles", user.id, true);
+          if (profile && !profile.recoveryEmail) {
+            profile.recoveryEmail = credential.email;
+            await tx.save("profiles", profile);
+          }
           return { accepted: true };
         }
         ensure(csrf, "FORBIDDEN");
@@ -284,9 +378,103 @@ export function createAuth(repository: Repository, options: AuthOptions) {
           tx,
           token,
           csrf,
-          ["add_email", "unlink", "request_erasure"].includes(c.action)
+          ["add_email", "unlink", "request_erasure", "recovery_email"].includes(
+            c.action
+          )
         );
         const { user, saved } = context;
+        const deletion = (
+          await tx.list("erasure_requests", {
+            userId: user.id,
+            processedAt: null,
+          })
+        ).find((r) => !r.cancelledAt);
+        ensure(
+          !deletion || ["restore_account", "logout"].includes(c.action),
+          "FORBIDDEN"
+        );
+        if (c.action === "restore_account") {
+          ensure(
+            deletion && (deletion.deleteAfter ?? "") > clock().toISOString(),
+            "FORBIDDEN"
+          );
+          deletion.cancelledAt = clock().toISOString();
+          await tx.save("erasure_requests", deletion);
+          await revokeSessions(tx, user.id);
+          return {
+            accepted: true,
+            ...(await issueSession(tx, user.id, device)),
+          };
+        }
+        if (
+          c.action === "save_profile" ||
+          c.action === "set_avatar" ||
+          c.action === "recovery_email"
+        ) {
+          const profile = await tx.get("profiles", user.id, true);
+          ensure(profile);
+          if (c.action === "save_profile") {
+            await tx.serializeKey(`username:${c.username}`);
+            ensure(
+              !(await tx.list("profiles", { username: c.username })).some(
+                (p) => p.id !== user.id
+              ),
+              "VALIDATION"
+            );
+            profile.username = c.username;
+            profile.provisional = false;
+          }
+          if (c.action === "set_avatar") {
+            ensure(
+              c.avatar === null ||
+                /^data:image\/webp;base64,[A-Za-z0-9+/=]+$/.test(c.avatar),
+              "VALIDATION"
+            );
+            profile.avatar = c.avatar;
+          }
+          if (c.action === "recovery_email") {
+            for (const t of await tx.list("auth_tokens", {
+              userId: user.id,
+              kind: "recovery_email",
+            })) {
+              t.usedAt = clock().toISOString();
+              await tx.save("auth_tokens", t);
+            }
+            profile.pendingEmail = c.email;
+            const proof = opaque();
+            await tx.insert("auth_tokens", {
+              id: randomUUID(),
+              userId: user.id,
+              kind: "recovery_email",
+              tokenHash: digest(proof),
+              usedAt: null,
+              expiresAt: new Date(clock().getTime() + 86400000).toISOString(),
+            });
+            delivery = {
+              recipient: c.email,
+              kind: "recovery_email",
+              token: proof,
+            };
+          }
+          await tx.save("profiles", profile);
+          return { accepted: true };
+        }
+        if (c.action === "revoke_session") {
+          const other = await tx.get("sessions", c.sessionId, true);
+          ensure(other?.userId === user.id, "NOT_FOUND");
+          other.revokedAt = clock().toISOString();
+          await tx.save("sessions", other);
+          return { accepted: true };
+        }
+        if (c.action === "notification") {
+          const notice = await tx.get("notifications", c.id, true);
+          ensure(notice?.userId === user.id, "NOT_FOUND");
+          notice.readAt = clock().toISOString();
+          if (c.dismiss) notice.dismissedAt = clock().toISOString();
+          await tx.save("notifications", notice);
+          return { accepted: true };
+        }
+
         if (c.action === "logout") {
           saved.revokedAt = clock().toISOString();
           await tx.save("sessions", saved);
@@ -343,13 +531,31 @@ export function createAuth(repository: Repository, options: AuthOptions) {
           await revokeSessions(tx, user.id);
           return { accepted: true };
         }
+        const profile = await tx.get("profiles", user.id, true);
+        ensure(
+          c.action === "request_erasure" &&
+            profile?.username === c.username &&
+            profile.recoveryEmail,
+          "VALIDATION"
+        );
         const requestId = randomUUID();
         await tx.insert("erasure_requests", {
           id: requestId,
           userId: user.id,
           requestedAt: clock().toISOString(),
+          deleteAfter: new Date(clock().getTime() + 7 * 86400000).toISOString(),
+          cancelledAt: null,
           processedAt: null,
         });
+        await tx.insert("account_mail", {
+          id: randomUUID(),
+          userId: user.id,
+          requestId,
+          sentAt: null,
+          nextAttemptAt: clock().toISOString(),
+          failures: 0,
+        });
+        await revokeSessions(tx, user.id);
         return { accepted: true, requestId };
       });
       if (delivery) {
@@ -360,6 +566,29 @@ export function createAuth(repository: Repository, options: AuthOptions) {
         }
       }
       return result;
+    },
+    /** Owner-only session history with coarse device labels and no bearer secrets. */
+    async sessions(token?: string) {
+      return repository.transaction(async (tx) => {
+        const { user, saved } = await session(tx, token);
+        return (await tx.list("sessions", { userId: user.id })).map((s) => ({
+          id: s.id,
+          device: s.device ?? "Unknown browser",
+          authenticatedAt: s.authenticatedAt,
+          expiresAt: s.expiresAt,
+          revokedAt: s.revokedAt,
+          current: s.id === saved.id,
+        }));
+      });
+    },
+    /** Owner-only inbox; dismissed notifications are excluded. */
+    async notifications(token?: string) {
+      return repository.transaction(async (tx) => {
+        const { user } = await session(tx, token);
+        return (
+          await tx.list("notifications", { userId: user.id, dismissedAt: null })
+        ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      });
     },
     /** Begin browser-bound OAuth proof; a linking target needs recent authenticated CSRF proof. */
     async beginOAuth(
@@ -440,7 +669,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
         if (!user)
           user = knownIdentity
             ? await tx.get("users", knownIdentity.userId, true)
-            : await newUser(tx);
+            : await newUser(tx, undefined, proof.avatar);
         ensure(user);
         await tx.serializeKey(`provider:${proof.provider}:${proof.subject}`);
         const saved = await tx.get("oauth_states", stateId, true);
@@ -482,6 +711,24 @@ export function createAuth(repository: Repository, options: AuthOptions) {
           });
         }
         ensure(user);
+        const profile = await tx.get("profiles", user.id, true);
+        if (profile?.provisional && proof.username) {
+          const candidate = proof.username
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "")
+            .slice(0, 32);
+          if (candidate.length >= 3) {
+            await tx.serializeKey(`username:${candidate}`);
+            if (
+              !(await tx.list("profiles", { username: candidate })).some(
+                (p) => p.id !== user.id
+              )
+            ) {
+              profile.username = candidate;
+              await tx.save("profiles", profile);
+            }
+          }
+        }
         saved.usedAt = clock().toISOString();
         await tx.save("oauth_states", saved);
         return issueSession(tx, user.id);

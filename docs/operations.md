@@ -43,3 +43,13 @@ Encrypted backups have a thirty-day maximum retention and require access separat
 Restore into an isolated database with traffic and workers stopped. Apply the tracked migrations, then replay the current ledger with the private privileged `replayErasures` service before enabling traffic; this removes restored account graphs and scoped queued work. Reconcile current erasure requests, verify completion immutability, compare safe counts and run synthetic reporting/authentication/readiness checks. Document an actual timed restore and deletion-ledger replay during the external hosting/release gate. The local PostgreSQL tests prove service behavior, not a production backup system or disaster-recovery exercise.
 
 Protocol references: [Discord interaction responses](https://github.com/discord/discord-api-docs/blob/main/developers/interactions/receiving-and-responding.mdx), [pg-boss queues](https://pgboss.io/api/queues) and [scheduling](https://pgboss.io/api/scheduling).
+
+## Account maintenance
+
+Schedule `pnpm accounts:maintain` once per minute in a separate operator-owned process. Supply ERASURE_DATABASE_URL only to that process, alongside SMTP settings, APP_ORIGIN and the owning QUEUE_SCHEMA. The command deliberately does not load the web .env. Its connection must have the existing privileged erasure capability plus access to the account-mail queue and profiles. It retries recovery notices, checks due requests under account locks and removes due accounts through the deletion-ledger path. Web runtime credentials must never inherit these privileges.
+
+If maintenance is unavailable, account access remains suspended and recovery still stops at the deadline; actual erasure waits for the next successful sweep. Monitor the age of due unprocessed requests and unsent account_mail records without logging recipient addresses. Alert on a due request older than five minutes. Retry the sweep after correcting transport/database failures; do not restart the grace period.
+
+Migration 0005 recovers first publication from existing PublishSeason audit events. Unknown values remain null and block backdating until an administrator supplies a verified timestamp in the season editor. Existing resumable cancellations migrate to paused without retroactive benefit loss. Apply migrations before application rollout; validate on a restored disposable copy first. Downgrading the application after new lifecycle states are used is unsupported; roll forward with fixes.
+
+LOG_FORMAT accepts auto, pretty or json. Auto pretty-prints sanitized diagnostics only in interactive non-production terminals; redirected and production logs remain JSON. Formatting never expands the diagnostic data allowlist.

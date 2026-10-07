@@ -20,6 +20,7 @@ export const guildCommands = [
   "perks",
   "seasons",
   "cancel",
+  "pause",
   "resume",
   "restart",
 ].map((name) => ({
@@ -34,6 +35,7 @@ export const guildCommands = [
     "update",
     "edit",
     "cancel",
+    "pause",
     "resume",
     "restart",
   ].includes(name)
@@ -241,14 +243,9 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
                   .map((c) => [c.custom_id, c.value])
               );
               let payload: unknown;
-              if (context.kind === "cancel" && input.type === 3)
-                payload = {
-                  command: "CancelEnrollment",
-                  enrollmentId: context.enrollmentId,
-                  expectedEnrollmentVersion: context.enrollmentVersion,
-                };
-              else if (input.type !== 5) throw { code: "VALIDATION" };
-              else if (context.kind === "setup" || context.kind === "restart") {
+              if (context.kind === "cancel") throw { code: "VALIDATION" };
+              if (input.type !== 5) throw { code: "VALIDATION" };
+              if (context.kind === "setup" || context.kind === "restart") {
                 if (context.kind === "restart" && values.confirm !== "RESTART")
                   throw { code: "VALIDATION" };
                 payload = {
@@ -258,7 +255,7 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
                       : "RestartAttempt",
                   enrollmentId: context.enrollmentId,
                   expectedEnrollmentVersion: context.enrollmentVersion,
-                  timezone: values.timezone,
+
                   goals: JSON.parse(values.goals ?? "[]"),
                   milestones: [],
                   ...(context.kind === "restart"
@@ -308,6 +305,19 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
               );
               result = message(
                 `Enrollment saved. Choose goals privately: ${deps.origin}/history`
+              );
+            } else if (command === "pause" && enrollment) {
+              await deps.tracker.execute(
+                userId,
+                {
+                  command: "PauseEnrollment",
+                  enrollmentId: enrollment.id,
+                  expectedEnrollmentVersion: enrollment.version,
+                },
+                `discord:${input.id}`
+              );
+              result = message(
+                "Season paused. Streak and benefits reset; another unfinished season can start tomorrow."
               );
             } else if (command === "resume" && enrollment) {
               await deps.tracker.execute(
@@ -359,20 +369,7 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
               });
               if (kind === "cancel")
                 result = message(
-                  "Cancel this enrollment? Retained reports remain; its unfinished slot is released.",
-                  [
-                    {
-                      type: 1,
-                      components: [
-                        {
-                          type: 2,
-                          style: 4,
-                          label: "Confirm cancellation",
-                          custom_id: form,
-                        },
-                      ],
-                    },
-                  ]
+                  `Confirm cancellation and choose retention privately: ${deps.origin}/challenge/${enrollment.id}`
                 );
               else
                 result = message(
@@ -493,11 +490,6 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
                         value: JSON.stringify([
                           { title: "My custom goal", kind: "qualitative" },
                         ]),
-                      },
-                      {
-                        id: "timezone",
-                        label: "IANA timezone",
-                        value: e?.timezone ?? "UTC",
                       },
                       ...(c.kind === "restart"
                         ? [

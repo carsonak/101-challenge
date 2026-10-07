@@ -100,3 +100,32 @@ export function streaks(dates: string[], today: string) {
     trailing: run,
   };
 }
+
+/**
+ * Compute the active streak tier independently of banked reroll credits.
+ * Each seven-day run increment earns a tier; each missed date removes one tier.
+ * A pause discards the preceding tier. Concrete tier benefits belong to artwork.
+ */
+export function activePerkTier(
+  dates: string[],
+  today: string,
+  after: string | null = null
+): number {
+  const day = (value: string) => Date.parse(`${value}T00:00:00Z`) / 86400000;
+  let tier = 0,
+    run = 0,
+    last: number | undefined;
+  for (const date of [...new Set(dates)]
+    .filter((d) => !after || d > after)
+    .sort()) {
+    const current = day(date),
+      gap = last === undefined ? 0 : Math.max(0, current - last - 1);
+    tier = Math.max(0, tier - gap);
+    run = last !== undefined && current === last + 1 ? run + 1 : 1;
+    if (run % 7 === 0) tier++;
+    last = current;
+  }
+  return last === undefined
+    ? 0
+    : Math.max(0, tier - Math.max(0, day(today) - last - 1));
+}

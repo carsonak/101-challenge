@@ -177,7 +177,27 @@ export function logBackend(
     }
     const line = JSON.stringify(record);
     if (sink) sink(line, level);
-    else console[level](line);
+    else {
+      const format = process.env.LOG_FORMAT ?? "auto";
+      const pretty =
+        format === "pretty" ||
+        (format === "auto" &&
+          process.env.NODE_ENV !== "production" &&
+          Boolean(process.stdout.isTTY));
+      console[level](
+        pretty
+          ? `${record.timestamp} ${level.toUpperCase().padEnd(5)} ${service} · ${event} ${Object.entries(
+              record
+            )
+              .filter(
+                ([key]) =>
+                  !["timestamp", "level", "service", "event"].includes(key)
+              )
+              .map(([key, value]) => `${key}=${value}`)
+              .join(" ")}`
+          : line
+      );
+    }
   } catch {
     // Diagnostics must not reverse a transaction or prevent an HTTP response.
   }

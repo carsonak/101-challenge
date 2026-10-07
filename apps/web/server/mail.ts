@@ -42,9 +42,16 @@ export function createMailer(
   return {
     /** Deliver one private verification/recovery link; caller handles failure safely. */
     async send(mail: AuthMail) {
-      const url = new URL("/login", config.APP_ORIGIN);
+      const url = new URL(
+        mail.kind === "deletion"
+          ? "/login"
+          : mail.kind === "recover"
+            ? "/reset"
+            : "/verify",
+        config.APP_ORIGIN
+      );
       url.searchParams.set(
-        mail.kind === "verify" ? "verify" : "recover",
+        mail.kind === "recovery_email" ? "recoveryEmail" : "token",
         mail.token
       );
       const started = performance.now();
@@ -56,7 +63,10 @@ export function createMailer(
             mail.kind === "verify"
               ? "Verify your challenge account"
               : "Recover your challenge account",
-          text: `${mail.kind === "verify" ? "Verify your email" : "Choose a new password"}: ${url}\nThis link is private and expires. If you did not request it, you can ignore this message.`,
+          text:
+            mail.kind === "deletion"
+              ? `Account deletion has been requested. You have seven days from the request to recover it. Sign in at ${config.APP_ORIGIN}/login to see the exact deadline and restore your account.`
+              : `${mail.kind === "recover" ? "Choose a new password" : "Verify your email"}: ${url}\nThis link is private and expires. If you did not request it, you can ignore this message.`,
         });
         logBackend("web", "mail_delivered", {
           durationMs: performance.now() - started,

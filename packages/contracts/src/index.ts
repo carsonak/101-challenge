@@ -29,6 +29,18 @@ const databaseUrl = z.preprocess(
 );
 /** Server settings and defaults accepted during service configuration. */
 const envSchema = z.object({
+  /** Server-owned timezone for new enrollments. */
+  REPORTING_TIMEZONE: z
+    .string()
+    .default("Africa/Nairobi")
+    .refine((value) => {
+      try {
+        new Intl.DateTimeFormat("en", { timeZone: value });
+        return true;
+      } catch {
+        return false;
+      }
+    }),
   /** Canonical browser origin for CSRF and exact OAuth callback allowlists. */
   APP_ORIGIN: z.url().default("http://localhost:3000"),
   /** Local Mailpit or verified sender transport; never send SMTP settings to a browser. */

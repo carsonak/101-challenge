@@ -30,9 +30,9 @@ export function createDatabase(connectionString: string) {
      */
     async probe() {
       const result = await pool.query(
-        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4)"
+        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4,5,6)"
       );
-      if (result.rows[0]?.count !== 4)
+      if (result.rows[0]?.count !== 6)
         throw new Error("Tracker migrations required");
     },
     /** Release this handle's database connections; await during cleanup and do not reuse afterward. */

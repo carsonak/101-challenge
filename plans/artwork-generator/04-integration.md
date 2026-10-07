@@ -25,3 +25,7 @@ Select completed entitlements first, regardless of a current progress-only attem
 - [ ] Backfill tests for completed-then-restarted, corrected, cancelled, never-completed and erased accounts.
 
 A worker outage delays artwork only; reports/completion remain available. No change to tracker completion counts is permitted by art code.
+
+## Accepted QA lifecycle boundary
+
+Pause expires active benefits and credits immediately; gaps preserve credits and reduce the separately defined perk tier. Concrete tier benefits remain an artwork-release decision. Cancellation removes incomplete preview progress; retained completion entitlements and completed seasonal artwork survive. An erased cancelled attempt exposes only an erased tombstone, never zeroed synthetic seed inputs as renderable source. Historical date corrections and backfill increment source versions and require chronological re-projection; stale render publication must still reject. Frozen attempt seed inputs and existing completion entitlements cannot be replaced by this recalculation.

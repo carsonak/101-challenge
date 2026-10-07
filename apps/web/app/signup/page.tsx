@@ -1,7 +1,6 @@
-import TrackerScreen from "../../components/tracker";
-/** Private screens render per request; participant data loads through authorized APIs. */
-export const dynamic = "force-dynamic";
-/** Render the signup browser flow. */
+import AuthScreen from "../../components/auth-screen";
+
+/** Dedicated signup flow with no unrelated authentication forms. */
 export default function Page() {
-  return <TrackerScreen view="signup" />;
+  return <AuthScreen view="signup" />;
 }

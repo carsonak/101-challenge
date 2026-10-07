@@ -27,6 +27,7 @@ import {
   deriveAttemptSeed,
   reportingDate,
   streaks,
+  activePerkTier,
 } from "./rules.js";
 
 /** Safe service failure code; messages never contain participant data. */
@@ -48,6 +49,8 @@ function requireRule(
 }
 /** Injected time and entropy make transactions deterministic under retries and tests. */
 export interface TrackerOptions {
+  /** Server-owned timezone for new participation. */
+  timezone?: string;
   /** Clock resolved once per logical mutation. */
   now?: () => Date;
   /** UUID source for new resource identities. */
@@ -70,6 +73,7 @@ export function createTracker(
   repository: Repository,
   options: TrackerOptions = {}
 ) {
+  const defaultZone = options.timezone ?? "Africa/Nairobi";
   const clock = options.now ?? (() => new Date());
   const id = options.id ?? randomUUID;
   const secret = options.secret ?? (() => randomBytes(32).toString("hex"));
@@ -78,6 +82,12 @@ export function createTracker(
   async function actor(tx: Transaction, userId: string) {
     const user = await tx.get("users", userId, true);
     requireRule(user, "UNAUTHENTICATED");
+    requireRule(
+      !(await tx.list("erasure_requests", { userId, processedAt: null })).some(
+        (r) => !r.cancelledAt
+      ),
+      "FORBIDDEN"
+    );
     return user;
   }
   /** Lock an owned enrollment after its user. */
@@ -107,7 +117,18 @@ export function createTracker(
   /** Claim the one unfinished-season slot while holding the user lock. */
   async function claimSlot(tx: Transaction, row: Enrollment) {
     if (row.hasCompleted) return;
-    const slot = await tx.get("slots", row.userId);
+    let slot = await tx.get("slots", row.userId);
+    if (slot && slot.enrollmentId !== row.id) {
+      const held = await tx.get("enrollments", slot.enrollmentId, true);
+      if (
+        held?.participation === "paused" &&
+        held.releaseOn &&
+        held.releaseOn <= reportingDate(clock(), held.timezone ?? defaultZone)
+      ) {
+        await tx.remove("slots", row.userId);
+        slot = undefined;
+      }
+    }
     requireRule(!slot || slot.enrollmentId === row.id, "SEASON_SLOT_OCCUPIED");
     if (!slot)
       await tx.insert("slots", { id: row.userId, enrollmentId: row.id });
@@ -140,6 +161,11 @@ export function createTracker(
       enrollmentId: owner.id,
       sequence,
       status: "active",
+      pausedAt: null,
+      streakAfter: null,
+      streakBreaks: [],
+      backfillUntil: null,
+      erased: false,
       mode: owner.hasCompleted ? "progress_only" : "qualifying",
       ...deriveAttemptSeed(
         user.participantSeed,
@@ -253,6 +279,8 @@ export function createTracker(
     if (
       [
         "CreateSeason",
+        "SaveSeason",
+        "BackdateEnrollment",
         "PublishSeason",
         "SetSeasonFeatured",
         "SaveSeasonTemplate",
@@ -264,20 +292,124 @@ export function createTracker(
       return;
     }
     if (
-      ["Enroll", "CancelEnrollment", "ResumeEnrollment"].includes(
-        command.command
-      )
+      [
+        "Enroll",
+        "CancelEnrollment",
+        "PauseEnrollment",
+        "ResumeEnrollment",
+      ].includes(command.command)
     ) {
       await enrollment(tx, user, resourceId);
       return;
     }
     if (
-      ["SubmitReport", "EditReport", "CorrectReport"].includes(command.command)
+      [
+        "SubmitReport",
+        "BackfillReport",
+        "EditReport",
+        "CorrectReport",
+      ].includes(command.command)
     ) {
       await report(tx, user, resourceId);
       return;
     }
     await attempt(tx, user, resourceId);
+  }
+  /** A window can be revoked independently of its original fixed deadline. */
+  async function hasBackfill(tx: Transaction, row: Attempt) {
+    const now = clock().toISOString();
+    return Boolean(
+      row.backfillUntil &&
+      row.backfillUntil > now &&
+      (await tx.list("grants", { attemptId: row.id, kind: "backfill" })).some(
+        (g) => !g.revokedAt && !g.usedAt && g.expiresAt > now
+      )
+    );
+  }
+  /** Historical edits respect both registration and first-publication local dates. */
+  async function eligibleDate(
+    tx: Transaction,
+    owner: Enrollment,
+    date: string,
+    now: string
+  ) {
+    const season = await tx.get("seasons", owner.seasonId);
+    requireRule(season?.publishedAt, "SEASON_UNAVAILABLE");
+    const zone = owner.timezone ?? defaultZone;
+    requireRule(
+      date >= owner.registeredDate &&
+        date >= reportingDate(new Date(season.publishedAt), zone) &&
+        date <= reportingDate(new Date(now), zone),
+      "VALIDATION"
+    );
+  }
+  /** Rebuild mutable source facts chronologically without replacing immutable completion facts. */
+  async function reorder(tx: Transaction, row: Attempt, now: string) {
+    const reports = (await tx.list("reports", { attemptId: row.id })).sort(
+      (a, b) => a.reportingDate.localeCompare(b.reportingDate)
+    );
+    const milestones = await tx.list("milestones", {
+      attemptId: row.id,
+      archived: false,
+    });
+    const credits = await tx.list("credits", { attemptId: row.id });
+    const achievements = new Map(
+      reports.flatMap((r) =>
+        r.milestoneFacts.map((f) => [f.revisionId, f.achieved] as const)
+      )
+    );
+    for (const [index, r] of reports.entries()) {
+      r.reportingIndex = index + 1;
+      const boundary = row.streakBreaks
+        .filter((b) => b.at < r.createdAt)
+        .at(-1)?.date;
+      r.streakAtReport = streaks(
+        reports
+          .slice(0, index + 1)
+          .map((v) => v.reportingDate)
+          .filter((d) => !boundary || d > boundary),
+        r.reportingDate
+      ).current;
+      r.milestoneFacts = [];
+      for (const m of milestones) {
+        const rev = await tx.get("milestone_revisions", m.currentRevisionId);
+        if (rev?.input.targetReportingDay === index + 1)
+          r.milestoneFacts.push({
+            revisionId: rev.id,
+            achieved:
+              rev.input.achievementKind === "reporting_count" ||
+              achievements.get(rev.id) === true,
+          });
+      }
+      r.version++;
+      r.updatedAt = now;
+      await tx.save("reports", r);
+      const earned =
+        r.streakAtReport > 0 &&
+        r.streakAtReport % 7 === 0 &&
+        (!row.pausedAt || r.createdAt > row.pausedAt) &&
+        row.status !== "paused" &&
+        row.status !== "cancelled" &&
+        row.status !== "restarted";
+      const old = credits.find((c) => c.earningReportId === r.id);
+      if (old) {
+        old.expired = !earned;
+        await tx.save("credits", old);
+      } else if (earned)
+        await tx.insert("credits", {
+          id: id(),
+          attemptId: row.id,
+          earningReportId: r.id,
+          ruleVersion: 1,
+          expired: false,
+          createdAt: now,
+        });
+    }
+    for (const m of milestones) {
+      const rev = await tx.get("milestone_revisions", m.currentRevisionId);
+      m.locked = Boolean(rev && rev.input.targetReportingDay <= reports.length);
+      await tx.save("milestones", m);
+    }
   }
   /** Dispatch a validated mutation inside its actor transaction. */
   async function dispatch(
@@ -288,10 +420,17 @@ export function createTracker(
   ): Promise<{ resourceId: string; version: number; rawKey?: string }> {
     if (c.command === "CreateSeason") {
       requireRule(user.admin, "FORBIDDEN");
+      await tx.serializeKey(`season-slug:${c.slug}`);
+      requireRule(
+        !(await tx.list("seasons", { slug: c.slug })).length,
+        "VALIDATION"
+      );
       const seasonId = id();
       await tx.insert("seasons", {
         id: seasonId,
         title: c.title,
+        slug: c.slug,
+        publishedAt: null,
         description: c.description ?? null,
         state: "draft",
         featured: false,
@@ -306,6 +445,7 @@ export function createTracker(
       return { resourceId: seasonId, version: 0 };
     }
     if (
+      c.command === "SaveSeason" ||
       c.command === "PublishSeason" ||
       c.command === "SetSeasonFeatured" ||
       c.command === "SaveSeasonTemplate"
@@ -314,7 +454,31 @@ export function createTracker(
       const row = await tx.get("seasons", c.seasonId, true);
       requireRule(row, "NOT_FOUND");
       requireRule(row.version === c.expectedSeasonVersion, "VERSION_CONFLICT");
-      if (c.command === "PublishSeason") row.state = "published";
+      if (c.command === "SaveSeason") {
+        requireRule(row.state === "draft" || row.slug === c.slug, "FORBIDDEN");
+        requireRule(
+          !c.publishedAt ||
+            (!row.publishedAt &&
+              row.state === "published" &&
+              c.publishedAt <= now),
+          "VALIDATION"
+        );
+        await tx.serializeKey(`season-slug:${c.slug}`);
+        requireRule(
+          !(await tx.list("seasons", { slug: c.slug })).some(
+            (s) => s.id !== row.id
+          ),
+          "VALIDATION"
+        );
+        row.title = c.title;
+        row.description = c.description;
+        row.slug = c.slug;
+        if (c.publishedAt) row.publishedAt = c.publishedAt;
+      }
+      if (c.command === "PublishSeason") {
+        row.state = "published";
+        row.publishedAt ??= now;
+      }
       if (c.command === "SetSeasonFeatured") row.featured = c.featured;
       if (c.command === "SaveSeasonTemplate") {
         row.goals = c.goals;
@@ -325,6 +489,73 @@ export function createTracker(
       row.updatedAt = now;
       await tx.save("seasons", row);
       return { resourceId: row.id, version: row.version };
+    }
+    if (c.command === "BackdateEnrollment") {
+      requireRule(user.admin, "FORBIDDEN");
+      const target = await actor(tx, c.userId);
+      const season = await tx.get("seasons", c.seasonId);
+      requireRule(
+        season?.state === "published" && season.publishedAt,
+        "SEASON_UNAVAILABLE"
+      );
+      requireRule(
+        c.registeredDate >=
+          reportingDate(new Date(season.publishedAt), defaultZone) &&
+          c.registeredDate <= reportingDate(new Date(now), defaultZone),
+        "VALIDATION"
+      );
+      requireRule(
+        !(
+          await tx.list("enrollments", {
+            userId: target.id,
+            seasonId: season.id,
+          })
+        ).length,
+        "VALIDATION"
+      );
+      requireRule(season.goals.length > 0, "VALIDATION");
+      const result = await dispatch(
+        tx,
+        target,
+        { command: "Enroll", seasonId: season.id },
+        now
+      );
+      const owner = await enrollment(tx, target, result.resourceId);
+      owner.registeredDate = c.registeredDate;
+      const row = await start(
+        tx,
+        target,
+        owner,
+        defaultZone,
+        season.goals,
+        season.milestones,
+        now
+      );
+      row.backfillUntil = new Date(Date.parse(now) + 86400000).toISOString();
+      await tx.save("attempts", row);
+      await tx.insert("grants", {
+        id: id(),
+        userId: target.id,
+        attemptId: row.id,
+        reportId: null,
+        kind: "backfill",
+        tokenHash: digest(secret()),
+        expiresAt: row.backfillUntil,
+        usedAt: null,
+        revokedAt: null,
+        createdAt: now,
+      });
+      await tx.insert("notifications", {
+        id: id(),
+        userId: target.id,
+        message:
+          "Your backdated season is ready. Fill missing reports within 24 hours.",
+        href: `/challenge/${owner.id}`,
+        createdAt: now,
+        readAt: null,
+        dismissedAt: null,
+      });
+      return { resourceId: owner.id, version: owner.version };
     }
     if (c.command === "Enroll") {
       const season = await tx.get("seasons", c.seasonId);
@@ -340,6 +571,8 @@ export function createTracker(
         seasonId: c.seasonId,
         participation: "active",
         timezone: null,
+        registeredDate: reportingDate(new Date(now), defaultZone),
+        releaseOn: null,
         currentAttemptId: null,
         hasCompleted: false,
         version: 0,
@@ -353,6 +586,7 @@ export function createTracker(
     if (
       c.command === "StartAttempt" ||
       c.command === "CancelEnrollment" ||
+      c.command === "PauseEnrollment" ||
       c.command === "ResumeEnrollment" ||
       c.command === "RestartAttempt"
     ) {
@@ -364,6 +598,14 @@ export function createTracker(
       const current = owner.currentAttemptId
         ? await tx.get("attempts", owner.currentAttemptId, true)
         : undefined;
+      if (
+        (c.command === "StartAttempt" || c.command === "RestartAttempt") &&
+        c.timezone
+      )
+        requireRule(
+          c.timezone === (owner.timezone ?? defaultZone),
+          "VALIDATION"
+        );
       if (c.command === "StartAttempt") {
         requireRule(
           owner.participation === "active" && !current,
@@ -373,7 +615,7 @@ export function createTracker(
           tx,
           user,
           owner,
-          c.timezone,
+          owner.timezone ?? defaultZone,
           c.goals,
           c.milestones,
           now
@@ -388,7 +630,9 @@ export function createTracker(
           "VERSION_CONFLICT"
         );
         requireRule(
-          current.status === "active" || current.status === "completed",
+          current.status === "active" ||
+            current.status === "completed" ||
+            current.status === "cancelled",
           "ATTEMPT_CLOSED"
         );
         if (current.status === "active") {
@@ -417,27 +661,72 @@ export function createTracker(
           tx,
           user,
           owner,
-          c.timezone,
+          owner.timezone ?? defaultZone,
           c.goals,
           c.milestones,
           now
         );
         return { resourceId: row.id, version: row.version };
       }
-      if (c.command === "CancelEnrollment") {
-        requireRule(owner.participation === "active", "ATTEMPT_CLOSED");
-        owner.participation = "cancelled";
-        if (current) {
-          requireRule(current.status === "active", "ATTEMPT_CLOSED");
+      if (c.command === "CancelEnrollment" || c.command === "PauseEnrollment") {
+        requireRule(
+          current &&
+            (owner.participation === "active" ||
+              (c.command === "CancelEnrollment" &&
+                owner.participation === "paused")),
+          "ATTEMPT_CLOSED"
+        );
+        if (c.command === "CancelEnrollment") {
+          const season = await tx.get("seasons", owner.seasonId);
+          requireRule(c.seasonSlug === season?.slug, "VALIDATION");
+          owner.participation = "cancelled";
           current.status = "cancelled";
+          await releaseSlot(tx, owner);
+          owner.releaseOn = null;
+        } else {
+          owner.participation = "paused";
+          current.status = "paused";
+          const today = reportingDate(
+            new Date(now),
+            owner.timezone ?? defaultZone
+          );
+          owner.releaseOn = new Date(
+            Date.parse(`${today}T00:00:00Z`) + 86400000
+          )
+            .toISOString()
+            .slice(0, 10);
+          current.pausedAt = now;
+          const hasToday = (
+            await tx.list("reports", { attemptId: current.id })
+          ).some((r) => r.reportingDate === today);
+          const cutoff = hasToday
+            ? today
+            : new Date(Date.parse(`${today}T00:00:00Z`) - 86400000)
+                .toISOString()
+                .slice(0, 10);
+          current.streakAfter = cutoff;
+          current.streakBreaks.push({ date: cutoff, at: now });
         }
-        await releaseSlot(tx, owner);
+        for (const grant of await tx.list("grants", {
+          attemptId: current.id,
+          kind: "backfill",
+        })) {
+          grant.revokedAt = now;
+          await tx.save("grants", grant);
+        }
+        for (const credit of await tx.list("credits", {
+          attemptId: current.id,
+        })) {
+          credit.expired = true;
+          await tx.save("credits", credit);
+        }
       } else {
-        requireRule(owner.participation === "cancelled", "ATTEMPT_CLOSED");
+        requireRule(owner.participation === "paused", "ATTEMPT_CLOSED");
         await claimSlot(tx, owner);
         owner.participation = "active";
+        owner.releaseOn = null;
         if (current) {
-          requireRule(current.status === "cancelled", "ATTEMPT_CLOSED");
+          requireRule(current.status === "paused", "ATTEMPT_CLOSED");
           current.status = "active";
         }
       }
@@ -459,19 +748,30 @@ export function createTracker(
           deliveries: 0,
         });
       }
+      if (c.command === "CancelEnrollment" && c.erase && current)
+        await tx.eraseAttempt(user.id, current.id);
       return { resourceId: owner.id, version: owner.version };
     }
-    if (c.command === "SubmitReport") {
+    if (c.command === "SubmitReport" || c.command === "BackfillReport") {
       const { owner, row } = await attempt(tx, user, c.attemptId);
       requireRule(row.version === c.expectedAttemptVersion, "VERSION_CONFLICT");
       requireRule(row.status === "active", "ATTEMPT_CLOSED");
-      const date = reportingDate(new Date(now), owner.timezone ?? "UTC");
+      const date =
+        c.command === "BackfillReport"
+          ? c.reportingDate
+          : reportingDate(new Date(now), owner.timezone ?? defaultZone);
+      if (c.command === "BackfillReport") {
+        requireRule(await hasBackfill(tx, row), "GRANT_INVALID");
+        await eligibleDate(tx, owner, date, now);
+      }
       const reports = await tx.list("reports", { attemptId: row.id });
       requireRule(
         !reports.some((r) => r.reportingDate === date),
         "ALREADY_REPORTED"
       );
       const count = reports.length + 1;
+      const reportingIndex =
+        reports.filter((r) => r.reportingDate < date).length + 1;
       requireRule(count <= 101, "ATTEMPT_CLOSED");
       await validateValues(tx, row, c.goalValues);
       const facts: Report["milestoneFacts"] = [];
@@ -484,7 +784,7 @@ export function createTracker(
           milestone.currentRevisionId
         );
         requireRule(revision, "VALIDATION");
-        if (revision.input.targetReportingDay === count) {
+        if (revision.input.targetReportingDay === reportingIndex) {
           facts.push({
             revisionId: revision.id,
             achieved:
@@ -504,13 +804,15 @@ export function createTracker(
         requireRule(
           milestone?.attemptId === row.id &&
             !milestone.archived &&
-            revision?.input.targetReportingDay === count &&
+            revision?.input.targetReportingDay === reportingIndex &&
             revision.input.achievementKind === "manual",
           "VALIDATION"
         );
       }
       const run = streaks(
-        [...reports.map((r) => r.reportingDate), date],
+        [...reports.map((r) => r.reportingDate), date].filter(
+          (d) => !row.streakAfter || d > row.streakAfter
+        ),
         date
       ).trailing;
       const accepted: Report = {
@@ -531,7 +833,7 @@ export function createTracker(
         updatedAt: now,
       };
       await tx.insert("reports", accepted);
-      if (run % 7 === 0)
+      if (run > 0 && run % 7 === 0)
         await tx.insert("credits", {
           id: id(),
           attemptId: row.id,
@@ -559,7 +861,7 @@ export function createTracker(
                 .sort((a, b) => a.reportingIndex - b.reportingIndex)
                 .map((r) => r.reportingDate),
               date,
-            ],
+            ].sort(),
           });
           owner.hasCompleted = true;
         }
@@ -567,6 +869,7 @@ export function createTracker(
         await tx.save("enrollments", owner);
       }
       await tx.save("attempts", row);
+      if (c.command === "BackfillReport") await reorder(tx, row, now);
       return { resourceId: accepted.id, version: accepted.version };
     }
     if (c.command === "EditReport" || c.command === "CorrectReport") {
@@ -584,7 +887,8 @@ export function createTracker(
               reportingDate(new Date(now), owner.timezone ?? "UTC"),
           "ATTEMPT_CLOSED"
         );
-      else {
+      else if (c.key || !(await hasBackfill(tx, row))) {
+        requireRule(c.key, "GRANT_INVALID");
         const foundGrant = (
           await tx.list("grants", { tokenHash: digest(c.key) })
         )[0];
@@ -607,6 +911,20 @@ export function createTracker(
           await tx.save("grants", grant);
         }
       }
+      if (
+        c.command === "CorrectReport" &&
+        c.reportingDate &&
+        c.reportingDate !== saved.reportingDate
+      ) {
+        await eligibleDate(tx, owner, c.reportingDate, now);
+        requireRule(
+          !(await tx.list("reports", { attemptId: row.id })).some(
+            (r) => r.id !== saved.id && r.reportingDate === c.reportingDate
+          ),
+          "ALREADY_REPORTED"
+        );
+        saved.reportingDate = c.reportingDate;
+      }
       await validateValues(tx, row, c.goalValues, saved);
       saved.body = c.body;
       saved.goalValues = c.goalValues;
@@ -617,6 +935,8 @@ export function createTracker(
       row.updatedAt = now;
       await tx.save("reports", saved);
       await tx.save("attempts", row);
+      if (c.command === "CorrectReport" && c.reportingDate)
+        await reorder(tx, row, now);
       return { resourceId: saved.id, version: saved.version };
     }
     if (c.command === "IssueCorrectionGrant") {
@@ -660,7 +980,11 @@ export function createTracker(
       return { resourceId: grant.id, version: 0 };
     }
     const { row } = await attempt(tx, user, c.attemptId);
-    requireRule(row.status === "active", "ATTEMPT_CLOSED");
+    requireRule(
+      row.status === "active" ||
+        (row.status === "completed" && (await hasBackfill(tx, row))),
+      "ATTEMPT_CLOSED"
+    );
     requireRule(row.version === c.expectedAttemptVersion, "VERSION_CONFLICT");
     if (c.command === "SaveGoal" || c.command === "ArchiveGoal") {
       const goal = c.goalId ? await tx.get("goals", c.goalId) : undefined;
@@ -705,7 +1029,8 @@ export function createTracker(
           milestone?.attemptId === row.id && !milestone.archived,
           "NOT_FOUND"
         );
-      requireRule(!milestone?.locked, "MILESTONE_LOCKED");
+      const backfill = await hasBackfill(tx, row);
+      requireRule(!milestone?.locked || backfill, "MILESTONE_LOCKED");
       const old = milestone
         ? await tx.get("milestone_revisions", milestone.currentRevisionId)
         : undefined;
@@ -713,7 +1038,7 @@ export function createTracker(
       requireRule(input, "NOT_FOUND");
       const reports = await tx.list("reports", { attemptId: row.id });
       requireRule(
-        input.targetReportingDay > reports.length,
+        input.targetReportingDay > reports.length || backfill,
         "MILESTONE_LOCKED"
       );
       if (input.goalId) {
@@ -754,6 +1079,7 @@ export function createTracker(
     row.sourceVersion++;
     row.updatedAt = now;
     await tx.save("attempts", row);
+    if (await hasBackfill(tx, row)) await reorder(tx, row, now);
     return { resourceId: row.id, version: row.version };
   }
 
@@ -768,7 +1094,17 @@ export function createTracker(
         createdAt: now,
         updatedAt: now,
       };
-      await repository.transaction((tx) => tx.insert("users", row));
+      await repository.transaction(async (tx) => {
+        await tx.insert("users", row);
+        await tx.insert("profiles", {
+          id: row.id,
+          username: `user-${row.id.replaceAll("-", "").slice(0, 26)}`,
+          provisional: true,
+          avatar: null,
+          recoveryEmail: null,
+          pendingEmail: null,
+        });
+      });
       return row.id;
     },
     /** Validate, authorize and execute an idempotent mutation; raw keys return only on initial issuance. */
@@ -847,6 +1183,36 @@ export function createTracker(
             deliveries: 0,
           });
         }
+        if (
+          !user.admin ||
+          [
+            "Enroll",
+            "StartAttempt",
+            "PauseEnrollment",
+            "CancelEnrollment",
+            "ResumeEnrollment",
+            "RestartAttempt",
+          ].includes(command.command)
+        )
+          await tx.insert("notifications", {
+            id: id(),
+            userId,
+            message:
+              (
+                {
+                  Enroll: "Season joined",
+                  StartAttempt: "Challenge started",
+                  PauseEnrollment: "Season paused",
+                  CancelEnrollment: "Season cancelled",
+                  ResumeEnrollment: "Season resumed",
+                  RestartAttempt: "New attempt started",
+                } as Record<string, string>
+              )[command.command] ?? "Challenge progress updated",
+            href: "/home",
+            createdAt: now,
+            readAt: null,
+            dismissedAt: null,
+          });
         return { ...result, replayed: false };
       });
     },
@@ -864,6 +1230,8 @@ export function createTracker(
         return rows.map((s) =>
           seasonSchema.parse({
             id: s.id,
+            slug: s.slug,
+            publishedAt: s.publishedAt,
             title: s.title,
             description: s.description,
             featured: s.featured,
@@ -884,6 +1252,8 @@ export function createTracker(
         return mapInOrder(rows, async (e) => ({
           ...enrollmentSchema.parse({
             id: e.id,
+            registeredDate: e.registeredDate,
+            releaseOn: e.releaseOn,
             seasonId: e.seasonId,
             participation: e.participation,
             timezone: e.timezone,
@@ -891,6 +1261,19 @@ export function createTracker(
             hasCompleted: e.hasCompleted,
             version: e.version,
           }),
+          earliestReportingDate:
+            [
+              e.registeredDate,
+              reportingDate(
+                new Date(
+                  (await tx.get("seasons", e.seasonId))?.publishedAt ??
+                    e.createdAt
+                ),
+                e.timezone ?? defaultZone
+              ),
+            ]
+              .sort()
+              .at(-1) ?? e.registeredDate,
           completion:
             (await tx.list("entitlements", { enrollmentId: e.id })).map(
               (entitlement) => ({
@@ -906,10 +1289,6 @@ export function createTracker(
               const reports = (
                 await tx.list("reports", { attemptId: a.id })
               ).sort((l, r) => l.reportingIndex - r.reportingIndex);
-              const run = streaks(
-                reports.map((r) => r.reportingDate),
-                reportingDate(clock(), e.timezone ?? "UTC")
-              );
               return {
                 ...progressSchema.parse({
                   enrollmentId: e.id,
@@ -918,8 +1297,26 @@ export function createTracker(
                   attemptState: a.status,
                   mode: a.mode,
                   reportingDays: reports.length,
-                  currentStreak: run.current,
-                  longestStreak: run.longest,
+                  currentStreak:
+                    a.status === "paused" || a.status === "cancelled"
+                      ? 0
+                      : streaks(
+                          reports
+                            .map((r) => r.reportingDate)
+                            .filter((d) => !a.streakAfter || d > a.streakAfter),
+                          reportingDate(clock(), e.timezone ?? defaultZone)
+                        ).current,
+                  perkTier: ["paused", "cancelled"].includes(a.status)
+                    ? 0
+                    : activePerkTier(
+                        reports.map((r) => r.reportingDate),
+                        reportingDate(clock(), e.timezone ?? defaultZone),
+                        a.streakAfter
+                      ),
+                  longestStreak: Math.max(
+                    0,
+                    ...reports.map((r) => r.streakAtReport)
+                  ),
                   rerollCredits: (
                     await tx.list("credits", {
                       attemptId: a.id,
@@ -929,6 +1326,15 @@ export function createTracker(
                   version: a.version,
                 }),
                 startedAt: a.startedAt,
+                backfillDeadline: a.backfillUntil,
+                backfillThrough: reportingDate(
+                  new Date(a.createdAt),
+                  e.timezone ?? defaultZone
+                ),
+                backfillUntil: (await hasBackfill(tx, a))
+                  ? a.backfillUntil
+                  : null,
+                erased: a.erased,
                 today: reportingDate(clock(), e.timezone ?? "UTC"),
                 goals: await tx.list("goals", { attemptId: a.id }),
                 goalRevisions: await tx.list("goal_revisions", {
@@ -971,10 +1377,6 @@ export function createTracker(
               const owner = await tx.get("enrollments", a.enrollmentId);
               requireRule(owner, "NOT_FOUND");
               const reports = await tx.list("reports", { attemptId: a.id });
-              const run = streaks(
-                reports.map((r) => r.reportingDate),
-                reportingDate(clock(), owner.timezone ?? "UTC")
-              );
               return {
                 id: a.id,
                 enrollmentId: a.enrollmentId,
@@ -984,9 +1386,30 @@ export function createTracker(
                 createdAt: a.createdAt,
                 updatedAt: a.updatedAt,
                 reportingDays: reports.length,
-                currentStreak: run.current,
-                longestStreak: run.longest,
-                selectedPerks: ["streak_reroll"],
+                currentStreak:
+                  a.status === "paused" || a.status === "cancelled"
+                    ? 0
+                    : streaks(
+                        reports
+                          .map((r) => r.reportingDate)
+                          .filter((d) => !a.streakAfter || d > a.streakAfter),
+                        reportingDate(clock(), owner.timezone ?? defaultZone)
+                      ).current,
+                longestStreak: Math.max(
+                  0,
+                  ...reports.map((r) => r.streakAtReport)
+                ),
+                perkTier: ["paused", "cancelled"].includes(a.status)
+                  ? 0
+                  : activePerkTier(
+                      reports.map((r) => r.reportingDate),
+                      reportingDate(clock(), owner.timezone ?? defaultZone),
+                      a.streakAfter
+                    ),
+                selectedPerks:
+                  a.status === "paused" || a.status === "cancelled"
+                    ? []
+                    : ["streak_reroll"],
                 rerollCredits: (
                   await tx.list("credits", { attemptId: a.id, expired: false })
                 ).length,
@@ -1019,6 +1442,10 @@ export function createTracker(
               version: r.version,
             })
           ),
+          users: (await tx.list("profiles", {})).map((p) => ({
+            id: p.id,
+            username: p.username,
+          })),
           grants: (await tx.list("grants", {})).map((g) => ({
             id: g.id,
             userId: g.userId,
@@ -1038,6 +1465,7 @@ export function createTracker(
       return repository.transaction(async (tx) => {
         const user = await actor(tx, userId);
         const { owner, row } = await attempt(tx, user, attemptId);
+        requireRule(!row.erased, "NOT_FOUND");
         const completion = (
           await tx.list("entitlements", { enrollmentId: owner.id })
         )[0];

@@ -31,6 +31,10 @@ export interface User extends Timed {
 export interface Season extends Timed {
   /** Persisted title for this record. */
   title: string;
+  /** Stable public URL identifier; frozen on publication. */
+  slug: string;
+  /** First publication instant; legacy unknown values require explicit reconciliation. */
+  publishedAt: string | null;
   /** Persisted description for this record. */
   description: string | null;
   /** Persisted state for this record. */
@@ -50,12 +54,16 @@ export interface Season extends Timed {
 }
 /** Retained per-season participation, independent of any current attempt. */
 export interface Enrollment extends Timed {
+  /** Earliest eligible local reporting date; actual creation remains separately retained. */
+  registeredDate: string;
+  /** Date before which another qualifying enrollment cannot claim the slot. */
+  releaseOn: string | null;
   /** Persisted user id for this record. */
   userId: string;
   /** Persisted season id for this record. */
   seasonId: string;
   /** Persisted participation for this record. */
-  participation: "active" | "cancelled" | "completed";
+  participation: "active" | "paused" | "cancelled" | "completed";
   /** Persisted timezone for this record. */
   timezone: string | null;
   /** Persisted current attempt id for this record. */
@@ -70,14 +78,24 @@ export interface Slot extends Row {
   /** Persisted enrollment id for this record. */
   enrollmentId: string;
 }
-/** Private retained attempt; initial inputs never change after setup. */
+/** Private retained attempt; seed inputs freeze at setup and can only be removed by explicit erasure. */
 export interface Attempt extends Timed {
+  /** Retained pause boundaries for chronological streak recalculation. */
+  streakBreaks: { date: string; at: string }[];
+  /** Last pause instant; reports saved before this never earn new post-pause credits. */
+  pausedAt: string | null;
+  /** Last local date excluded from a new post-pause streak. */
+  streakAfter: string | null;
+  /** Fixed administrator backfill deadline. */
+  backfillUntil: string | null;
+  /** Whether private attempt content was explicitly erased on cancellation. */
+  erased: boolean;
   /** Persisted enrollment id for this record. */
   enrollmentId: string;
   /** Persisted sequence for this record. */
   sequence: number;
   /** Persisted status for this record. */
-  status: "active" | "cancelled" | "restarted" | "completed";
+  status: "active" | "paused" | "cancelled" | "restarted" | "completed";
   /** Persisted mode for this record. */
   mode: "qualifying" | "progress_only";
   /** Persisted base seed for this record. */
@@ -187,7 +205,7 @@ export interface Grant extends Row {
   /** Persisted report id for this record. */
   reportId: string | null;
   /** Persisted kind for this record. */
-  kind: "single_report" | "attempt_window";
+  kind: "single_report" | "attempt_window" | "backfill";
   /** Persisted token hash for this record. */
   tokenHash: string;
   /** Persisted expires at for this record. */
@@ -248,6 +266,12 @@ export interface Audit extends Row {
 }
 /** Typed repository tables; private records remain behind services. */
 export interface Tables {
+  /** Owner profiles, unique usernames and private recovery addresses. */
+  profiles: Profile;
+  /** Owner notification inbox. */
+  notifications: Notification;
+  /** Retrying content-free deletion email jobs. */
+  account_mail: AccountMail;
   /** Persisted users for this record. */
   users: User;
   /** Persisted seasons for this record. */
@@ -322,6 +346,8 @@ export interface Transaction {
       | "oauth_states",
     id: string
   ): Promise<void>;
+  /** Erase only a cancelled current attempt after core authorization. */
+  eraseAttempt(userId: string, attemptId: string): Promise<void>;
   /** Serialize provisioning by normalized identity key without taking another user lock. */
   serializeKey(key: string): Promise<void>;
 }
@@ -353,6 +379,8 @@ export interface Identity extends Row {
 }
 /** Opaque hashed authentication session and bound CSRF proof. */
 export interface Session extends Row {
+  /** Coarse browser/device label; never the raw user-agent. */
+  device?: string;
   /** Authenticated independent account. */
   userId: string;
   /** Hash of the opaque HttpOnly session cookie. */
@@ -371,7 +399,7 @@ export interface AuthToken extends Row {
   /** Account receiving proof through its private delivery address. */
   userId: string;
   /** Verification and password recovery cannot redeem each other's keys. */
-  kind: "verify" | "recover";
+  kind: "verify" | "recover" | "recovery_email";
   /** Opaque key hash; plaintext exists only during delivery. */
   tokenHash: string;
   /** Absolute expiry; redemption checks time while locked. */
@@ -400,10 +428,56 @@ export interface OAuthState extends Row {
 }
 /** Owner-confirmed account deletion request; execution is a separate privileged path. */
 export interface ErasureRequest extends Row {
+  /** Fixed erasure deadline, checked under the account lock. */
+  deleteAfter?: string;
+  /** Owner recovery timestamp; cancelled requests cannot execute. */
+  cancelledAt?: string | null;
   /** Account to erase, established from a recent authenticated session. */
   userId: string;
   /** Time of explicit owner confirmation. */
   requestedAt: string;
   /** Privileged completion timestamp, null until processed. */
   processedAt: string | null;
+}
+
+/** Owner profile; provider identity claims never establish email ownership. */
+export interface Profile extends Row {
+  /** Unique normalized username. */
+  username: string;
+  /** Existing/provisioned accounts must confirm their suggested username. */
+  provisional: boolean;
+  /** Sanitized image data or trusted provider image URL. */
+  avatar: string | null;
+  /** Verified independently, including for provider-only accounts. */
+  recoveryEmail: string | null;
+  /** Pending verification target; changing it invalidates old proofs. */
+  pendingEmail: string | null;
+}
+/** Content-free owner notification; no private log text. */
+export interface Notification extends Row {
+  /** Owning account. */
+  userId: string;
+  /** Human-readable event summary without participant text. */
+  message: string;
+  /** Server-owned relative navigation target. */
+  href: string;
+  /** Creation instant. */
+  createdAt: string;
+  /** Read marker. */
+  readAt: string | null;
+  /** Dismissal marker. */
+  dismissedAt: string | null;
+}
+/** Retryable deletion notice; recovery uses independent sign-in proof, never a queued bearer secret. */
+export interface AccountMail extends Row {
+  /** Owning account; cascade deleted on erasure. */
+  userId: string;
+  /** Request to describe; cancelled notices are discarded. */
+  requestId: string;
+  /** Successful delivery marker. */
+  sentAt: string | null;
+  /** Retry backoff boundary. */
+  nextAttemptAt: string;
+  /** Number of failed delivery attempts. */
+  failures: number;
 }

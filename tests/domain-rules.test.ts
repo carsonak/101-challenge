@@ -92,3 +92,14 @@ test("streak gaps preserve longest and progress while separate runs earn separat
   });
   assert.equal(streaks(dates, "2026-03-15").current, 0);
 });
+
+test("perk tiers degrade per missed date while pauses start a fresh tier", async () => {
+  const { activePerkTier } = await import("../packages/core/src/rules.js");
+  const dates = Array.from({ length: 14 }, (_, i) =>
+    new Date(Date.UTC(2026, 0, i + 1)).toISOString().slice(0, 10)
+  );
+  assert.equal(activePerkTier(dates, "2026-01-15"), 2);
+  assert.equal(activePerkTier(dates, "2026-01-16"), 1);
+  assert.equal(activePerkTier(dates, "2026-01-17"), 0);
+  assert.equal(activePerkTier(dates, "2026-01-14", "2026-01-14"), 0);
+});

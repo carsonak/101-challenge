@@ -61,7 +61,7 @@ export const startAttemptSchema = z
     command: z.literal("StartAttempt"),
     enrollmentId: resourceId,
     expectedEnrollmentVersion: version,
-    timezone,
+    timezone: timezone.optional(),
     goals: z.array(initialGoalSchema).min(1).max(20),
     milestones: z.array(initialMilestoneSchema).max(101).default([]),
   })
@@ -102,12 +102,14 @@ const enrollmentMutation = {
   enrollmentId: resourceId,
   expectedEnrollmentVersion: version,
 };
-/** Cancellation retains history and releases an unfinished-season slot. */
+/** Cancellation requires the season identifier; optionally erases current-attempt content. */
 export const cancelEnrollmentSchema = z.strictObject({
   command: z.literal("CancelEnrollment"),
   ...enrollmentMutation,
+  seasonSlug: z.string().min(1),
+  erase: z.boolean().default(false),
 });
-/** Resumption reacquires a slot and continues the cancelled attempt. */
+/** Resumption reacquires a slot and continues a paused attempt without restoring benefits. */
 export const resumeEnrollmentSchema = z.strictObject({
   command: z.literal("ResumeEnrollment"),
   ...enrollmentMutation,
@@ -177,14 +179,22 @@ export const revokeCorrectionGrantSchema = z.strictObject({
   command: z.literal("RevokeCorrectionGrant"),
   grantId: resourceId,
 });
-/** Owner redeems a secret key to overwrite an existing report; no date can be supplied. */
+/** Owner corrects an existing report and eligible date using a key or an active backfill grant. */
 export const correctReportSchema = editReportSchema.extend({
   command: z.literal("CorrectReport"),
-  key: z.string().regex(/^[a-f0-9]{64}$/),
+  key: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  reportingDate: z.iso.date().optional(),
 });
 /** Admin creates a draft; publishing and featuring are separate explicit actions. */
 export const createSeasonSchema = z.strictObject({
   command: z.literal("CreateSeason"),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .max(80),
   title: z.string().trim().min(1).max(200),
   description: z.string().max(4000).optional(),
 });
@@ -219,8 +229,42 @@ export const saveSeasonTemplateSchema = z
       (m) => m.goalIndex === undefined || m.goalIndex < input.goals.length
     )
   );
+/** Pause preserves progress but expires benefits and delays qualifying slot release. */
+export const pauseEnrollmentSchema = z.strictObject({
+  command: z.literal("PauseEnrollment"),
+  ...enrollmentMutation,
+});
+/** Versioned administrator metadata changes; identifiers freeze at publication. */
+export const saveSeasonSchema = z.strictObject({
+  command: z.literal("SaveSeason"),
+  seasonId: resourceId,
+  expectedSeasonVersion: version,
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(4000),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .max(80),
+  publishedAt: z.iso.datetime().optional(),
+});
+/** Administrator creates template participation with a fixed 24-hour owner backfill. */
+export const backdateEnrollmentSchema = z.strictObject({
+  command: z.literal("BackdateEnrollment"),
+  userId: resourceId,
+  seasonId: resourceId,
+  registeredDate: z.iso.date(),
+});
+/** Owner fills a previously missing date only during their administrator-issued window. */
+export const backfillReportSchema = submitReportSchema.extend({
+  command: z.literal("BackfillReport"),
+  reportingDate: z.iso.date(),
+});
 /** Complete v0.1 domain command registry; authentication has separate contracts. */
 export const trackerCommandSchema = z.union([
+  pauseEnrollmentSchema,
+  saveSeasonSchema,
+  backdateEnrollmentSchema,
+  backfillReportSchema,
   enrollSchema,
   startAttemptSchema,
   submitReportSchema,
@@ -261,12 +305,20 @@ export const trackerEventSchema = z.strictObject({
 export const progressSchema = z.strictObject({
   enrollmentId: resourceId,
   attemptId: resourceId,
-  participation: z.enum(["active", "cancelled", "completed"]),
-  attemptState: z.enum(["active", "cancelled", "restarted", "completed"]),
+  participation: z.enum(["active", "paused", "cancelled", "completed"]),
+  attemptState: z.enum([
+    "active",
+    "paused",
+    "cancelled",
+    "restarted",
+    "completed",
+  ]),
   mode: z.enum(["qualifying", "progress_only"]),
   reportingDays: z.number().int().min(0).max(101),
   currentStreak: z.number().int().min(0).max(101),
   longestStreak: z.number().int().min(0).max(101),
+  /** Streak tier is separate from the credit balance; concrete benefits ship with artwork. */
+  perkTier: z.number().int().nonnegative().default(0),
   rerollCredits: z.number().int().nonnegative(),
   version,
 });
@@ -305,9 +357,11 @@ export const ownerReportSchema = z.strictObject({
 });
 /** Owner-safe seasonal enrollment including setup and current slot state. */
 export const enrollmentSchema = z.strictObject({
+  registeredDate: z.iso.date(),
+  releaseOn: z.iso.date().nullable(),
   id: resourceId,
   seasonId: resourceId,
-  participation: z.enum(["active", "cancelled", "completed"]),
+  participation: z.enum(["active", "paused", "cancelled", "completed"]),
   timezone: z.string().nullable(),
   currentAttemptId: resourceId.nullable(),
   hasCompleted: z.boolean(),
@@ -315,6 +369,8 @@ export const enrollmentSchema = z.strictObject({
 });
 /** Public season discovery contains only deliberately published template text. */
 export const seasonSchema = z.strictObject({
+  slug: z.string(),
+  publishedAt: z.iso.datetime().nullable(),
   id: resourceId,
   title: z.string(),
   description: z.string().nullable(),

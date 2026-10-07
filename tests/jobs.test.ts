@@ -55,7 +55,11 @@ test(
         owner = await tracker.createUser(),
         s = await tracker.execute(
           admin,
-          { command: "CreateSeason", title: "Fictional worker season" },
+          {
+            command: "CreateSeason",
+            slug: randomUUID(),
+            title: "Fictional worker season",
+          },
           randomUUID()
         );
       await tracker.execute(
@@ -78,7 +82,7 @@ test(
             command: "StartAttempt",
             enrollmentId: e.resourceId,
             expectedEnrollmentVersion: 0,
-            timezone: "UTC",
+            timezone: "Africa/Nairobi",
             goals: [{ title: "Private worker goal", kind: "qualitative" }],
           },
           randomUUID()
@@ -241,7 +245,11 @@ test(
         admin = await tracker.createUser(true);
       const s = await tracker.execute(
         admin,
-        { command: "CreateSeason", title: "Fictional queue season" },
+        {
+          command: "CreateSeason",
+          slug: randomUUID(),
+          title: "Fictional queue season",
+        },
         randomUUID()
       );
       const event = required(

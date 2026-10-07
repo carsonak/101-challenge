@@ -15,7 +15,9 @@ function build() {
   const database = createRepository(config.DATABASE_URL, true);
   const mail = createMailer(config);
   const auth = createAuth(database.repository, { sendMail: mail.send });
-  const tracker = createTracker(database.repository);
+  const tracker = createTracker(database.repository, {
+    timezone: config.REPORTING_TIMEZONE,
+  });
   const providers = createProviders(config);
   logBackend("web", "runtime_ready");
   return {

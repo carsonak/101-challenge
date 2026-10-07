@@ -6,6 +6,11 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     services:
+      mailpit:
+        image: docker.io/axllent/mailpit:v1.31.2
+        ports:
+          - 1026:1025
+          - 8026:8025
       postgres:
         image: docker.io/library/postgres:17.11-alpine
         env:
@@ -34,3 +39,15 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - run: pnpm smoke
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser acceptance
+        env:
+          APP_ORIGIN: http://127.0.0.1:3101
+          PORT: 3101
+          SMTP_PORT: 1026
+          QA_BASE_URL: http://127.0.0.1:3101
+          QA_MAILPIT_URL: http://127.0.0.1:8026
+        run: |
+          pnpm start:web > "$RUNNER_TEMP/qa-web.log" 2>&1 &
+          curl --retry 20 --retry-connrefused --retry-delay 1 --fail http://127.0.0.1:3101/api/ready
+          pnpm test:browser

@@ -70,7 +70,12 @@ test(
         (
           await request(
             "/api/v1/auth",
-            { action: "signup", email, password },
+            {
+              action: "signup",
+              username: randomUUID().slice(0, 32),
+              email,
+              password,
+            },
             { origin: "https://evil.invalid" }
           )
         ).status,
@@ -78,8 +83,14 @@ test(
       );
       assert.equal(mail.length, 0);
       assert.equal(
-        (await request("/api/v1/auth", { action: "signup", email, password }))
-          .status,
+        (
+          await request("/api/v1/auth", {
+            action: "signup",
+            username: randomUUID().slice(0, 32),
+            email,
+            password,
+          })
+        ).status,
         200
       );
       const proof = required(mail.at(-1));
@@ -112,7 +123,11 @@ test(
       const admin = await tracker.createUser(true);
       const season = await tracker.execute(
         admin,
-        { command: "CreateSeason", title: "Fictional browser season" },
+        {
+          command: "CreateSeason",
+          slug: randomUUID(),
+          title: "Fictional browser season",
+        },
         randomUUID()
       );
       const rows = await tracker.seasons(admin, true),

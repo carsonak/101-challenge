@@ -2,6 +2,31 @@ import type { Tables } from "@challenge/core";
 
 /** Fixed typed-column encodings used by the private repository mapper. */
 export const columns = {
+  profiles: {
+    id: "uuid",
+    username: "text",
+    provisional: "boolean",
+    avatar: "text?",
+    recoveryEmail: "text?",
+    pendingEmail: "text?",
+  },
+  notifications: {
+    id: "uuid",
+    userId: "uuid",
+    message: "text",
+    href: "text",
+    createdAt: "instant",
+    readAt: "instant?",
+    dismissedAt: "instant?",
+  },
+  account_mail: {
+    id: "uuid",
+    userId: "uuid",
+    requestId: "uuid",
+    sentAt: "instant?",
+    nextAttemptAt: "instant",
+    failures: "integer",
+  },
   users: {
     id: "uuid",
     participantSeed: "seed",
@@ -10,6 +35,8 @@ export const columns = {
     updatedAt: "instant",
   },
   seasons: {
+    slug: "text",
+    publishedAt: "instant?",
     id: "uuid",
     title: "text",
     description: "text?",
@@ -24,6 +51,8 @@ export const columns = {
     updatedAt: "instant",
   },
   enrollments: {
+    registeredDate: "date",
+    releaseOn: "date?",
     id: "uuid",
     userId: "uuid",
     seasonId: "uuid",
@@ -40,6 +69,11 @@ export const columns = {
     enrollmentId: "uuid",
   },
   attempts: {
+    streakBreaks: "json",
+    pausedAt: "instant?",
+    streakAfter: "date?",
+    backfillUntil: "instant?",
+    erased: "boolean",
     id: "uuid",
     enrollmentId: "uuid",
     sequence: "integer",
@@ -168,6 +202,7 @@ export const columns = {
   },
   identities: { id: "uuid", userId: "uuid", provider: "text", subject: "text" },
   sessions: {
+    device: "text",
     id: "uuid",
     userId: "uuid",
     tokenHash: "text",
@@ -196,6 +231,8 @@ export const columns = {
     usedAt: "instant?",
   },
   erasure_requests: {
+    deleteAfter: "instant",
+    cancelledAt: "instant?",
     id: "uuid",
     userId: "uuid",
     requestedAt: "instant",

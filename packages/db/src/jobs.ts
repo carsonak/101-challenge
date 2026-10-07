@@ -19,9 +19,9 @@ export function createJobStore(
     /** Require every tracker migration before handlers or readiness are enabled. */
     async ready() {
       const r = await pool.query(
-        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4)"
+        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4,5,6)"
       );
-      if (r.rows[0]?.count !== 4)
+      if (r.rows[0]?.count !== 6)
         throw new Error("Tracker migrations required");
     },
     /** Claim pending events with leases; publish failures retain metadata and bounded backoff. */

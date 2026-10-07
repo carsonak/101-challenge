@@ -30,7 +30,11 @@ async function fixture() {
     user = await tracker.createUser();
   const create = await tracker.execute(
     admin,
-    { command: "CreateSeason", title: "Fictional practice" },
+    {
+      command: "CreateSeason",
+      slug: randomUUID(),
+      title: "Fictional practice",
+    },
     randomUUID()
   );
   await tracker.execute(
@@ -213,7 +217,11 @@ test(
     try {
       const second = await f.tracker.execute(
         f.admin,
-        { command: "CreateSeason", title: "Second fictional season" },
+        {
+          command: "CreateSeason",
+          slug: randomUUID(),
+          title: "Second fictional season",
+        },
         randomUUID()
       );
       await f.tracker.execute(
@@ -254,12 +262,13 @@ test(
       const cancel = await f.tracker.execute(
         f.user,
         {
-          command: "CancelEnrollment",
+          command: "PauseEnrollment",
           enrollmentId: f.enrollmentId,
           expectedEnrollmentVersion: 1,
         },
         randomUUID()
       );
+      f.advance();
       const contenders = await Promise.allSettled([
         f.tracker.execute(
           f.user,
@@ -389,7 +398,7 @@ test(
 );
 
 test(
-  "PostgreSQL credits survive separate runs/cancellation and expire on retained restart",
+  "PostgreSQL credits survive separate runs, expire on pause and expire on retained restart",
   { skip: !url },
   async () => {
     const f = await fixture();
@@ -403,14 +412,14 @@ test(
       await f.tracker.execute(
         f.user,
         {
-          command: "CancelEnrollment",
+          command: "PauseEnrollment",
           enrollmentId: f.enrollmentId,
           expectedEnrollmentVersion: e.version,
         },
         randomUUID()
       );
       e = required((await f.tracker.history(f.user))[0]);
-      assert.equal(required(e.attempts[0]).rerollCredits, 2);
+      assert.equal(required(e.attempts[0]).rerollCredits, 0);
       await f.tracker.execute(
         f.user,
         {

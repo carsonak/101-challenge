@@ -1,6 +1,6 @@
 # Contributing
 
-These practices apply to individual and collaborative development from any repository checkout. The optional [carsonak workflow](docs/workflows/carsonak.md) describes one personal setup; adopting it is not a contributor requirement.
+These practices apply to individual and collaborative development from any repository checkout.
 
 ## Architecture and source layout
 
@@ -52,3 +52,52 @@ Use JSDoc for code documentation throughout the project. Write for a developer u
 Enforce resource authorization, safe response projections, and explicit confirmation for destructive user operations. Never commit credentials, tokens, private report bodies, real participant fixtures, or machine-specific environment files. Redact sensitive content in logs and keep private session details out of public issues, reviews, and PRs.
 
 Use [directory READMEs](plans/README.md) to discover current planning groups. Record durable architecture decisions in ADRs and lasting behavioral requirements in domain documentation. Plans may be cleaned up; documentation needed to maintain the project must survive that cleanup. Keep developer guidance here rather than duplicating it in agent instructions.
+
+## Local setup
+
+Requirements: Node 24.7 or newer within the Node 24 line, pnpm 12.9.1, Docker Compose (or compatible Podman Compose). Install pnpm with `npm install --global pnpm@12.9.1` if needed.
+
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
+pnpm services:up
+pnpm database:migrate
+pnpm dev:web
+```
+
+In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
+
+The web landing page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. Apply the tracked migrations with `pnpm database:migrate` using local schema-owner credentials. Auth provider settings may remain blank; no fake login or development authentication bypass is installed. See [authentication and privacy](docs/authentication.md) for runtime/operator role separation.
+
+For concurrent checkouts use unique COMPOSE_PROJECT_NAME, POSTGRES_DB, POSTGRES_PORT, PORT, WORKER_PORT, QUEUE_SCHEMA and Mailpit ports in separate ignored `.env` files. Update DATABASE_URL to match that checkout's database and port. Never point smoke tests or experimental workers at participant databases.
+
+## Commands and boundaries
+
+| Command                                | Purpose                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm check`                           | Typecheck, lint/boundaries, formatting, document links/vector and unit tests             |
+| `pnpm build`                           | Compile packages/worker and build production Next.js                                     |
+| `pnpm smoke`                           | Start built web/worker on temporary ports; verify page, branding, liveness and readiness |
+| `pnpm format`                          | Format source and documentation                                                          |
+| `pnpm start:web` / `pnpm start:worker` | Run production builds with root `.env`                                                   |
+
+Run build before smoke/start. Without DATABASE_URL, smoke verifies readiness is unavailable; with an isolated database it verifies connectivity and worker queue initialization. Set TRACKER_TEST_DATABASE_URL to a disposable database ending in `_test` or `_ci` to run the transaction/adapter/worker suite; absent configuration explicitly skips those tests. CI supplies PostgreSQL, migrates it and runs the real suite, build and smoke. `GET /api/health` and worker `GET /health` are liveness; `/api/ready` and worker `/ready` require database connectivity. Readiness also requires all applied tracker migrations; the worker checks them before handlers start. See the [operations runbook](docs/operations.md).
+
+`apps/web` owns the browser/API adapters; `apps/worker` owns async execution. `packages/contracts` owns transport schemas, `packages/core` framework-independent services and `packages/db` persistence. Shared packages compile before app development; rerun their build after editing their sources. The guidance above describes coordination and verification.
+
+## Containers
+
+```sh
+docker build --target web -t challenge-web .
+docker build --target worker -t challenge-worker .
+```
+
+Images run as a non-root user and contain the verified workspace build. This initial portable image retains build dependencies; production image slimming is an operations follow-up. Supply runtime environment and database networking explicitly; local `.env` and credentials are excluded from the build context. Containers do not provision hosting or run domain migrations.
+
+Dependency choices were checked against official [Next.js installation](https://nextjs.org/docs/app/getting-started/installation), [pnpm installation](https://pnpm.io/installation), [Drizzle PostgreSQL](https://orm.drizzle.team/docs/get-started-postgresql), [Zod](https://zod.dev/) and [pg-boss](https://pgboss.io/introduction) documentation. Exact versions live in manifests and lockfile; Node 24 meets Next.js and pg-boss runtime requirements. TypeScript remains on the compatible 5.9 line for this foundation.
+
+## Browser regression suite
+
+Install the runner's Chromium with `pnpm exec playwright install chromium` (see [Playwright browser setup](https://playwright.dev/docs/browsers)). Start a production build against an isolated database and set QA_BASE_URL and TRACKER_TEST_DATABASE_URL before `pnpm test:browser`. The database name must end in `_test` or `_ci`; fixtures create fictional users and seasons. QA_BROWSER_OUTPUT selects an external artifact directory (defaults to the system temporary directory). If the host requires an already-installed compatible Chromium, supply QA_CHROMIUM_EXECUTABLE explicitly. Tests run without retries.
+
+Avatar uploads use Sharp's default metadata stripping, resize and explicit WebP output; see [Sharp output behavior](https://sharp.pixelplumbing.com/api-output/). Keep decoding and pixel limits server-side.

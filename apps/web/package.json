@@ -18,7 +18,8 @@
     "next": "16.3.8",
     "nodemailer": "10.0.15",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@types/nodemailer": "8.0.2",

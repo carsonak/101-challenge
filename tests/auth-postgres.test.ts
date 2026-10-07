@@ -49,7 +49,12 @@ async function fixture() {
     },
     async signup() {
       const address = email();
-      await auth.execute({ action: "signup", email: address, password });
+      await auth.execute({
+        action: "signup",
+        username: randomUUID().slice(0, 32),
+        email: address,
+        password,
+      });
       const proof = required(mail.at(-1));
       await auth.execute({ action: "verify", token: proof.token });
       const result = await auth.execute({
@@ -85,7 +90,12 @@ test(
     try {
       const address = email();
       assert.deepEqual(
-        await f.auth.execute({ action: "signup", email: address, password }),
+        await f.auth.execute({
+          action: "signup",
+          username: randomUUID().slice(0, 32),
+          email: address,
+          password,
+        }),
         { accepted: true }
       );
       await assert.rejects(
@@ -293,7 +303,11 @@ test(
       f.advance(10);
       await assert.rejects(
         f.auth.execute(
-          { action: "request_erasure", confirmed: true },
+          {
+            action: "request_erasure",
+            confirmed: true,
+            username: (await f.auth.account(owner.token)).username,
+          },
           owner.token,
           owner.csrf
         ),
@@ -305,7 +319,11 @@ test(
         owner.csrf
       );
       const request = await f.auth.execute(
-        { action: "request_erasure", confirmed: true },
+        {
+          action: "request_erasure",
+          confirmed: true,
+          username: (await f.auth.account(owner.token)).username,
+        },
         owner.token,
         owner.csrf
       );
@@ -331,7 +349,11 @@ test(
       const admin = await tracker.createUser(true);
       const season = await tracker.execute(
         admin,
-        { command: "CreateSeason", title: "Erasure fixture" },
+        {
+          command: "CreateSeason",
+          slug: randomUUID(),
+          title: "Erasure fixture",
+        },
         randomUUID()
       );
       await tracker.execute(
@@ -432,7 +454,11 @@ test(
         enrollmentVersion: 0,
       });
       const request = await f.auth.execute(
-        { action: "request_erasure", confirmed: true },
+        {
+          action: "request_erasure",
+          confirmed: true,
+          username: (await f.auth.account(owner.token)).username,
+        },
         owner.token,
         owner.csrf
       );
@@ -440,6 +466,15 @@ test(
       const requestId = required(request.requestId);
       await assert.rejects(f.db.eraseAccount(actor.userId, randomUUID()), {
         code: "42501",
+      });
+      await assert.rejects(f.db.eraseAccount(actor.userId, requestId), {
+        code: "42501",
+      });
+      await f.db.repository.transaction(async (tx) => {
+        const row = await tx.get("erasure_requests", requestId, true);
+        assert.ok(row);
+        row.deleteAfter = "2000-01-01T00:00:00.000Z";
+        await tx.save("erasure_requests", row);
       });
       await f.db.eraseAccount(actor.userId, requestId);
       assert.equal(await jobs.projection(started.resourceId), undefined);

@@ -26,10 +26,13 @@
     "services:up": "node scripts/services-up.mjs",
     "services:down": "docker compose down",
     "smoke": "node --env-file-if-exists=.env scripts/smoke.mjs",
-    "database:migrate": "pnpm build:packages && node --env-file-if-exists=.env scripts/migrate.mjs"
+    "database:migrate": "pnpm build:packages && node --env-file-if-exists=.env scripts/migrate.mjs",
+    "accounts:maintain": "pnpm build:packages && node --import tsx scripts/account-maintenance.ts",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.58.2",
     "@types/node": "24.19.1",
     "prettier": "3.9.9",
     "tsx": "4.23.15",
