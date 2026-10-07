@@ -26,6 +26,7 @@ Create an account, verify your email, choose a season, and customize its recomme
 - [Project status](docs/project-status.md): available features and release boundaries.
 - [Plans](plans/README.md): current initiatives and progress.
 - [Domain rules](docs/domain.md) and [operations](docs/operations.md).
+- [Database and HTTP reference](docs/reference/README.md): DBML schema diagram and OpenAPI specification.
 - [Verification evidence](docs/verification.md).
 
 ## License and identity

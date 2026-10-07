@@ -1,0 +1,507 @@
+// PostgreSQL schema after migrations 0001–0006. See README.md for scope and limitations.
+Project challenge_tracker {
+  database_type: 'PostgreSQL'
+  Note: 'Schema documentation only. SQL migrations remain authoritative for deployment, grants, triggers, partial indexes and deferrable constraints.'
+}
+
+Table profiles {
+  "id" uuid [pk, not null]
+  "username" text [not null]
+  "provisional" boolean [not null, default: false]
+  "avatar" text [null]
+  "recoveryEmail" text [null]
+  "pendingEmail" text [null]
+  indexes {
+    (`lower(username)`) [unique, name: 'profiles_username']
+  }
+  checks {
+    `username ~ '^[a-z0-9_-]{3,32}$'`
+    `length(avatar) <= 400000`
+  }
+}
+
+Table notifications {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "message" text [not null]
+  "href" text [not null]
+  "createdAt" timestamptz [not null]
+  "readAt" timestamptz [null]
+  "dismissedAt" timestamptz [null]
+  indexes {
+    ("userId", "createdAt") [name: 'notifications_owner']
+  }
+}
+
+Table account_mail {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "requestId" uuid [not null]
+  "sentAt" timestamptz [null]
+  "nextAttemptAt" timestamptz [not null]
+  "failures" integer [not null, default: 0]
+  indexes {
+    "requestId" [unique]
+  }
+}
+
+Table users {
+  "id" uuid [pk, not null]
+  "participantSeed" bytea [not null, note: 'Private 32-byte value; never expose in API responses.']
+  "admin" boolean [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  checks {
+    `octet_length("participantSeed") = 32`
+  }
+}
+
+Table seasons {
+  "slug" text [not null]
+  "publishedAt" timestamptz [null]
+  "id" uuid [pk, not null]
+  "title" text [not null]
+  "description" text [null]
+  "state" text [not null]
+  "featured" boolean [not null]
+  "seasonSeed" bytea [not null, note: 'Private 32-byte value; never expose in API responses.']
+  "goals" jsonb [not null]
+  "milestones" jsonb [not null]
+  "sessionUrl" text [null]
+  "version" integer [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    slug [unique]
+  }
+  checks {
+    `octet_length("seasonSeed") = 32`
+    `"version" >= 0`
+    `slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`
+  }
+}
+
+Table enrollments {
+  "registeredDate" date [not null]
+  "releaseOn" date [null]
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "seasonId" uuid [not null]
+  "participation" text [not null]
+  "timezone" text [null]
+  "currentAttemptId" uuid [null]
+  "hasCompleted" boolean [not null]
+  "version" integer [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    ("userId", "seasonId") [unique]
+    (id, "userId") [unique]
+  }
+  checks {
+    `"version" >= 0`
+  }
+}
+
+Table slots {
+  "id" uuid [pk, not null]
+  "enrollmentId" uuid [not null]
+}
+
+Table attempts {
+  "streakBreaks" jsonb [not null, default: `'[]'::jsonb`]
+  "pausedAt" timestamptz [null]
+  "streakAfter" date [null]
+  "backfillUntil" timestamptz [null]
+  "erased" boolean [not null, default: false]
+  "id" uuid [pk, not null]
+  "enrollmentId" uuid [not null]
+  "sequence" integer [not null]
+  "status" text [not null]
+  "mode" text [not null]
+  "baseSeed" bytea [not null, note: 'Private 32-byte value; never expose in API responses.']
+  "seedVersion" text [not null]
+  "initialInputDigest" bytea [not null, note: 'Private 32-byte value; never expose in API responses.']
+  "initialGoals" jsonb [not null]
+  "initialMilestones" jsonb [not null]
+  "startedAt" timestamptz [not null]
+  "sourceVersion" integer [not null]
+  "version" integer [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    ("enrollmentId", sequence) [unique]
+    (id, "enrollmentId") [unique]
+    "enrollmentId" [name: 'attempts_one_current', note: 'UNIQUE only WHERE status IN (active, paused); see migrations.']
+  }
+  checks {
+    `"sequence" >= 0`
+    `octet_length("baseSeed") = 32`
+    `octet_length("initialInputDigest") = 32`
+    `"sourceVersion" >= 0`
+    `"version" >= 0`
+    `status IN ('active','paused','cancelled','restarted','completed')`
+    `mode IN ('qualifying','progress_only')`
+  }
+}
+
+Table goals {
+  "id" uuid [pk, not null]
+  "attemptId" uuid [not null]
+  "currentRevisionId" uuid [not null]
+  "archived" boolean [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    (id, "attemptId") [unique]
+    ("attemptId", id) [name: 'goals_owner']
+  }
+}
+
+Table goal_revisions {
+  "id" uuid [pk, not null]
+  "goalId" uuid [not null]
+  "attemptId" uuid [not null]
+  "input" jsonb [not null]
+  "archived" boolean [not null]
+  "createdAt" timestamptz [not null]
+  indexes {
+    (id, "attemptId") [unique]
+    (id, "goalId") [unique]
+    ("attemptId", id) [name: 'goal_revisions_owner']
+  }
+}
+
+Table milestones {
+  "id" uuid [pk, not null]
+  "attemptId" uuid [not null]
+  "currentRevisionId" uuid [not null]
+  "archived" boolean [not null]
+  "locked" boolean [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    (id, "attemptId") [unique]
+    ("attemptId", id) [name: 'milestones_owner']
+  }
+}
+
+Table milestone_revisions {
+  "id" uuid [pk, not null]
+  "milestoneId" uuid [not null]
+  "attemptId" uuid [not null]
+  "input" jsonb [not null]
+  "archived" boolean [not null]
+  "createdAt" timestamptz [not null]
+  indexes {
+    (id, "milestoneId") [unique]
+    (id, "attemptId") [unique]
+    ("attemptId", id) [name: 'milestone_revisions_owner']
+  }
+}
+
+Table reports {
+  "id" uuid [pk, not null]
+  "attemptId" uuid [not null]
+  "reportingDate" date [not null]
+  "reportingIndex" integer [not null]
+  "body" text [not null]
+  "goalValues" jsonb [not null]
+  "applicableGoalRevisionIds" jsonb [not null]
+  "streakAtReport" integer [not null]
+  "selectedPerks" jsonb [not null]
+  "milestoneFacts" jsonb [not null]
+  "version" integer [not null]
+  "createdAt" timestamptz [not null]
+  "updatedAt" timestamptz [not null]
+  indexes {
+    ("attemptId", "reportingDate") [unique]
+    ("attemptId", "reportingIndex") [unique, note: 'DEFERRABLE INITIALLY DEFERRED']
+    (id, "attemptId") [unique]
+    ("attemptId", "reportingDate", id) [name: 'reports_cursor']
+  }
+  checks {
+    `"reportingIndex" >= 0`
+    `"reportingIndex" BETWEEN 1 AND 101`
+    `"streakAtReport" >= 0`
+    `"version" >= 0`
+  }
+}
+
+Table credits {
+  "id" uuid [pk, not null]
+  "attemptId" uuid [not null]
+  "earningReportId" uuid [not null]
+  "ruleVersion" integer [not null]
+  "expired" boolean [not null]
+  "createdAt" timestamptz [not null]
+  indexes {
+    ("earningReportId", "ruleVersion") [unique]
+  }
+  checks {
+    `"ruleVersion" >= 0`
+  }
+}
+
+Table entitlements {
+  Note: 'Completion facts are immutable. UPDATE is always rejected; DELETE requires authorized privileged erasure.'
+  "id" uuid [pk, not null]
+  "enrollmentId" uuid [not null]
+  "attemptId" uuid [not null]
+  "completedAt" timestamptz [not null]
+  "reportingDates" jsonb [not null]
+  indexes {
+    "enrollmentId" [unique]
+  }
+  checks {
+    `jsonb_array_length("reportingDates") = 101`
+  }
+}
+
+Table grants {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "attemptId" uuid [not null]
+  "reportId" uuid [null]
+  "kind" text [not null]
+  "tokenHash" text [not null]
+  "expiresAt" timestamptz [not null]
+  "usedAt" timestamptz [null]
+  "revokedAt" timestamptz [null]
+  "createdAt" timestamptz [not null]
+  indexes {
+    "tokenHash" [unique]
+    ("userId", id) [name: 'grants_recipient']
+  }
+  checks {
+    `kind IN ('single_report','attempt_window','backfill')`
+    `(kind='single_report' AND "reportId" IS NOT NULL AND "expiresAt" <= "createdAt" + interval '24 hours') OR (kind='attempt_window' AND "reportId" IS NULL AND "expiresAt" <= "createdAt" + interval '1 hour') OR (kind='backfill' AND "reportId" IS NULL AND "expiresAt" <= "createdAt" + interval '24 hours')`
+  }
+}
+
+Table replays {
+  Note: 'Polymorphic resourceId has no SQL foreign key.'
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "command" text [not null]
+  "key" text [not null]
+  "requestHash" text [not null]
+  "resourceId" uuid [not null]
+  "version" integer [not null]
+  "expiresAt" timestamptz [not null]
+  indexes {
+    ("userId", command, key) [unique]
+  }
+  checks {
+    `"version" >= 0`
+  }
+}
+
+Table outbox {
+  Note: 'Polymorphic aggregateId has no SQL foreign key.'
+  "id" uuid [pk, not null]
+  "type" text [not null]
+  "aggregateId" uuid [not null]
+  "sourceVersion" integer [not null]
+  "occurredAt" timestamptz [not null]
+  "publishedAt" timestamptz [null]
+  "deliveries" integer [not null]
+  "leasedUntil" timestamptz [null]
+  "lastFailureAt" timestamptz [null]
+  indexes {
+    ("publishedAt", id) [name: 'outbox_pending']
+  }
+  checks {
+    `"sourceVersion" >= 0`
+    `deliveries >= 0`
+  }
+}
+
+Table audit {
+  Note: 'actorId and aggregateId are metadata identifiers without SQL foreign keys.'
+  "id" uuid [pk, not null]
+  "actorId" uuid [not null]
+  "action" text [not null]
+  "aggregateId" uuid [not null]
+  "occurredAt" timestamptz [not null]
+}
+
+Table credentials {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "email" text [not null]
+  "passwordHash" text [not null]
+  "verified" boolean [not null]
+  indexes {
+    "userId" [unique]
+    email [unique]
+  }
+  checks {
+    `id = "userId"`
+  }
+}
+
+Table identities {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "provider" text [not null]
+  "subject" text [not null]
+  indexes {
+    (provider, subject) [unique]
+    ("userId", provider) [unique]
+  }
+  checks {
+    `provider IN ('google','discord')`
+    `length(subject) BETWEEN 1 AND 255`
+  }
+}
+
+Table sessions {
+  "device" text [not null, default: 'Unknown browser']
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "tokenHash" text [not null]
+  "csrfHash" text [not null]
+  "authenticatedAt" timestamptz [not null]
+  "expiresAt" timestamptz [not null]
+  "revokedAt" timestamptz [null]
+  indexes {
+    "tokenHash" [unique]
+    ("userId", id) [name: 'sessions_owner']
+  }
+}
+
+Table auth_tokens {
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "kind" text [not null]
+  "tokenHash" text [not null]
+  "expiresAt" timestamptz [not null]
+  "usedAt" timestamptz [null]
+  indexes {
+    "tokenHash" [unique]
+  }
+  checks {
+    `kind IN ('verify','recover','recovery_email')`
+  }
+}
+
+Table oauth_states {
+  "id" uuid [pk, not null]
+  "provider" text [not null]
+  "userId" uuid [null]
+  "stateHash" text [not null]
+  "browserHash" text [not null]
+  "nonce" text [not null]
+  "verifier" text [not null]
+  "expiresAt" timestamptz [not null]
+  "usedAt" timestamptz [null]
+  indexes {
+    "stateHash" [unique]
+  }
+  checks {
+    `provider IN ('google','discord')`
+  }
+}
+
+Table erasure_requests {
+  "deleteAfter" timestamptz [not null, default: `now() + interval '7 days'`]
+  "cancelledAt" timestamptz [null]
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "requestedAt" timestamptz [not null]
+  "processedAt" timestamptz [null]
+}
+
+Table report_goal_values {
+  Note: 'Normalized report values coexist with reports.goalValues JSON.'
+  "report_id" uuid [not null]
+  "attempt_id" uuid [not null]
+  "goal_revision_id" uuid [not null]
+  "value" numeric [not null]
+  indexes {
+    (report_id, goal_revision_id) [pk]
+  }
+  checks {
+    `value >= 0 AND scale(value) <= 6 AND length(replace(value::text,'.','')) <= 18`
+  }
+}
+
+Table deletion_ledger {
+  Note: 'Content-free UUID tombstones intentionally have no users foreign key; they survive account erasure.'
+  "userId" uuid [pk, not null]
+  "erasedAt" timestamptz [not null]
+}
+
+Table adapter_confirmations {
+  Note: 'Actor-bound form metadata; resourceId and enrollmentId have no SQL foreign keys.'
+  "id" uuid [pk, not null]
+  "userId" uuid [not null]
+  "kind" text [not null]
+  "resourceId" uuid [not null]
+  "version" integer [not null]
+  "enrollmentId" uuid [not null]
+  "enrollmentVersion" integer [not null]
+  "expiresAt" timestamptz [not null]
+  checks {
+    `kind IN ('setup','update','edit','cancel','restart')`
+    `version >= 0`
+    `"enrollmentVersion" >= 0`
+  }
+}
+
+Table event_receipts {
+  "id" uuid [pk, not null]
+  "processedAt" timestamptz [not null]
+}
+
+Table source_projections {
+  "attemptId" uuid [pk, not null]
+  "sourceVersion" integer [not null]
+  "state" text [not null]
+  "reportingDays" integer [not null]
+  "checkedAt" timestamptz [not null]
+}
+
+Table tracker_migrations {
+  Note: 'Created by the migration runner before numbered migrations.'
+  "version" integer [pk, not null]
+}
+
+// Current-attempt and current-revision composite references are DEFERRABLE INITIALLY DEFERRED.
+Ref: enrollments."userId" > users.id
+Ref: grants."userId" > users.id
+Ref: replays."userId" > users.id
+Ref: credentials."userId" > users.id
+Ref: identities."userId" > users.id
+Ref: sessions."userId" > users.id
+Ref: auth_tokens."userId" > users.id
+Ref: oauth_states."userId" > users.id
+Ref: erasure_requests."userId" > users.id
+Ref: adapter_confirmations."userId" > users.id [delete: cascade]
+Ref: notifications."userId" > users.id [delete: cascade]
+Ref: account_mail."userId" > users.id [delete: cascade]
+Ref: goals."attemptId" > attempts.id
+Ref: milestones."attemptId" > attempts.id
+Ref: reports."attemptId" > attempts.id
+Ref: credits."attemptId" > attempts.id
+Ref: enrollments."seasonId" > seasons.id
+Ref: slots.id > users.id
+Ref: slots.("enrollmentId", id) > enrollments.(id, "userId")
+Ref: attempts."enrollmentId" > enrollments.id
+Ref: enrollments.("currentAttemptId", id) > attempts.(id, "enrollmentId")
+Ref: goal_revisions.("goalId", "attemptId") > goals.(id, "attemptId")
+Ref: goals.("currentRevisionId", id) > goal_revisions.(id, "goalId")
+Ref: milestone_revisions.("milestoneId", "attemptId") > milestones.(id, "attemptId")
+Ref: milestones.("currentRevisionId", id) > milestone_revisions.(id, "milestoneId")
+Ref: report_goal_values.(report_id, attempt_id) > reports.(id, "attemptId")
+Ref: report_goal_values.(goal_revision_id, attempt_id) > goal_revisions.(id, "attemptId")
+Ref: credits.("earningReportId", "attemptId") > reports.(id, "attemptId")
+Ref: entitlements."enrollmentId" > enrollments.id
+Ref: entitlements.("attemptId", "enrollmentId") > attempts.(id, "enrollmentId")
+Ref: grants.("reportId", "attemptId") > reports.(id, "attemptId")
+Ref: credentials.id > users.id
+Ref: profiles.id > users.id [delete: cascade]
+Ref: account_mail."requestId" > erasure_requests.id [delete: cascade]
+Ref: event_receipts.id > outbox.id [delete: cascade]
+Ref: source_projections."attemptId" > attempts.id [delete: cascade]

@@ -1,0 +1,4252 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "101 Challenge HTTP API",
+    "version": "0.1.0-dev",
+    "description": "Documentation of the current local tracker. Cookie-authenticated browser API plus OAuth callbacks, signed Discord ingress and service health. JSON browser responses use private, no-store caching. Custom domain validation remains authoritative; no new endpoints are introduced by this document."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local web origin; replace with configured APP_ORIGIN."
+    }
+  ],
+  "paths": {
+    "/api/v1/session": {
+      "get": {
+        "operationId": "getSession",
+        "summary": "getSession",
+        "description": "Anonymous callers receive account:null and csrf:null. A supplied invalid session returns 401. Provider flags describe enabled integrations.",
+        "security": [
+          {},
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/seasons": {
+      "get": {
+        "operationId": "listPublishedSeasons",
+        "summary": "listPublishedSeasons",
+        "description": "",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "description": "Opaque cursor scoped to this collection; omit on the first page. Other query parameters are rejected."
+          }
+        ]
+      }
+    },
+    "/api/v1/seasons/{seasonId}": {
+      "get": {
+        "operationId": "getPublishedSeason",
+        "summary": "getPublishedSeason",
+        "description": "",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/seasonSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "operationId": "listSessions",
+        "summary": "listSessions",
+        "description": "Owner-only projection.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "summary": "listNotifications",
+        "description": "Owner-only projection.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/history": {
+      "get": {
+        "operationId": "getHistory",
+        "summary": "getHistory",
+        "description": "Owner-only projection.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "description": "Opaque cursor scoped to this collection; omit on the first page. Other query parameters are rejected."
+          }
+        ]
+      }
+    },
+    "/api/v1/export": {
+      "get": {
+        "operationId": "exportHistory",
+        "summary": "exportHistory",
+        "description": "Owner-only projection.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Export"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "const": "attachment; filename=\"challenge-history.json\""
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/stats": {
+      "get": {
+        "operationId": "getAdminStats",
+        "summary": "getAdminStats",
+        "description": "Administrator access required; private participant report bodies and goal values are excluded.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/seasons": {
+      "get": {
+        "operationId": "listAdminSeasons",
+        "summary": "listAdminSeasons",
+        "description": "Administrator access required; private participant report bodies and goal values are excluded.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "description": "Opaque cursor scoped to this collection; omit on the first page. Other query parameters are rejected."
+          }
+        ]
+      }
+    },
+    "/api/v1/auth": {
+      "post": {
+        "operationId": "executeAuth",
+        "summary": "executeAuth",
+        "description": "Anonymous actions: signup, login, recover, verify, reset, verify_recovery_email. All other actions require the session cookie and x-csrf-token. add_email, unlink, request_erasure and recovery_email also require authentication within the last ten minutes. Usernames are trimmed and lowercased; email addresses are lowercased. Payload limit: 2 MiB. Avatar accepts null or a PNG/JPEG/WebP base64 data URL (max 400000 characters); decoding is limited to 16 million pixels and output is sanitized WebP up to 256\u00d7256. Accepted signup/recovery does not disclose whether an address exists. Login and restore_account set session cookies; logout, unlink, reset and request_erasure clear them.",
+        "security": [
+          {},
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "challenge_session (HttpOnly) and challenge_csrf; Path=/, SameSite=Lax, Secure when APP_ORIGIN uses HTTPS."
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/authCommandSchema"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "description": "Must exactly match configured APP_ORIGIN.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": false,
+            "description": "CSRF proof associated with the session, available through /api/v1/session or challenge_csrf cookie.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/command": {
+      "post": {
+        "operationId": "executeTrackerCommand",
+        "summary": "executeTrackerCommand",
+        "description": "Payload limit: 2 MiB. Identity, reporting date for SubmitReport, timestamps, mode and seeds are server-owned. Ownership and optimistic versions are checked by core. Administrator commands require admin access; IssueCorrectionGrant and RevokeCorrectionGrant additionally require authentication within ten minutes. Replays reauthorize and reload the resource; reuse the key only for the same logical command.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/commandResultSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackerCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "description": "Must exactly match configured APP_ORIGIN.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "description": "CSRF proof associated with the session, available through /api/v1/session or challenge_csrf cookie.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[-\\w:]{1,200}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/oauth": {
+      "post": {
+        "operationId": "beginOAuth",
+        "summary": "beginOAuth",
+        "description": "Begin provider sign-in (link:false) or explicit account linking (link:true). Linking requires a session, CSRF and authentication within ten minutes. Sets the ten-minute HttpOnly challenge_oauth browser-binding cookie.",
+        "security": [
+          {},
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": ["url"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "enum": ["google", "discord"]
+                  },
+                  "link": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["provider", "link"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "description": "Must exactly match configured APP_ORIGIN.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": false,
+            "description": "CSRF proof associated with the session, available through /api/v1/session or challenge_csrf cookie.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "operationId": "completeGoogleOAuth",
+        "summary": "completeGoogleOAuth",
+        "description": "Provider callback verifies one-use state, browser binding and provider proof. Sets session/CSRF cookies and clears challenge_oauth.",
+        "security": [
+          {
+            "oauthCookie": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "303": {
+            "description": "Redirect to APP_ORIGIN/account.",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          }
+        ]
+      }
+    },
+    "/api/auth/discord/callback": {
+      "get": {
+        "operationId": "completeDiscordOAuth",
+        "summary": "completeDiscordOAuth",
+        "description": "Provider callback verifies one-use state, browser binding and provider proof. Sets session/CSRF cookies and clears challenge_oauth.",
+        "security": [
+          {
+            "oauthCookie": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "303": {
+            "description": "Redirect to APP_ORIGIN/account.",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          }
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "webHealth",
+        "summary": "Web health",
+        "security": [],
+        "description": "Liveness without external dependency checks.",
+        "responses": {
+          "200": {
+            "description": "Service available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebHealth"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ready": {
+      "get": {
+        "operationId": "webReady",
+        "summary": "Web ready",
+        "security": [],
+        "description": "Readiness requires configured database connectivity and applied tracker migrations.",
+        "responses": {
+          "200": {
+            "description": "Service available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebHealth"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebHealth"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "workerHealth",
+        "summary": "Worker health",
+        "security": [],
+        "description": "Liveness without external dependency checks.",
+        "responses": {
+          "200": {
+            "description": "Service available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealth"
+                }
+              }
+            }
+          }
+        }
+      },
+      "servers": [
+        {
+          "url": "http://localhost:3001",
+          "description": "Worker origin; replace with configured WORKER_HOST/WORKER_PORT."
+        }
+      ]
+    },
+    "/ready": {
+      "get": {
+        "operationId": "workerReady",
+        "summary": "Worker ready",
+        "security": [],
+        "description": "Readiness requires configured database connectivity and applied tracker migrations.",
+        "responses": {
+          "200": {
+            "description": "Service available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealth"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealth"
+                }
+              }
+            }
+          }
+        }
+      },
+      "servers": [
+        {
+          "url": "http://localhost:3001",
+          "description": "Worker origin; replace with configured WORKER_HOST/WORKER_PORT."
+        }
+      ]
+    },
+    "/api/discord": {
+      "post": {
+        "operationId": "handleDiscordInteraction",
+        "summary": "Handle signed Discord guild interaction",
+        "description": "Discord wire envelope, not a browser command endpoint. Requires Ed25519 signature of timestamp + raw body and timestamp within five minutes; maximum body 65536 bytes. PING returns type 1. Guild replies are private, slow work defers with type 5, and modals use type 9. Domain failures can be private type 4 messages with HTTP 200. Provider-specific fields are extensible; this document describes the supported envelope rather than the entire Discord protocol.",
+        "security": [
+          {
+            "discordSignature": [],
+            "discordTimestamp": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscordInteraction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed JSON or invalid interaction identifiers."
+          },
+          "401": {
+            "description": "Missing, invalid or stale signature."
+          },
+          "404": {
+            "description": "Discord public key is not configured."
+          },
+          "413": {
+            "description": "Body exceeds 65536 bytes."
+          },
+          "503": {
+            "description": "Service initialization failed."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "challenge_session"
+      },
+      "csrfHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-csrf-token"
+      },
+      "oauthCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "challenge_oauth"
+      },
+      "discordSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-signature-ed25519"
+      },
+      "discordTimestamp": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-signature-timestamp"
+      }
+    },
+    "schemas": {
+      "adminReportSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "reportingDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "reportingIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 101
+          },
+          "applicableGoalRevisionIds": {
+            "default": [],
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "attemptId",
+          "reportingDate",
+          "reportingIndex",
+          "applicableGoalRevisionIds",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "archiveGoalSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "ArchiveGoal"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "goalId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "command",
+          "attemptId",
+          "expectedAttemptVersion",
+          "goalId"
+        ],
+        "additionalProperties": false
+      },
+      "archiveMilestoneSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "ArchiveMilestone"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "command",
+          "attemptId",
+          "expectedAttemptVersion",
+          "milestoneId"
+        ],
+        "additionalProperties": false
+      },
+      "backdateEnrollmentSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "BackdateEnrollment"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "registeredDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": ["command", "userId", "seasonId", "registeredDate"],
+        "additionalProperties": false
+      },
+      "backfillReportSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "BackfillReport"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "goalValues": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goalRevisionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["goalRevisionId", "value"],
+              "additionalProperties": false
+            }
+          },
+          "milestoneAchievements": {
+            "default": [],
+            "maxItems": 101,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "reportingDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": [
+          "command",
+          "attemptId",
+          "expectedAttemptVersion",
+          "body",
+          "goalValues",
+          "reportingDate"
+        ],
+        "additionalProperties": false
+      },
+      "cancelEnrollmentSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "CancelEnrollment"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedEnrollmentVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "seasonSlug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "erase": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "command",
+          "enrollmentId",
+          "expectedEnrollmentVersion",
+          "seasonSlug"
+        ],
+        "additionalProperties": false
+      },
+      "commandResultSchema": {
+        "type": "object",
+        "properties": {
+          "resourceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["resourceId", "version", "replayed"],
+        "additionalProperties": false
+      },
+      "correctReportSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "CorrectReport"
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedReportVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "goalValues": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goalRevisionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["goalRevisionId", "value"],
+              "additionalProperties": false
+            }
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "reportingDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": [
+          "command",
+          "reportId",
+          "expectedReportVersion",
+          "body",
+          "goalValues"
+        ],
+        "additionalProperties": false
+      },
+      "createSeasonSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "CreateSeason"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": ["command", "slug", "title"],
+        "additionalProperties": false
+      },
+      "decimalValueSchema": {
+        "type": "string",
+        "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+      },
+      "editReportSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "EditReport"
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedReportVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "goalValues": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goalRevisionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["goalRevisionId", "value"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "command",
+          "reportId",
+          "expectedReportVersion",
+          "body",
+          "goalValues"
+        ],
+        "additionalProperties": false
+      },
+      "enrollSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "Enroll"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["command", "seasonId"],
+        "additionalProperties": false
+      },
+      "enrollmentSchema": {
+        "type": "object",
+        "properties": {
+          "registeredDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "releaseOn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "participation": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "completed"]
+          },
+          "timezone": {
+            "type": ["string", "null"]
+          },
+          "currentAttemptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasCompleted": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "registeredDate",
+          "releaseOn",
+          "id",
+          "seasonId",
+          "participation",
+          "timezone",
+          "currentAttemptId",
+          "hasCompleted",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "initialGoalSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["qualitative", "count", "duration", "quantity"]
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+          }
+        },
+        "required": ["title", "kind"],
+        "additionalProperties": false
+      },
+      "initialMilestoneSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "targetReportingDay": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 101
+          },
+          "goalIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "achievementKind": {
+            "type": "string",
+            "enum": ["manual", "reporting_count"]
+          }
+        },
+        "required": ["title", "targetReportingDay", "achievementKind"],
+        "additionalProperties": false
+      },
+      "issueCorrectionGrantSchema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "const": "IssueCorrectionGrant"
+              },
+              "kind": {
+                "type": "string",
+                "const": "single_report"
+              },
+              "reportId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": ["command", "kind", "reportId"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "const": "IssueCorrectionGrant"
+              },
+              "kind": {
+                "type": "string",
+                "const": "attempt_window"
+              },
+              "attemptId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 60
+              }
+            },
+            "required": ["command", "kind", "attemptId", "durationMinutes"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ownerReportSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "reportingDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "reportingIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 101
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "goalValues": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goalRevisionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["goalRevisionId", "value"],
+              "additionalProperties": false
+            }
+          },
+          "applicableGoalRevisionIds": {
+            "default": [],
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "attemptId",
+          "reportingDate",
+          "reportingIndex",
+          "body",
+          "goalValues",
+          "applicableGoalRevisionIds",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "pauseEnrollmentSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "PauseEnrollment"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedEnrollmentVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["command", "enrollmentId", "expectedEnrollmentVersion"],
+        "additionalProperties": false
+      },
+      "progressSchema": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "participation": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "completed"]
+          },
+          "attemptState": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "restarted", "completed"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["qualifying", "progress_only"]
+          },
+          "reportingDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "currentStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "longestStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "perkTier": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "rerollCredits": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "attemptId",
+          "participation",
+          "attemptState",
+          "mode",
+          "reportingDays",
+          "currentStreak",
+          "longestStreak",
+          "perkTier",
+          "rerollCredits",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "publishSeasonSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "PublishSeason"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedSeasonVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["command", "seasonId", "expectedSeasonVersion"],
+        "additionalProperties": false
+      },
+      "restartAttemptSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "RestartAttempt"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedEnrollmentVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "goals": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["qualitative", "count", "duration", "quantity"]
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "target": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["title", "kind"],
+              "additionalProperties": false
+            }
+          },
+          "milestones": {
+            "default": [],
+            "maxItems": 101,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "targetReportingDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 101
+                },
+                "goalIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "achievementKind": {
+                  "type": "string",
+                  "enum": ["manual", "reporting_count"]
+                }
+              },
+              "required": ["title", "targetReportingDay", "achievementKind"],
+              "additionalProperties": false
+            }
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "confirmed": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "command",
+          "enrollmentId",
+          "expectedEnrollmentVersion",
+          "goals",
+          "attemptId",
+          "expectedAttemptVersion",
+          "confirmed"
+        ],
+        "additionalProperties": false
+      },
+      "resumeEnrollmentSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "ResumeEnrollment"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedEnrollmentVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["command", "enrollmentId", "expectedEnrollmentVersion"],
+        "additionalProperties": false
+      },
+      "revokeCorrectionGrantSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "RevokeCorrectionGrant"
+          },
+          "grantId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["command", "grantId"],
+        "additionalProperties": false
+      },
+      "saveGoalSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SaveGoal"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "goalId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "goal": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["qualitative", "count", "duration", "quantity"]
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+              }
+            },
+            "required": ["title", "kind"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["command", "attemptId", "expectedAttemptVersion", "goal"],
+        "additionalProperties": false
+      },
+      "saveMilestoneSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SaveMilestone"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "milestone": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "targetReportingDay": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 101
+              },
+              "achievementKind": {
+                "type": "string",
+                "enum": ["manual", "reporting_count"]
+              },
+              "goalId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": ["title", "targetReportingDay", "achievementKind"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "command",
+          "attemptId",
+          "expectedAttemptVersion",
+          "milestone"
+        ],
+        "additionalProperties": false
+      },
+      "saveSeasonSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SaveSeason"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedSeasonVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "command",
+          "seasonId",
+          "expectedSeasonVersion",
+          "title",
+          "description",
+          "slug"
+        ],
+        "additionalProperties": false
+      },
+      "saveSeasonTemplateSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SaveSeasonTemplate"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedSeasonVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "goals": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["qualitative", "count", "duration", "quantity"]
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "target": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["title", "kind"],
+              "additionalProperties": false
+            }
+          },
+          "milestones": {
+            "maxItems": 101,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "targetReportingDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 101
+                },
+                "goalIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "achievementKind": {
+                  "type": "string",
+                  "enum": ["manual", "reporting_count"]
+                }
+              },
+              "required": ["title", "targetReportingDay", "achievementKind"],
+              "additionalProperties": false
+            }
+          },
+          "sessionUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "command",
+          "seasonId",
+          "expectedSeasonVersion",
+          "goals",
+          "milestones"
+        ],
+        "additionalProperties": false
+      },
+      "seasonSchema": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["draft", "published"]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["qualitative", "count", "duration", "quantity"]
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "target": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["title", "kind"],
+              "additionalProperties": false
+            }
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "targetReportingDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 101
+                },
+                "goalIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "achievementKind": {
+                  "type": "string",
+                  "enum": ["manual", "reporting_count"]
+                }
+              },
+              "required": ["title", "targetReportingDay", "achievementKind"],
+              "additionalProperties": false
+            }
+          },
+          "sessionUrl": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "slug",
+          "publishedAt",
+          "id",
+          "title",
+          "description",
+          "featured",
+          "state",
+          "version",
+          "goals",
+          "milestones",
+          "sessionUrl"
+        ],
+        "additionalProperties": false
+      },
+      "setSeasonFeaturedSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SetSeasonFeatured"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedSeasonVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "featured": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "command",
+          "seasonId",
+          "expectedSeasonVersion",
+          "featured"
+        ],
+        "additionalProperties": false
+      },
+      "startAttemptSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "StartAttempt"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedEnrollmentVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "goals": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["qualitative", "count", "duration", "quantity"]
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "target": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["title", "kind"],
+              "additionalProperties": false
+            }
+          },
+          "milestones": {
+            "default": [],
+            "maxItems": 101,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "targetReportingDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 101
+                },
+                "goalIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "achievementKind": {
+                  "type": "string",
+                  "enum": ["manual", "reporting_count"]
+                }
+              },
+              "required": ["title", "targetReportingDay", "achievementKind"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "command",
+          "enrollmentId",
+          "expectedEnrollmentVersion",
+          "goals"
+        ],
+        "additionalProperties": false
+      },
+      "submitReportSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "const": "SubmitReport"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "expectedAttemptVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "goalValues": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goalRevisionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$"
+                }
+              },
+              "required": ["goalRevisionId", "value"],
+              "additionalProperties": false
+            }
+          },
+          "milestoneAchievements": {
+            "default": [],
+            "maxItems": 101,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "command",
+          "attemptId",
+          "expectedAttemptVersion",
+          "body",
+          "goalValues"
+        ],
+        "additionalProperties": false
+      },
+      "trackerErrorCodeSchema": {
+        "type": "string",
+        "enum": [
+          "UNAUTHENTICATED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "VALIDATION",
+          "VERSION_CONFLICT",
+          "ALREADY_REPORTED",
+          "ATTEMPT_CLOSED",
+          "SEASON_UNAVAILABLE",
+          "SEASON_SLOT_OCCUPIED",
+          "MILESTONE_LOCKED",
+          "GRANT_INVALID",
+          "RATE_LIMITED",
+          "IDEMPOTENCY_CONFLICT"
+        ]
+      },
+      "trackerEventSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["source_changed", "enrollment_changed", "season_changed"]
+          },
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "sourceVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "eventId",
+          "type",
+          "schemaVersion",
+          "aggregateId",
+          "sourceVersion",
+          "occurredAt"
+        ],
+        "additionalProperties": false
+      },
+      "accountSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "username": {
+            "type": "string"
+          },
+          "provisional": {
+            "type": "boolean"
+          },
+          "avatar": {
+            "type": ["string", "null"]
+          },
+          "recoveryEmail": {
+            "type": ["string", "null"]
+          },
+          "deletion": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "requestedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  "deleteAfter": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": ["requestedAt", "deleteAfter"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "email": {
+            "type": ["string", "null"]
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["google", "discord"]
+            }
+          },
+          "admin": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "provisional",
+          "avatar",
+          "recoveryEmail",
+          "deletion",
+          "email",
+          "emailVerified",
+          "providers",
+          "admin"
+        ],
+        "additionalProperties": false
+      },
+      "authCommandSchema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "signup"
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128
+              },
+              "username": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 32,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              }
+            },
+            "required": ["action", "email", "password", "username"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "login"
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128
+              }
+            },
+            "required": ["action", "email", "password"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "recover"
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              }
+            },
+            "required": ["action", "email"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "verify"
+              },
+              "token": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": ["action", "token"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "reset"
+              },
+              "token": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128
+              }
+            },
+            "required": ["action", "token", "password"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "logout"
+              }
+            },
+            "required": ["action"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "save_profile"
+              },
+              "username": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 32,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              }
+            },
+            "required": ["action", "username"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "set_avatar"
+              },
+              "avatar": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 400000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["action", "avatar"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "recovery_email"
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              }
+            },
+            "required": ["action", "email"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "verify_recovery_email"
+              },
+              "token": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": ["action", "token"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "restore_account"
+              }
+            },
+            "required": ["action"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "revoke_session"
+              },
+              "sessionId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": ["action", "sessionId"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "notification"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "dismiss": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": ["action", "id"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "reauthenticate"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128
+              }
+            },
+            "required": ["action", "password"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "add_email"
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128
+              }
+            },
+            "required": ["action", "email", "password"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "unlink"
+              },
+              "provider": {
+                "type": "string",
+                "enum": ["email", "google", "discord"]
+              }
+            },
+            "required": ["action", "provider"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "request_erasure"
+              },
+              "confirmed": {
+                "type": "boolean",
+                "const": true
+              },
+              "username": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 32,
+                "pattern": "^[a-zA-Z0-9_-]+$"
+              }
+            },
+            "required": ["action", "confirmed", "username"],
+            "additionalProperties": false
+          }
+        ],
+        "description": "Anonymous actions: signup, login, recover, verify, reset, verify_recovery_email. All other actions require the session cookie and x-csrf-token. add_email, unlink, request_erasure and recovery_email also require authentication within the last ten minutes. Usernames are trimmed and lowercased; email addresses are lowercased."
+      },
+      "usernameSchema": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 32,
+        "pattern": "^[a-zA-Z0-9_-]+$"
+      },
+      "TrackerCommand": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/archiveGoalSchema"
+          },
+          {
+            "$ref": "#/components/schemas/archiveMilestoneSchema"
+          },
+          {
+            "$ref": "#/components/schemas/backdateEnrollmentSchema"
+          },
+          {
+            "$ref": "#/components/schemas/backfillReportSchema"
+          },
+          {
+            "$ref": "#/components/schemas/cancelEnrollmentSchema"
+          },
+          {
+            "$ref": "#/components/schemas/correctReportSchema"
+          },
+          {
+            "$ref": "#/components/schemas/createSeasonSchema"
+          },
+          {
+            "$ref": "#/components/schemas/editReportSchema"
+          },
+          {
+            "$ref": "#/components/schemas/enrollSchema"
+          },
+          {
+            "$ref": "#/components/schemas/pauseEnrollmentSchema"
+          },
+          {
+            "$ref": "#/components/schemas/publishSeasonSchema"
+          },
+          {
+            "$ref": "#/components/schemas/restartAttemptSchema"
+          },
+          {
+            "$ref": "#/components/schemas/resumeEnrollmentSchema"
+          },
+          {
+            "$ref": "#/components/schemas/revokeCorrectionGrantSchema"
+          },
+          {
+            "$ref": "#/components/schemas/saveGoalSchema"
+          },
+          {
+            "$ref": "#/components/schemas/saveMilestoneSchema"
+          },
+          {
+            "$ref": "#/components/schemas/saveSeasonSchema"
+          },
+          {
+            "$ref": "#/components/schemas/saveSeasonTemplateSchema"
+          },
+          {
+            "$ref": "#/components/schemas/setSeasonFeaturedSchema"
+          },
+          {
+            "$ref": "#/components/schemas/startAttemptSchema"
+          },
+          {
+            "$ref": "#/components/schemas/submitReportSchema"
+          },
+          {
+            "$ref": "#/components/schemas/issueCorrectionGrantSchema"
+          }
+        ],
+        "description": "Strict command objects; server checks authorization, lifecycle, ownership and custom refinements. Milestone goalIndex must reference the submitted goal list; goalValues and milestoneAchievements must use distinct IDs. Timezones must be valid IANA names. Decimal strings have at most 18 total digits and 6 fractional digits; supplied targets must be positive."
+      },
+      "SessionRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device": {
+            "type": "string"
+          },
+          "authenticatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "authenticatedAt",
+          "expiresAt",
+          "revokedAt",
+          "current"
+        ],
+        "additionalProperties": false
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dismissedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "message",
+          "href",
+          "createdAt",
+          "readAt",
+          "dismissedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currentRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "attemptId",
+          "currentRevisionId",
+          "archived",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Milestone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currentRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "locked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "attemptId",
+          "currentRevisionId",
+          "archived",
+          "createdAt",
+          "updatedAt",
+          "locked"
+        ],
+        "additionalProperties": false
+      },
+      "GoalRevision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "goalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input": {
+            "$ref": "#/components/schemas/initialGoalSchema"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "goalId",
+          "attemptId",
+          "input",
+          "archived",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "MilestoneRevision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "targetReportingDay": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 101
+              },
+              "achievementKind": {
+                "type": "string",
+                "enum": ["manual", "reporting_count"]
+              },
+              "goalId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": ["title", "targetReportingDay", "achievementKind"],
+            "additionalProperties": false
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "milestoneId",
+          "attemptId",
+          "input",
+          "archived",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "Completion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reportingDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "minItems": 101,
+            "maxItems": 101
+          }
+        },
+        "required": ["id", "attemptId", "completedAt", "reportingDates"],
+        "additionalProperties": false
+      },
+      "AttemptHistory": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "participation": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "completed"]
+          },
+          "attemptState": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "restarted", "completed"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["qualifying", "progress_only"]
+          },
+          "reportingDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "currentStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "longestStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 101
+          },
+          "perkTier": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "rerollCredits": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "backfillDeadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "backfillThrough": {
+            "type": "string",
+            "format": "date"
+          },
+          "backfillUntil": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "erased": {
+            "type": "boolean"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Goal"
+            }
+          },
+          "goalRevisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalRevision"
+            }
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Milestone"
+            }
+          },
+          "milestoneRevisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MilestoneRevision"
+            }
+          },
+          "reports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ownerReportSchema"
+            }
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "attemptId",
+          "participation",
+          "attemptState",
+          "mode",
+          "reportingDays",
+          "currentStreak",
+          "longestStreak",
+          "perkTier",
+          "rerollCredits",
+          "version",
+          "startedAt",
+          "backfillDeadline",
+          "backfillThrough",
+          "backfillUntil",
+          "erased",
+          "today",
+          "goals",
+          "goalRevisions",
+          "milestones",
+          "milestoneRevisions",
+          "reports"
+        ],
+        "additionalProperties": false
+      },
+      "EnrollmentHistory": {
+        "type": "object",
+        "properties": {
+          "registeredDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "releaseOn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "seasonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "participation": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "completed"]
+          },
+          "timezone": {
+            "type": ["string", "null"]
+          },
+          "currentAttemptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasCompleted": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "earliestReportingDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Completion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttemptHistory"
+            }
+          }
+        },
+        "required": [
+          "registeredDate",
+          "releaseOn",
+          "id",
+          "seasonId",
+          "participation",
+          "timezone",
+          "currentAttemptId",
+          "hasCompleted",
+          "version",
+          "earliestReportingDate",
+          "completion",
+          "attempts"
+        ],
+        "additionalProperties": false
+      },
+      "SeasonPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/seasonSchema"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false
+      },
+      "HistoryPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnrollmentHistory"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/accountSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "csrf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "providers": {
+            "type": "object",
+            "properties": {
+              "google": {
+                "type": "boolean"
+              },
+              "discord": {
+                "type": "boolean"
+              }
+            },
+            "required": ["google", "discord"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["account", "csrf", "providers"],
+        "additionalProperties": false
+      },
+      "AuthResult": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "const": true
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["accepted"],
+        "additionalProperties": false
+      },
+      "Export": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "account": {
+            "$ref": "#/components/schemas/accountSchema"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnrollmentHistory"
+            }
+          }
+        },
+        "required": ["schemaVersion", "account", "history"],
+        "additionalProperties": false
+      },
+      "AdminAttempt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "paused", "cancelled", "restarted", "completed"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["qualifying", "progress_only"]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reportingDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentStreak": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "longestStreak": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "perkTier": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "selectedPerks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rerollCredits": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "enrollmentId",
+          "status",
+          "mode",
+          "startedAt",
+          "createdAt",
+          "updatedAt",
+          "reportingDays",
+          "currentStreak",
+          "longestStreak",
+          "perkTier",
+          "selectedPerks",
+          "rerollCredits"
+        ],
+        "additionalProperties": false
+      },
+      "AdminGoal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "attemptId", "archived", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "AdminMilestone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "locked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "attemptId",
+          "archived",
+          "createdAt",
+          "updatedAt",
+          "locked"
+        ],
+        "additionalProperties": false
+      },
+      "AdminGrant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": ["single_report", "attempt_window", "backfill"]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "attemptId",
+          "reportId",
+          "kind",
+          "expiresAt",
+          "usedAt",
+          "revokedAt",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "AdminStats": {
+        "type": "object",
+        "properties": {
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAttempt"
+            }
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGoal"
+            }
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminMilestone"
+            }
+          },
+          "reports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/adminReportSchema"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "username"],
+              "additionalProperties": false
+            }
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGrant"
+            }
+          }
+        },
+        "required": [
+          "attempts",
+          "goals",
+          "milestones",
+          "reports",
+          "users",
+          "grants"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/trackerErrorCodeSchema"
+          }
+        },
+        "required": ["code"],
+        "additionalProperties": false
+      },
+      "Unavailable": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "const": "Service unavailable"
+          }
+        },
+        "required": ["error"],
+        "additionalProperties": false
+      },
+      "WebHealth": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": ["ok", "unavailable"]
+          },
+          "service": {
+            "const": "web"
+          }
+        },
+        "required": ["status", "service"],
+        "additionalProperties": false
+      },
+      "WorkerHealth": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": ["ok", "unavailable"]
+          },
+          "service": {
+            "const": "worker"
+          }
+        },
+        "required": ["status", "service"],
+        "additionalProperties": false
+      },
+      "DiscordInteraction": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "guild_id": {
+            "type": "string"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "member": {
+            "type": "object"
+          },
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": true
+      },
+      "DiscordResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "integer",
+            "enum": [1, 4, 5, 9]
+          },
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": true
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "VALIDATION: invalid payload, cursor or idempotency key.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "UNAUTHENTICATED: missing, expired or revoked proof.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "FORBIDDEN: origin, CSRF, recent authentication or authorization check failed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "NOT_FOUND: route or resource unavailable.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Domain or optimistic version conflict; see error code.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error429": {
+        "description": "RATE_LIMITED.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Unexpected service failure; private details omitted.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Unavailable"
+            }
+          }
+        }
+      }
+    }
+  }
+}

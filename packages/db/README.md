@@ -1,5 +1,9 @@
 # Database boundary
 
+See the [DBML schema reference](../../docs/reference/schema.dbml) and
+[reference guide](../../docs/reference/README.md) for the migrated tables,
+constraints, relationships and diagram limitations.
+
 `createDatabase` supplies migration-aware readiness and Drizzle access. `createRepository` implements the core transaction port using Drizzle parameterized SQL over PostgreSQL, typed columns, binary private entropy, UTC timestamps and SQL reporting dates. Await `close()` on shutdown.
 
 Call `migrate()` using the schema owner before starting application traffic. The clean initial migration is serialized by a transaction advisory lock and recorded in `tracker_migrations`. It creates retained attempts/revisions/reports, same-attempt composite references, the unique unfinished-season slot, completion entitlement, grant hashes, safe replay references, audit and outbox. No production migration from deployed tracker data is assumed.
