@@ -10,6 +10,18 @@ Web transactions select the restricted `challenge_tracker_app` role. Provision a
 
 `/api/health` and worker `/health` check liveness. `/api/ready` and worker `/ready` require all four tracker migrations; worker startup checks them before initializing queue handlers. Use an exclusive `QUEUE_SCHEMA` and database for each environment/task. Queue startup failure stops the worker; a queue outage does not prevent the web service committing reports or completion.
 
+## Administrator provisioning
+
+Register and verify the intended account through the ordinary browser signup flow first. An explicitly authorized operator uses the database-owner connection to locate exactly that verified credential and update its matching `users.admin` flag in a transaction. Confirm the affected account and verify unrelated accounts remain unchanged before committing. Refresh the browser afterward: permissions are read from the database, not permanently embedded in the session. The restricted application role cannot update this flag; no browser signup field or public endpoint grants administrator access. Production provisioning needs its own controlled operator connection and access record.
+
+## Backend diagnostics
+
+Application diagnostics are JSON lines in the terminal running `pnpm dev:web` or `pnpm dev:worker`; production commands write to the same stdout/stderr streams for the hosting log collector. Browser console output is separate. API completion records include a timestamp, service, severity, fixed route template, HTTP method, status, duration and a server-generated request ID. Find that ID in the response's `x-request-id` header in the browser Network panel to correlate a failure with its backend record. Expected 4xx responses are warnings; 5xx responses are errors. Runtime initialization failures also produce a correlated record. SMTP success/failure records expose delivery duration and safe error codes, never recipients or verification/recovery links. Discord deferred action/delivery failures retain that same request ID.
+
+Error diagnostics include only recognized domain, transport or PostgreSQL codes and fixed error categories. For example, `ECONNREFUSED` indicates a refused connection, `42P01` a missing table, and `42501` insufficient database privileges; unrecognized errors use `INTERNAL`. Raw exception messages, stacks, SQL, request/response bodies, email addresses, cookies, tokens, provider codes and query strings are omitted. Unrecognized URL paths become `unmatched`; season IDs become a fixed route parameter.
+
+Worker records cover startup, listener/queue failures, shutdown, projection outcomes, housekeeping and nonempty outbox delivery/failure counts. Empty two-second publisher scans do not generate noise. The existing private failure inspection remains available for terminal event metadata. Capture these streams in deployment, restrict operator access and enforce the thirty-day retention limit below. Framework development logs are separate and may include URLs; use synthetic accounts locally and configure the production proxy/collector redaction described below.
+
 ## Queue recovery
 
 The publisher leases at most twenty pending content-free events per scan. Expired leases recover a process crash. Transport failures retain the event, increment the attempt count and back off; eight unsuccessful publishing attempts become terminal. A crash after publish but before mark may deliver again. Event receipts deduplicate logical processing. Workers reload the attempt under the account lock; stale source versions do not replace a newer projection, and deleted accounts/events are ignored. Completion stays synchronous in the command transaction.

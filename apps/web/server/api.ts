@@ -11,6 +11,7 @@ import {
   type createTracker,
 } from "@challenge/core";
 import type { createProviders } from "./providers";
+import { observeRequest } from "./logging";
 
 /** Shared cookie names; only the session/browser binding are HttpOnly. */
 export const cookieNames = {
@@ -151,185 +152,191 @@ export function createWebApi(deps: ApiDependencies) {
   return {
     /** Dispatch native HTTP requests; adapters cannot override actor, date, mode or seeds. */
     async handle(request: Request): Promise<Response> {
-      try {
-        const url = new URL(request.url),
-          path = url.pathname;
-        const token = cookie(request, cookieNames.session),
-          csrf = request.headers.get("x-csrf-token") ?? undefined;
-        if (
-          request.method === "POST" &&
-          request.headers.get("origin") !== config.APP_ORIGIN
-        )
-          throw new DomainError("FORBIDDEN");
-        if (request.method === "GET" && path === "/api/v1/session") {
-          const flags = {
-            google: config.googleEnabled,
-            discord: config.discordEnabled,
-          };
-          if (!token)
-            return json({ account: null, csrf: null, providers: flags });
-          const proof = cookie(request, cookieNames.csrf);
-          await auth.authenticate(token, proof);
-          return json({
-            account: await auth.account(token),
-            csrf: proof,
-            providers: flags,
-          });
-        }
-        if (request.method === "GET" && path === "/api/v1/seasons")
-          return json(page(await tracker.seasons(), url, "seasons"));
-        if (
-          request.method === "GET" &&
-          /^\/api\/v1\/seasons\/[a-f0-9-]{36}$/.test(path)
-        ) {
-          const season = (await tracker.seasons()).find(
-            (s) => s.id === path.split("/").at(-1)
-          );
-          if (!season) throw new DomainError("NOT_FOUND");
-          return json(season);
-        }
-        if (request.method === "GET" && path === "/api/v1/history") {
-          const actor = await auth.authenticate(token);
-          return json(
-            page(await tracker.history(actor.userId), url, "history")
-          );
-        }
-        if (request.method === "GET" && path === "/api/v1/export") {
-          const actor = await auth.authenticate(token);
-          const response = json({
-            schemaVersion: 1,
-            account: await auth.account(token),
-            history: await tracker.history(actor.userId),
-          });
-          response.headers.set(
-            "content-disposition",
-            'attachment; filename="challenge-history.json"'
-          );
-          return response;
-        }
-        if (request.method === "GET" && path === "/api/v1/admin/stats") {
-          const actor = await auth.authenticate(token);
-          return json(await tracker.adminStats(actor.userId));
-        }
-        if (request.method === "GET" && path === "/api/v1/admin/seasons") {
-          const actor = await auth.authenticate(token);
-          return json(
-            page(
-              await tracker.seasons(actor.userId, true),
-              url,
-              "admin-seasons"
-            )
-          );
-        }
-        if (request.method === "POST" && path === "/api/v1/auth") {
-          rate("anonymous-auth", 1000, 10 * 60000);
-          const input = await payload(request);
-          const c = authCommandSchema.safeParse(input);
-          if (!c.success) throw new DomainError("VALIDATION");
-          const result = await auth.execute(c.data, token, csrf);
-          const response = json({
-            accepted: result.accepted,
-            ...("requestId" in result ? { requestId: result.requestId } : {}),
-          });
+      return observeRequest(request, async (recordError) => {
+        try {
+          const url = new URL(request.url),
+            path = url.pathname;
+          const token = cookie(request, cookieNames.session),
+            csrf = request.headers.get("x-csrf-token") ?? undefined;
           if (
-            "token" in result &&
-            "csrf" in result &&
-            result.token &&
-            result.csrf
+            request.method === "POST" &&
+            request.headers.get("origin") !== config.APP_ORIGIN
           )
-            loginCookies(response, { token: result.token, csrf: result.csrf });
-          if (["logout", "unlink", "reset"].includes(c.data.action)) {
-            setCookie(response, cookieNames.session, "", secure, true, 0);
-            setCookie(response, cookieNames.csrf, "", secure, false, 0);
+            throw new DomainError("FORBIDDEN");
+          if (request.method === "GET" && path === "/api/v1/session") {
+            const flags = {
+              google: config.googleEnabled,
+              discord: config.discordEnabled,
+            };
+            if (!token)
+              return json({ account: null, csrf: null, providers: flags });
+            const proof = cookie(request, cookieNames.csrf);
+            await auth.authenticate(token, proof);
+            return json({
+              account: await auth.account(token),
+              csrf: proof,
+              providers: flags,
+            });
           }
-          return response;
-        }
-        if (request.method === "POST" && path === "/api/v1/command") {
-          if (!csrf) throw new DomainError("FORBIDDEN");
-          const input = await payload(request);
-          if (!input || typeof input !== "object")
-            throw new DomainError("VALIDATION");
-          const cmd = input as { command?: unknown };
-          const recent =
-            cmd.command === "IssueCorrectionGrant" ||
-            cmd.command === "RevokeCorrectionGrant";
-          const actor = await auth.authenticate(token, csrf, recent);
-          rate(`actor:${actor.userId}`, 120);
-          const key = request.headers.get("idempotency-key");
-          if (!key || !/^[-\w:]{1,200}$/.test(key))
-            throw new DomainError("VALIDATION");
-          return json(await tracker.execute(actor.userId, input, key));
-        }
-        if (request.method === "POST" && path === "/api/v1/oauth") {
-          rate("anonymous-oauth", 100, 60000);
-          const value = await payload(request);
-          if (!value || typeof value !== "object")
-            throw new DomainError("VALIDATION");
-          const input = value as { provider?: unknown; link?: unknown };
+          if (request.method === "GET" && path === "/api/v1/seasons")
+            return json(page(await tracker.seasons(), url, "seasons"));
           if (
-            (input.provider !== "google" && input.provider !== "discord") ||
-            typeof input.link !== "boolean"
-          )
-            throw new DomainError("VALIDATION");
-          const browser = randomBytes(32).toString("hex");
-          const state = await auth.beginOAuth(
-            input.provider,
-            browser,
-            token,
-            csrf,
-            input.link
+            request.method === "GET" &&
+            /^\/api\/v1\/seasons\/[a-f0-9-]{36}$/.test(path)
+          ) {
+            const season = (await tracker.seasons()).find(
+              (s) => s.id === path.split("/").at(-1)
+            );
+            if (!season) throw new DomainError("NOT_FOUND");
+            return json(season);
+          }
+          if (request.method === "GET" && path === "/api/v1/history") {
+            const actor = await auth.authenticate(token);
+            return json(
+              page(await tracker.history(actor.userId), url, "history")
+            );
+          }
+          if (request.method === "GET" && path === "/api/v1/export") {
+            const actor = await auth.authenticate(token);
+            const response = json({
+              schemaVersion: 1,
+              account: await auth.account(token),
+              history: await tracker.history(actor.userId),
+            });
+            response.headers.set(
+              "content-disposition",
+              'attachment; filename="challenge-history.json"'
+            );
+            return response;
+          }
+          if (request.method === "GET" && path === "/api/v1/admin/stats") {
+            const actor = await auth.authenticate(token);
+            return json(await tracker.adminStats(actor.userId));
+          }
+          if (request.method === "GET" && path === "/api/v1/admin/seasons") {
+            const actor = await auth.authenticate(token);
+            return json(
+              page(
+                await tracker.seasons(actor.userId, true),
+                url,
+                "admin-seasons"
+              )
+            );
+          }
+          if (request.method === "POST" && path === "/api/v1/auth") {
+            rate("anonymous-auth", 1000, 10 * 60000);
+            const input = await payload(request);
+            const c = authCommandSchema.safeParse(input);
+            if (!c.success) throw new DomainError("VALIDATION");
+            const result = await auth.execute(c.data, token, csrf);
+            const response = json({
+              accepted: result.accepted,
+              ...("requestId" in result ? { requestId: result.requestId } : {}),
+            });
+            if (
+              "token" in result &&
+              "csrf" in result &&
+              result.token &&
+              result.csrf
+            )
+              loginCookies(response, {
+                token: result.token,
+                csrf: result.csrf,
+              });
+            if (["logout", "unlink", "reset"].includes(c.data.action)) {
+              setCookie(response, cookieNames.session, "", secure, true, 0);
+              setCookie(response, cookieNames.csrf, "", secure, false, 0);
+            }
+            return response;
+          }
+          if (request.method === "POST" && path === "/api/v1/command") {
+            if (!csrf) throw new DomainError("FORBIDDEN");
+            const input = await payload(request);
+            if (!input || typeof input !== "object")
+              throw new DomainError("VALIDATION");
+            const cmd = input as { command?: unknown };
+            const recent =
+              cmd.command === "IssueCorrectionGrant" ||
+              cmd.command === "RevokeCorrectionGrant";
+            const actor = await auth.authenticate(token, csrf, recent);
+            rate(`actor:${actor.userId}`, 120);
+            const key = request.headers.get("idempotency-key");
+            if (!key || !/^[-\w:]{1,200}$/.test(key))
+              throw new DomainError("VALIDATION");
+            return json(await tracker.execute(actor.userId, input, key));
+          }
+          if (request.method === "POST" && path === "/api/v1/oauth") {
+            rate("anonymous-oauth", 100, 60000);
+            const value = await payload(request);
+            if (!value || typeof value !== "object")
+              throw new DomainError("VALIDATION");
+            const input = value as { provider?: unknown; link?: unknown };
+            if (
+              (input.provider !== "google" && input.provider !== "discord") ||
+              typeof input.link !== "boolean"
+            )
+              throw new DomainError("VALIDATION");
+            const browser = randomBytes(32).toString("hex");
+            const state = await auth.beginOAuth(
+              input.provider,
+              browser,
+              token,
+              csrf,
+              input.link
+            );
+            const response = json({
+              url: providers.authorization(input.provider, state),
+            });
+            setCookie(response, cookieNames.oauth, browser, secure, true, 600);
+            return response;
+          }
+          if (
+            request.method === "GET" &&
+            /^\/api\/auth\/(google|discord)\/callback$/.test(path)
+          ) {
+            const provider = path.includes("/google/") ? "google" : "discord";
+            const state = url.searchParams.get("state"),
+              code = url.searchParams.get("code"),
+              browser = cookie(request, cookieNames.oauth);
+            if (!state || !code || !browser || code.length > 4096)
+              throw new DomainError("UNAUTHENTICATED");
+            const saved = await auth.oauthState(provider, state, browser);
+            const proof = await providers.exchange(saved, code);
+            const session = await auth.completeOAuth(
+              saved.id,
+              browser,
+              proof,
+              token
+            );
+            const response = new Response(null, {
+              status: 303,
+              headers: {
+                location: `${config.APP_ORIGIN}/account`,
+                "cache-control": "no-store",
+                "referrer-policy": "no-referrer",
+              },
+            });
+            loginCookies(response, session);
+            setCookie(response, cookieNames.oauth, "", secure, true, 0);
+            return response;
+          }
+          return json({ code: "NOT_FOUND" }, 404);
+        } catch (error) {
+          recordError(error);
+          const code = trackerErrorCodeSchema.safeParse(
+            (error as { code?: unknown })?.code
           );
-          const response = json({
-            url: providers.authorization(input.provider, state),
-          });
-          setCookie(response, cookieNames.oauth, browser, secure, true, 600);
-          return response;
+          if (!code.success) return json({ error: "Service unavailable" }, 503);
+          const statuses: Record<string, number> = {
+            UNAUTHENTICATED: 401,
+            FORBIDDEN: 403,
+            NOT_FOUND: 404,
+            VALIDATION: 400,
+            RATE_LIMITED: 429,
+          };
+          return json({ code: code.data }, statuses[code.data] ?? 409);
         }
-        if (
-          request.method === "GET" &&
-          /^\/api\/auth\/(google|discord)\/callback$/.test(path)
-        ) {
-          const provider = path.includes("/google/") ? "google" : "discord";
-          const state = url.searchParams.get("state"),
-            code = url.searchParams.get("code"),
-            browser = cookie(request, cookieNames.oauth);
-          if (!state || !code || !browser || code.length > 4096)
-            throw new DomainError("UNAUTHENTICATED");
-          const saved = await auth.oauthState(provider, state, browser);
-          const proof = await providers.exchange(saved, code);
-          const session = await auth.completeOAuth(
-            saved.id,
-            browser,
-            proof,
-            token
-          );
-          const response = new Response(null, {
-            status: 303,
-            headers: {
-              location: `${config.APP_ORIGIN}/account`,
-              "cache-control": "no-store",
-              "referrer-policy": "no-referrer",
-            },
-          });
-          loginCookies(response, session);
-          setCookie(response, cookieNames.oauth, "", secure, true, 0);
-          return response;
-        }
-        return json({ code: "NOT_FOUND" }, 404);
-      } catch (error) {
-        const code = trackerErrorCodeSchema.safeParse(
-          (error as { code?: unknown })?.code
-        );
-        if (!code.success) return json({ error: "Service unavailable" }, 503);
-        const statuses: Record<string, number> = {
-          UNAUTHENTICATED: 401,
-          FORBIDDEN: 403,
-          NOT_FOUND: 404,
-          VALIDATION: 400,
-          RATE_LIMITED: 429,
-        };
-        return json({ code: code.data }, statuses[code.data] ?? 409);
-      }
+      });
     },
   };
 }

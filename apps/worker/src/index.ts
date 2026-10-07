@@ -12,7 +12,7 @@
 
 import { createServer } from "node:http";
 import { parseServerConfig } from "@challenge/contracts";
-import { readiness } from "@challenge/core";
+import { readiness, logBackend } from "@challenge/core";
 import { createJobStore } from "@challenge/db";
 import { startJobs } from "./jobs.js";
 import { PgBoss } from "pg-boss";
@@ -29,7 +29,7 @@ async function main() {
         schema: config.QUEUE_SCHEMA,
       })
     : undefined;
-  boss?.on("error", () => console.error("Worker queue unavailable"));
+  boss?.on("error", (error) => logBackend("worker", "queue_failed", {}, error));
   let stopJobs: (() => Promise<void>) | undefined;
   const server = createServer(async (request, response) => {
     if (
@@ -57,6 +57,7 @@ async function main() {
   async function shutdown() {
     if (stopping) return;
     stopping = true;
+    logBackend("worker", "shutdown_started");
     const deadline = setTimeout(() => process.exit(1), 10000).unref();
     await startup?.catch(() => {});
     server.closeAllConnections();
@@ -65,6 +66,7 @@ async function main() {
     await boss?.stop();
     await database?.close();
     clearTimeout(deadline);
+    logBackend("worker", "shutdown_complete");
   }
   process.once("SIGTERM", () => {
     void shutdown();
@@ -72,8 +74,8 @@ async function main() {
   process.once("SIGINT", () => {
     void shutdown();
   });
-  server.once("error", () => {
-    console.error("Worker listener failed");
+  server.once("error", (error) => {
+    logBackend("worker", "listener_failed", {}, error);
     void shutdown().then(() => {
       process.exitCode = 1;
     });
@@ -88,20 +90,18 @@ async function main() {
   })();
   try {
     await startup;
-  } catch {
+  } catch (error) {
     await shutdown();
-    throw new Error("Worker queue startup failed");
+    throw error;
   }
   if (!stopping) {
     server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
-      console.info("Worker listening")
+      logBackend("worker", "listening", { port: config.WORKER_PORT })
     );
   }
 }
 
-main().catch(() => {
-  console.error(
-    "Worker startup failed; check server configuration and database availability"
-  );
+main().catch((error) => {
+  logBackend("worker", "startup_failed", {}, error);
   process.exitCode = 1;
 });

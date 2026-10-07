@@ -1,3 +1,4 @@
+import { logBackend } from "@challenge/core";
 import type { PgBoss } from "pg-boss";
 import type { createJobStore } from "@challenge/db";
 import { trackerEventSchema } from "@challenge/contracts";
@@ -25,15 +26,19 @@ export async function startJobs(
   await boss.work("tracker_projection", async (jobs) => {
     for (const job of jobs)
       try {
-        await store.process(trackerEventSchema.parse(job.data));
-      } catch {
+        const outcome = await store.process(trackerEventSchema.parse(job.data));
+        logBackend("worker", "projection_complete", { outcome });
+      } catch (error) {
+        logBackend("worker", "projection_failed", {}, error);
         throw new Error("Projection check unavailable");
       }
   });
   await boss.work("tracker_housekeeping", async () => {
     try {
       await store.housekeeping();
-    } catch {
+      logBackend("worker", "housekeeping_complete");
+    } catch (error) {
+      logBackend("worker", "housekeeping_failed", {}, error);
       throw new Error("Housekeeping unavailable");
     }
   });
@@ -56,7 +61,11 @@ export async function startJobs(
           retryBackoff: true,
         });
       })
-      .catch(() => console.error("Outbox scan unavailable"))
+      .then((result) => {
+        if (result.delivered || result.failed)
+          logBackend("worker", "outbox_complete", result);
+      })
+      .catch((error) => logBackend("worker", "outbox_failed", {}, error))
       .finally(() => {
         publishing = undefined;
       });

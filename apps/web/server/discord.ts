@@ -1,6 +1,10 @@
 import { createPublicKey, verify } from "node:crypto";
 import { trackerErrorCodeSchema } from "@challenge/contracts";
-import type { createAuth, createTracker } from "@challenge/core";
+import {
+  logBackend,
+  type createAuth,
+  type createTracker,
+} from "@challenge/core";
 import type { createRepository } from "@challenge/db";
 
 /** Guild-only command manifest; register only after the external Discord gate. */
@@ -45,6 +49,8 @@ export const guildCommands = [
 }));
 /** Signed interaction services; schedule must retain work after the HTTP response. */
 export interface DiscordDependencies {
+  /** Server-generated request ID correlates deferred work without retaining interaction tokens. */
+  requestId?: string;
   /** Portal Ed25519 public key, or undefined to disable this endpoint. */
   publicKey?: string;
   /** Canonical browser origin for private account/history links. */
@@ -416,6 +422,12 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
             else throw { code: "VALIDATION" };
           }
         } catch (error) {
+          logBackend(
+            "web",
+            "discord_action_failed",
+            { requestId: deps.requestId },
+            error
+          );
           const code = trackerErrorCodeSchema.safeParse(
             (error as { code?: unknown })?.code
           );
@@ -427,7 +439,13 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
         }
         try {
           await deps.deliver(input.application_id, input.token, result.data);
-        } catch {
+        } catch (error) {
+          logBackend(
+            "web",
+            "discord_delivery_failed",
+            { requestId: deps.requestId },
+            error
+          );
           /* Delivery failure never reverses a committed mutation. */
         }
       }
@@ -517,7 +535,13 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
                         : []),
                     ];
               return Response.json(modal(id, `Challenge ${c.kind}`, fields));
-            } catch {
+            } catch (error) {
+              logBackend(
+                "web",
+                "discord_form_failed",
+                { requestId: deps.requestId },
+                error
+              );
               return Response.json(
                 message("Form unavailable. Use private website history.")
               );
