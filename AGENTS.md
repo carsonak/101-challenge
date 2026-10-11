@@ -4,7 +4,7 @@ This guide applies throughout the repository. Follow higher-priority instruction
 
 ## Find the relevant guidance
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for developer practices, relevant [architecture decisions](docs/adr/README.md), and [domain documentation](docs/domain.md) when changing behavior. Use directory READMEs to discover applicable plans and component guidance. Distinguish proposals from accepted decisions and resolve policy-dependent questions before implementation.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for developer practices, relevant [architecture decisions](docs/adr/README.md), and [domain documentation](docs/domain.md) when changing behavior. Read [the design brief](docs/design.md) before UI or Discord copy changes. Use directory READMEs to discover applicable plans and component guidance. Distinguish proposals from accepted decisions and resolve policy-dependent questions before implementation.
 
 The optional [carsonak workflow](docs/workflows/carsonak.md) applies when requested by the user or established by the session context. Do not impose it on other contributors or assume a clone has that workspace layout.
 
@@ -34,5 +34,6 @@ Follow the [JSDoc guidelines](CONTRIBUTING.md#code-documentation) when adding or
 
 - Follow relevant contributor checks and acceptance criteria. Match verification to the change; documentation changes need content and link review rather than unrelated application tests.
 - Treat flaky failures as defects. Do not rerun solely to obtain a pass.
+- For UI, routing, browser authentication or frontend configuration changes, run focused Playwright checks on a disposable database. Capture and inspect synthetic screenshots of affected routes in both themes and relevant viewport sizes; keep them outside the repository and never include owner data.
 - Keep credentials, private content, workstation paths, and session logistics out of tracked deliverables and public communications. Follow documented privacy requirements.
 - Report resulting behavior, relevant verification, unexecuted checks and reasons, unresolved blockers, and authorized Git operations concisely. Never present plans or checks on a diagnostic variant as proof of the submitted implementation.

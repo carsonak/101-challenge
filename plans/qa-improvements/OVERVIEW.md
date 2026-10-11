@@ -10,7 +10,7 @@ Implemented against reviewed main commit `fd1af95`. The user subsequently author
 
 The [47-item mapping](checklist.md) preserves the original recommendations. The unfinished Home item is consolidated into QA-45. Checkmarks cover the agreed application scope, with the release boundaries below.
 
-## Verification
+## Historical verification
 
 Verified on 2026-10-07 using isolated PostgreSQL 17, Mailpit and Chromium:
 

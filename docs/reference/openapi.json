@@ -765,36 +765,15 @@
       "get": {
         "operationId": "completeGoogleOAuth",
         "summary": "completeGoogleOAuth",
-        "description": "Provider callback verifies one-use state, browser binding and provider proof. Sets session/CSRF cookies and clears challenge_oauth.",
+        "description": "Provider callback verifies one-use state, browser binding and provider proof. Success sets session/CSRF cookies and redirects to account. All failures clear the browser-binding cookie and redirect with friendly generic feedback to login, or account only for a valid bound linking flow. Provider error text is never reflected.",
         "security": [
           {
             "oauthCookie": []
           }
         ],
         "responses": {
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "503": {
-            "$ref": "#/components/responses/ServiceUnavailable"
-          },
           "303": {
-            "description": "Redirect to APP_ORIGIN/account.",
+            "description": "Success redirects to APP_ORIGIN/account; failure redirects to APP_ORIGIN/login?error=oauth or a valid bound linking flow to APP_ORIGIN/account?error=oauth. Includes a safe request ID and clears challenge_oauth.",
             "headers": {
               "Location": {
                 "schema": {
@@ -814,7 +793,7 @@
           {
             "name": "state",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -822,11 +801,20 @@
           {
             "name": "code",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "maxLength": 4096
             }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Provider cancellation/error indicator; details are not reflected."
           }
         ]
       }
@@ -835,36 +823,15 @@
       "get": {
         "operationId": "completeDiscordOAuth",
         "summary": "completeDiscordOAuth",
-        "description": "Provider callback verifies one-use state, browser binding and provider proof. Sets session/CSRF cookies and clears challenge_oauth.",
+        "description": "Provider callback verifies one-use state, browser binding and provider proof. Success sets session/CSRF cookies and redirects to account. All failures clear the browser-binding cookie and redirect with friendly generic feedback to login, or account only for a valid bound linking flow. Provider error text is never reflected.",
         "security": [
           {
             "oauthCookie": []
           }
         ],
         "responses": {
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "503": {
-            "$ref": "#/components/responses/ServiceUnavailable"
-          },
           "303": {
-            "description": "Redirect to APP_ORIGIN/account.",
+            "description": "Success redirects to APP_ORIGIN/account; failure redirects to APP_ORIGIN/login?error=oauth or a valid bound linking flow to APP_ORIGIN/account?error=oauth. Includes a safe request ID and clears challenge_oauth.",
             "headers": {
               "Location": {
                 "schema": {
@@ -884,7 +851,7 @@
           {
             "name": "state",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -892,11 +859,20 @@
           {
             "name": "code",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "maxLength": 4096
             }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Provider cancellation/error indicator; details are not reflected."
           }
         ]
       }
@@ -4233,6 +4209,15 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds until retry is appropriate.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
             }
           }
         }

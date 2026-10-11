@@ -30,6 +30,6 @@ Use deterministic clocks, fictional participants and actual PostgreSQL for const
 
 ## Progress, risks and evolution
 
-The complete local suite passes 29 tests with PostgreSQL enabled and no skips. Coverage includes clean migrations, slots/restart/completion/milestone/one-use races, exact grant/proof expiry boundaries, sparse 101 dates, final-day editing, retained facts/history, rollback, independent authentication/linking, cookie CSRF, provider proof validation, signed guild parity, privacy/erasure and worker recovery. Production-browser verification uses fictional accounts and a separate local SMTP catcher. Worker maintenance/retry scenarios each create and remove a separate disposable database. Final production build/smoke evidence is recorded in the root README. Live provider/load/production restore checks remain unchecked.
+Local implementation coverage and dated results are recorded in [historical verification](../../docs/verification.md). Tests cover migrations, lifecycle and entitlement races, authentication/linking, private reporting, worker recovery and erasure. Live-provider and production release gates are tracked separately.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

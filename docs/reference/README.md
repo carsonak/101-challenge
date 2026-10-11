@@ -1,7 +1,7 @@
 # Database and HTTP reference
 
 - [Database schema](schema.dbml): PostgreSQL tables, columns, keys, indexes,
-  checks and foreign keys after migrations `0001` through `0006`.
+  checks and foreign keys defined by the tracked migrations.
 - [OpenAPI document](openapi.json): OpenAPI 3.1 description of the implemented
   browser API, OAuth callbacks, Discord ingress and web/worker health endpoints.
 
@@ -96,8 +96,8 @@ collection-specific `cursor`; responses contain `items` and nullable `nextCursor
 Sessions and notifications return arrays without pagination. Browser failures
 return a typed `code`; unexpected failures return HTTP 503 with
 `{"error":"Service unavailable"}`. Health readiness failures instead return
-`{"status":"unavailable","service":"web"}` (or `worker`). OAuth success is a
-303 redirect. Discord uses its own signed wire envelope and can return an HTTP
+`{"status":"unavailable","service":"web"}` (or `worker`). OAuth callbacks use a
+303 redirect for success and failure; failures clear browser binding and return friendly login feedback, or account feedback only for validated linking state. Discord uses its own signed wire envelope and can return an HTTP
 200 private message for a domain failure; it does not use browser cookies or CSRF.
 
 ## Maintaining the references

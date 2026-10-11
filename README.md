@@ -4,13 +4,17 @@ Build a steady practice with BitDevs Kisumu. Choose a season, make your own goal
 
 ## Quick start
 
-Install Node 24.7–24.x, pnpm 12.9.1, and Docker Compose (or compatible Podman Compose), then run:
+Install the Node and pnpm versions specified in [package.json](package.json), and Docker Compose (or compatible Podman Compose), then run:
 
 ```sh
 pnpm install --frozen-lockfile
 cp .env.example .env
+cp .env.operator.example .env.operator
+chmod 600 .env .env.operator
 pnpm services:up
+pnpm database:provision roles
 pnpm database:migrate
+pnpm database:provision grants
 pnpm dev:web
 ```
 
@@ -31,4 +35,6 @@ Create an account, verify your email, choose a season, and customize its recomme
 
 ## License and identity
 
-Code and documentation use [Apache-2.0](LICENSE). BitDevs Kisumu identity is reserved separately in [BRANDING.md]. Participant text and artwork are not automatically licensed under the code license. Set APP_DISPLAY_NAME to rebrand the displayed name.
+Code and documentation use [Apache-2.0](LICENSE). BitDevs Kisumu identity is reserved separately in [BRANDING.md](BRANDING.md). Participant text and artwork are not automatically licensed under the code license. Set APP_DISPLAY_NAME to rebrand the displayed name.
+
+Local setup uses [.env.example](.env.example) and [.env.operator.example](.env.operator.example); see the [configuration guide](docs/configuration.md) for scoped commands and developer diagnostics.

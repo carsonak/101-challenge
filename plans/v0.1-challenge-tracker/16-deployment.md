@@ -30,6 +30,6 @@ Separate local/staging/production databases, credentials and queue namespaces. E
 
 ## Progress, risks and evolution
 
-Foundation evidence: clean web image build, non-root web/worker entrypoint smoke, PostgreSQL 17.11 and Mailpit 1.31.2 health passed. CI is configured but has not run remotely; no live deployment evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
+Historical foundation evidence is recorded in [verification](../../docs/verification.md). CI is configured but has not run remotely; no live deployment evidence yet. Record checked task evidence, migration impact and remaining gate here as implementation proceeds. External prerequisites block only the named live gate, never fixture/local work. Cross-component changes require integration review.
 
 2026-10-06: reconciled with approved product review and dependency gates. Supersedes contradictory initial proposals; no deployed-data migration is needed at this planning baseline.

@@ -502,7 +502,7 @@ Table adapter_confirmations {
   "enrollmentVersion" integer [not null]
   "expiresAt" timestamptz [not null]
   checks {
-    `kind IN ('setup','update','edit','cancel','restart')`
+    `kind IN ('setup','update','edit','cancel','restart','dashboard','report','start','pause','resume','custom')`
     `version >= 0`
     `"enrollmentVersion" >= 0`
   }
