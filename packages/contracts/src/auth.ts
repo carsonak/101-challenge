@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./validation.js";
 
 /** Normalize independently verified credential addresses; never use email to merge accounts. */
 const email = z

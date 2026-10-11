@@ -6,7 +6,8 @@ import { trackerEventSchema } from "@challenge/contracts";
 /** Register v0.1 content-free handlers after readiness; return a timer cleanup function. */
 export async function startJobs(
   boss: PgBoss,
-  store: ReturnType<typeof createJobStore>
+  store: ReturnType<typeof createJobStore>,
+  polling = { activeMs: 2000, idleMaxMs: 30000 }
 ) {
   await store.ready();
   await boss.createQueue("tracker_projection", {
@@ -23,25 +24,35 @@ export async function startJobs(
     retryDelay: 60,
     retryBackoff: true,
   });
-  await boss.work("tracker_projection", async (jobs) => {
-    for (const job of jobs)
-      try {
-        const outcome = await store.process(trackerEventSchema.parse(job.data));
-        logBackend("worker", "projection_complete", { outcome });
-      } catch (error) {
-        logBackend("worker", "projection_failed", {}, error);
-        throw new Error("Projection check unavailable");
-      }
-  });
-  await boss.work("tracker_housekeeping", async () => {
-    try {
-      await store.housekeeping();
-      logBackend("worker", "housekeeping_complete");
-    } catch (error) {
-      logBackend("worker", "housekeeping_failed", {}, error);
-      throw new Error("Housekeeping unavailable");
+  await boss.work(
+    "tracker_projection",
+    { pollingIntervalSeconds: 5 },
+    async (jobs) => {
+      for (const job of jobs)
+        try {
+          const outcome = await store.process(
+            trackerEventSchema.parse(job.data)
+          );
+          logBackend("worker", "projection_complete", { outcome });
+        } catch (error) {
+          logBackend("worker", "projection_failed", {}, error);
+          throw new Error("Projection check unavailable");
+        }
     }
-  });
+  );
+  await boss.work(
+    "tracker_housekeeping",
+    { pollingIntervalSeconds: 30 },
+    async () => {
+      try {
+        await store.housekeeping();
+        logBackend("worker", "housekeeping_complete");
+      } catch (error) {
+        logBackend("worker", "housekeeping_failed", {}, error);
+        throw new Error("Housekeeping unavailable");
+      }
+    }
+  );
   await boss.schedule(
     "tracker_housekeeping",
     "0 * * * *",
@@ -49,6 +60,9 @@ export async function startJobs(
     { singletonKey: "hourly" }
   );
   let publishing: Promise<unknown> | undefined;
+  let stopped = false;
+  let delay = polling.activeMs;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   /** Publish without overlapping this worker's own scan; queue errors never disclose supplied content. */
   function tick() {
     if (publishing) return;
@@ -62,18 +76,26 @@ export async function startJobs(
         });
       })
       .then((result) => {
+        delay =
+          result.delivered || result.failed
+            ? polling.activeMs
+            : Math.min(polling.idleMaxMs, delay * 2);
         if (result.delivered || result.failed)
           logBackend("worker", "outbox_complete", result);
       })
-      .catch((error) => logBackend("worker", "outbox_failed", {}, error))
+      .catch((error) => {
+        delay = polling.activeMs;
+        logBackend("worker", "outbox_failed", {}, error);
+      })
       .finally(() => {
         publishing = undefined;
+        if (!stopped) timer = setTimeout(tick, delay).unref();
       });
   }
   tick();
-  const timer = setInterval(tick, 2000).unref();
   return async () => {
-    clearInterval(timer);
+    stopped = true;
+    clearTimeout(timer);
     await publishing;
   };
 }

@@ -319,6 +319,14 @@ export interface Tables {
 }
 /** Repository transaction port; implementations own persistence, SQL and rollback. */
 export interface Transaction {
+  /** Read report dates/count facts and only today's private report, avoiding history bodies. */
+  reportSummary(
+    attemptId: string,
+    date: string
+  ): Promise<{
+    dates: { reportingDate: string; streakAtReport: number }[];
+    today: Report | undefined;
+  }>;
   /** Load and optionally lock one row; callers follow user/enrollment/attempt lock order. */
   get<K extends keyof Tables>(
     table: K,

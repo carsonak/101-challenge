@@ -3,7 +3,7 @@ import { trackerErrorCodeSchema } from "@challenge/contracts";
 /** Fixed backend events; arbitrary application content is never an event name. */
 export type BackendEvent =
   | "http_request"
-  | "mail_delivered"
+  | "mail_accepted"
   | "mail_failed"
   | "runtime_ready"
   | "startup_failed"
@@ -166,6 +166,21 @@ function exceptionDetails(
   return visit(error, 0);
 }
 
+/** Return redacted exception, stack/cause chain, recognized codes and a fixed operator hint. Never serialize SQL or arbitrary properties. */
+export function diagnosticFailure(
+  error: unknown,
+  secrets: readonly string[] = []
+) {
+  const codes = diagnosticCodes(error);
+  const hint = errorHints[codes[0] ?? ""];
+  return {
+    error: exceptionDetails(error, secrets),
+    errorCode: codes[0] ?? "INTERNAL",
+    ...(codes.length > 1 ? { errorCodes: codes } : {}),
+    ...(hint ? { hint } : {}),
+  };
+}
+
 /** Fixed route templates prevent paths, resource IDs and proof-bearing queries leaking. */
 const safeRoutes = new Set([
   "/api/v1/session",
@@ -258,12 +273,7 @@ export function logBackend(
     )
       record.outcome = details.outcome;
     if (error !== undefined) {
-      record.error = exceptionDetails(error, details.redact);
-      const codes = diagnosticCodes(error);
-      record.errorCode = codes[0] ?? "INTERNAL";
-      if (codes.length > 1) record.errorCodes = codes;
-      const hint = errorHints[codes[0] ?? ""];
-      if (hint) record.hint = hint;
+      Object.assign(record, diagnosticFailure(error, details.redact));
       const name = (error as { name?: unknown } | null)?.name;
       record.errorKind =
         typeof name === "string" &&

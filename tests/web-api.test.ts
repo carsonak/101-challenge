@@ -64,6 +64,16 @@ test(
       return response;
     };
     try {
+      const stale = await request("/api/v1/session", undefined, {
+        cookie: `challenge_session=${"a".repeat(64)}; challenge_csrf=${"b".repeat(64)}`,
+      });
+      assert.equal(stale.status, 200);
+      assert.deepEqual(await stale.json(), {
+        account: null,
+        csrf: null,
+        providers: { google: false, discord: false },
+      });
+      assert.equal(stale.headers.getSetCookie().length, 2);
       const email = `browser-${randomUUID()}@example.invalid`,
         password = "fictional browser password";
       assert.equal(

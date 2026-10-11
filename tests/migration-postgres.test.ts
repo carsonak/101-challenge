@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { trackerMigrations } from "../packages/db/src/migrations.js";
 import { createRepository } from "../packages/db/src/index.js";
 /** Resolve the existing database driver's dependency for migration-fixture SQL only. */
 const { Pool } = createRequire(
@@ -88,7 +89,7 @@ test(
       assert.equal(
         (await sql.query("SELECT count(*)::int n FROM tracker_migrations"))
           .rows[0].n,
-        6
+        trackerMigrations.length
       );
     } finally {
       await db.close();

@@ -206,6 +206,72 @@ test(
         await db.repository.transaction((tx) => tx.get("replays", replayId)),
         undefined
       );
+      assert.equal(
+        (
+          await db.repository.transaction((tx) =>
+            tx.list("notifications", { userId: owner })
+          )
+        ).length,
+        0
+      );
+      const notifications = [
+        {
+          createdAt: "1999-01-01T00:00:00Z",
+          readAt: "1999-12-31T00:00:00Z",
+          dismissedAt: null,
+          retained: true,
+        },
+        {
+          createdAt: "1999-01-01T00:00:00Z",
+          readAt: "1999-12-02T00:00:00Z",
+          dismissedAt: null,
+          retained: true,
+        },
+        {
+          createdAt: "1999-01-01T00:00:00Z",
+          readAt: "1999-12-01T23:59:59Z",
+          dismissedAt: null,
+          retained: false,
+        },
+        {
+          createdAt: "1999-01-01T00:00:00Z",
+          readAt: null,
+          dismissedAt: "1999-12-01T23:59:59Z",
+          retained: false,
+        },
+        {
+          createdAt: "1999-10-03T00:00:00Z",
+          readAt: null,
+          dismissedAt: null,
+          retained: true,
+        },
+        {
+          createdAt: "1999-10-02T23:59:59Z",
+          readAt: null,
+          dismissedAt: null,
+          retained: false,
+        },
+      ].map((row) => ({ ...row, id: randomUUID() }));
+      await db.repository.transaction(async (tx) => {
+        for (const { retained: _retained, ...row } of notifications)
+          await tx.insert("notifications", {
+            ...row,
+            userId: owner,
+            message: "Fictional system reminder",
+            href: "/home",
+          });
+      });
+      await store.housekeeping();
+      const remaining = await db.repository.transaction((tx) =>
+        tx.list("notifications", { userId: owner })
+      );
+      assert.deepEqual(
+        remaining.map((row) => row.id).sort(),
+        notifications
+          .filter((row) => row.retained)
+          .map((row) => row.id)
+          .sort()
+      );
     } finally {
       await store.close();
       await db.close();

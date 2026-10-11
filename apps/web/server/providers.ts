@@ -12,6 +12,21 @@ import {
 } from "@challenge/core";
 import type { parseServerConfig } from "@challenge/contracts";
 
+/** Accept only credential-free HTTPS image URLs on provider-owned hosts. */
+export function googleAvatar(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2048) return;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      url.hostname.endsWith(".googleusercontent.com")
+    )
+      return url.toString();
+  } catch {}
+}
 /** Validated server configuration; all credentials remain inside this adapter. */
 type Config = ReturnType<typeof parseServerConfig>;
 /** Provider transports with injectable HTTP/JWKS for deterministic local tests. */
@@ -62,7 +77,7 @@ export function createProviders(
         client_id: s.clientId,
         redirect_uri: s.redirect,
         response_type: "code",
-        scope: provider === "google" ? "openid" : "identify",
+        scope: provider === "google" ? "openid profile" : "identify",
         state: state.state,
       }).toString();
       if (provider === "google") {
@@ -125,9 +140,8 @@ export function createProviders(
           return {
             provider: "google",
             subject: payload.sub,
-            ...(typeof payload.picture === "string" &&
-            /^https:\/\/[^/]+\.googleusercontent\.com\//.test(payload.picture)
-              ? { avatar: payload.picture }
+            ...(googleAvatar(payload.picture)
+              ? { avatar: googleAvatar(payload.picture) }
               : {}),
           };
         }

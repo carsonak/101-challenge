@@ -4,7 +4,7 @@ import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import { parseServerConfig } from "../packages/contracts/src/index.js";
 import type { OAuthState } from "../packages/core/src/index.js";
-import { createProviders } from "../apps/web/server/providers.js";
+import { createProviders, googleAvatar } from "../apps/web/server/providers.js";
 test("Google validates issuer, audience, nonce, expiry and signature; Discord uses stable subject only", async () => {
   const config = parseServerConfig({
     GOOGLE_CLIENT_ID: "fictional-google",
@@ -87,6 +87,7 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
     })
   );
   assert.equal(authURL.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(authURL.searchParams.get("scope"), "openid profile");
   assert.deepEqual(await providers.exchange(state, "code"), {
     provider: "google",
     subject: "stable-google-subject",
@@ -112,4 +113,21 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
     { provider: "discord", subject: "123456789" }
   );
   assert.ok(calls.every((c) => !c.includes("email")));
+});
+
+test("Google avatars reject lookalike hosts, credentials, non-HTTPS and arbitrary ports", () => {
+  assert.equal(
+    googleAvatar("https://lh3.googleusercontent.com/a/fixture"),
+    "https://lh3.googleusercontent.com/a/fixture"
+  );
+  for (const value of [
+    "https://lh3.googleusercontent.com.evil.invalid/a",
+    "https://user:secret@lh3.googleusercontent.com/a",
+    "http://lh3.googleusercontent.com/a",
+    "https://lh3.googleusercontent.com:444/a",
+    "https://evil.invalid/a",
+    "bad",
+    null,
+  ])
+    assert.equal(googleAvatar(value), undefined);
 });

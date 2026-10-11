@@ -27,3 +27,6 @@ export * from "./rules.js";
 export * from "./tracker.js";
 export * from "./auth.js";
 export * from "./diagnostics.js";
+
+export * from "./capacity.js";
+export * from "./throttle.js";

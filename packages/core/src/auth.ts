@@ -1,5 +1,7 @@
 import { argon2, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { createCapacity } from "./capacity.js";
+import { createThrottle } from "./throttle.js";
 import {
   authCommandSchema,
   accountSchema,
@@ -24,7 +26,13 @@ const argonParameters = {
   tagLength: 32,
 };
 /** Native asynchronous Argon2 keeps expensive hashing off the request event loop. */
-const derive = promisify(argon2);
+const nativeDerive = promisify(argon2);
+// Two 64 MiB hashes reserve about 128 MiB; keep the waiting queue small on a budget host.
+/** One process-wide gate covers hashing, dummy verification and reauthentication. */
+const passwordCapacity = createCapacity();
+/** Acquire capacity for native password work. */
+const derive: typeof nativeDerive = (...args) =>
+  passwordCapacity.run(() => nativeDerive(...args));
 /** Hash passwords with fresh 16-byte salts; returned versioned record stays private. */
 export async function hashPassword(password: string): Promise<string> {
   const nonce = randomBytes(16);
@@ -97,6 +105,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
   const clock = options.now ?? (() => new Date());
   const opaque = () => randomBytes(32).toString("hex");
   let dummyHash: Promise<string> | undefined;
+  const cooldown = createThrottle(() => clock().getTime());
   /** Find and lock the authenticated user before session/resource locks. */
   async function session(
     tx: Transaction,
@@ -273,6 +282,15 @@ export function createAuth(repository: Repository, options: AuthOptions) {
           ? await hashPassword(c.password)
           : undefined;
       let delivery: AuthMail | undefined;
+      const mayMail =
+        "email" in c &&
+        ["signup", "recover", "add_email", "recovery_email"].includes(c.action)
+          ? cooldown.allow(
+              c.action === "recover" ? "recovery-mail" : "verification-mail",
+              c.email.trim().toLowerCase(),
+              15 * 60000
+            )
+          : true;
       const result = await repository.transaction(async (tx) => {
         if (c.action === "signup" || c.action === "recover") {
           await tx.serializeKey(`email:${c.email}`);
@@ -291,7 +309,11 @@ export function createAuth(repository: Repository, options: AuthOptions) {
             };
             await tx.insert("credentials", credential);
           }
-          if (credential && (c.action === "recover" || !credential.verified))
+          if (
+            mayMail &&
+            credential &&
+            (c.action === "recover" || !credential.verified)
+          )
             delivery = await mailToken(
               tx,
               credential,
@@ -301,7 +323,10 @@ export function createAuth(repository: Repository, options: AuthOptions) {
         }
         if (c.action === "login") {
           const found = (await tx.list("credentials", { email: c.email }))[0];
-          dummyHash ??= hashPassword(opaque());
+          dummyHash ??= hashPassword(opaque()).catch((error) => {
+            dummyHash = undefined;
+            throw error;
+          });
           const valid = await verifyPassword(
             c.password,
             found?.passwordHash ?? (await dummyHash)
@@ -433,6 +458,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
             profile.avatar = c.avatar;
           }
           if (c.action === "recovery_email") {
+            if (!mayMail) return { accepted: true };
             for (const t of await tx.list("auth_tokens", {
               userId: user.id,
               kind: "recovery_email",
@@ -507,7 +533,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
             verified: false,
           };
           await tx.insert("credentials", credential);
-          delivery = await mailToken(tx, credential, "verify");
+          if (mayMail) delivery = await mailToken(tx, credential, "verify");
           return { accepted: true };
         }
         if (c.action === "unlink") {

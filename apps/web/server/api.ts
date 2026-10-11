@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { isIP } from "node:net";
 import { randomBytes } from "node:crypto";
 import {
   authCommandSchema,
@@ -8,6 +9,7 @@ import {
 } from "@challenge/contracts";
 import {
   DomainError,
+  createThrottle,
   type createAuth,
   type createTracker,
 } from "@challenge/core";
@@ -22,6 +24,8 @@ export const cookieNames = {
 } as const;
 /** API dependencies expose only server-owned service handles and settings. */
 export interface ApiDependencies {
+  /** Injectable limiter clock. */
+  now?: () => number;
   /** Validated settings, never serialized wholesale. */
   config: ReturnType<typeof parseServerConfig>;
   /** Session/proof service. */
@@ -129,18 +133,18 @@ function page<T extends { id: string }>(rows: T[], url: URL, kind: string) {
 export function createWebApi(deps: ApiDependencies) {
   const { config, auth, tracker, providers } = deps;
   const secure = config.APP_ORIGIN.startsWith("https:");
-  const rates = new Map<string, { count: number; expires: number }>();
-  /** Bound anonymous/actor mutation rates without storing bodies or addresses. */
-  function rate(key: string, limit: number, window = 60000) {
-    const now = Date.now();
-    const old = rates.get(key);
-    const counter =
-      old && old.expires > now ? old : { count: 0, expires: now + window };
-    counter.count++;
-    rates.set(key, counter);
-    if (counter.count > limit) throw new DomainError("RATE_LIMITED");
-    if (rates.size > 1000)
-      for (const [k, v] of rates) if (v.expires <= now) rates.delete(k);
+  const rates = createThrottle(deps.now);
+  /** Accept only a validated address from the explicitly configured ingress chain. */
+  function address(request: Request) {
+    if (!config.TRUSTED_PROXY_HOPS || !config.TRUSTED_PROXY_HEADER)
+      return "local";
+    const chain =
+      request.headers
+        .get(config.TRUSTED_PROXY_HEADER)
+        ?.split(",")
+        .map((value) => value.trim()) ?? [];
+    const value = chain.at(-config.TRUSTED_PROXY_HOPS);
+    return value && isIP(value) ? value : "unknown";
   }
   /** Persist fresh opaque cookies while returning no bearer token in JSON. */
   function loginCookies(
@@ -172,12 +176,25 @@ export function createWebApi(deps: ApiDependencies) {
             if (!token)
               return json({ account: null, csrf: null, providers: flags });
             const proof = cookie(request, cookieNames.csrf);
-
-            return json({
-              account: await auth.account(token),
-              csrf: proof,
-              providers: flags,
-            });
+            try {
+              return json({
+                account: await auth.account(token),
+                csrf: proof,
+                providers: flags,
+              });
+            } catch (error) {
+              if ((error as { code?: unknown })?.code !== "UNAUTHENTICATED")
+                throw error;
+              // Expired or revoked cookies are an anonymous browser context.
+              const response = json({
+                account: null,
+                csrf: null,
+                providers: flags,
+              });
+              setCookie(response, cookieNames.session, "", secure, true, 0);
+              setCookie(response, cookieNames.csrf, "", secure, false, 0);
+              return response;
+            }
           }
           if (request.method === "GET" && path === "/api/v1/seasons")
             return json(page(await tracker.seasons(), url, "seasons"));
@@ -233,10 +250,38 @@ export function createWebApi(deps: ApiDependencies) {
             );
           }
           if (request.method === "POST" && path === "/api/v1/auth") {
-            rate("anonymous-auth", 1000, 10 * 60000);
+            rates.take("auth-input", address(request), 100, 60000);
             const input = await payload(request);
             const c = authCommandSchema.safeParse(input);
             if (!c.success) throw new DomainError("VALIDATION");
+            const action = c.data.action;
+            const bucket = `auth-${action}`;
+            rates.take(
+              bucket,
+              address(request),
+              action === "login" ? 20 : 60,
+              60000
+            );
+            if ("email" in c.data)
+              rates.take(
+                `${bucket}-email`,
+                c.data.email.trim().toLowerCase(),
+                10,
+                15 * 60000
+              );
+            if (
+              ![
+                "login",
+                "signup",
+                "recover",
+                "verify",
+                "reset",
+                "verify_recovery_email",
+              ].includes(action)
+            ) {
+              const account = await auth.account(token);
+              rates.take("account-user", account.id, 120, 60000);
+            }
             if (c.data.action === "set_avatar" && c.data.avatar) {
               const match =
                 /^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
@@ -297,14 +342,14 @@ export function createWebApi(deps: ApiDependencies) {
               cmd.command === "IssueCorrectionGrant" ||
               cmd.command === "RevokeCorrectionGrant";
             const actor = await auth.authenticate(token, csrf, recent);
-            rate(`actor:${actor.userId}`, 120);
+            rates.take("mutation", actor.userId, 120, 60000);
             const key = request.headers.get("idempotency-key");
             if (!key || !/^[-\w:]{1,200}$/.test(key))
               throw new DomainError("VALIDATION");
             return json(await tracker.execute(actor.userId, input, key));
           }
           if (request.method === "POST" && path === "/api/v1/oauth") {
-            rate("anonymous-oauth", 100, 60000);
+            rates.take("oauth", address(request), 20, 60000);
             const value = await payload(request);
             if (!value || typeof value !== "object")
               throw new DomainError("VALIDATION");
@@ -336,25 +381,42 @@ export function createWebApi(deps: ApiDependencies) {
             const state = url.searchParams.get("state"),
               code = url.searchParams.get("code"),
               browser = cookie(request, cookieNames.oauth);
-            if (!state || !code || !browser || code.length > 4096)
-              throw new DomainError("UNAUTHENTICATED");
-            const saved = await auth.oauthState(provider, state, browser);
-            const proof = await providers.exchange(saved, code);
-            const session = await auth.completeOAuth(
-              saved.id,
-              browser,
-              proof,
-              token
-            );
-            const response = new Response(null, {
-              status: 303,
-              headers: {
-                location: `${config.APP_ORIGIN}/account`,
-                "cache-control": "no-store",
-                "referrer-policy": "no-referrer",
-              },
-            });
-            loginCookies(response, session);
+            let destination = "/login";
+            let response: Response;
+            try {
+              if (!state || !browser || state.length > 256)
+                throw new DomainError("UNAUTHENTICATED");
+              const saved = await auth.oauthState(provider, state, browser);
+              if (saved.userId) destination = "/account";
+              if (url.searchParams.has("error") || !code || code.length > 4096)
+                throw new DomainError("UNAUTHENTICATED");
+              const proof = await providers.exchange(saved, code);
+              const session = await auth.completeOAuth(
+                saved.id,
+                browser,
+                proof,
+                token
+              );
+              response = new Response(null, {
+                status: 303,
+                headers: {
+                  location: `${config.APP_ORIGIN}/account`,
+                  "cache-control": "no-store",
+                  "referrer-policy": "no-referrer",
+                },
+              });
+              loginCookies(response, session);
+            } catch (error) {
+              recordError(error);
+              response = new Response(null, {
+                status: 303,
+                headers: {
+                  location: `${config.APP_ORIGIN}${destination}?error=oauth`,
+                  "cache-control": "no-store",
+                  "referrer-policy": "no-referrer",
+                },
+              });
+            }
             setCookie(response, cookieNames.oauth, "", secure, true, 0);
             return response;
           }
@@ -372,7 +434,16 @@ export function createWebApi(deps: ApiDependencies) {
             VALIDATION: 400,
             RATE_LIMITED: 429,
           };
-          return json({ code: code.data }, statuses[code.data] ?? 409);
+          const response = json(
+            { code: code.data },
+            statuses[code.data] ?? 409
+          );
+          if (code.data === "RATE_LIMITED")
+            response.headers.set(
+              "retry-after",
+              String((error as { retryAfter?: number }).retryAfter ?? 5)
+            );
+          return response;
         }
       });
     },

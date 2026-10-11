@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./validation.js";
 import {
   initialGoalSchema,
   initialMilestoneSchema,

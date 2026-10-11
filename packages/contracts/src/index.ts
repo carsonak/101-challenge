@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./validation.js";
 
 /**
  * Validates health payloads received from web or worker services.
@@ -29,6 +29,23 @@ const databaseUrl = z.preprocess(
 );
 /** Server settings and defaults accepted during service configuration. */
 const envSchema = z.object({
+  /** Header overwritten by an isolated trusted ingress; unset ignores all forwarding headers. */
+  TRUSTED_PROXY_HEADER: optionalString,
+  /** Explicit ingress chain length; zero disables forwarded client identities. */
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+  /** Active and maximum idle outbox scan delays in milliseconds. */
+  OUTBOX_POLL_MS: z.coerce.number().int().min(250).max(60000).default(2000),
+  OUTBOX_IDLE_MAX_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(300000)
+    .default(30000),
+  /** Optional contact shown in terms/privacy. */
+  CONTACT_EMAIL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.email().optional()
+  ),
   /** Server-owned timezone for new enrollments. */
   REPORTING_TIMEZONE: z
     .string()
@@ -92,6 +109,9 @@ const envSchema = z.object({
 });
 
 // Parse only on the server; errors deliberately omit supplied values/secrets.
+/** Server configuration field inventory used to verify local examples stay complete. Contains names, never values. */
+export const serverConfigKeys = Object.keys(envSchema.shape);
+
 /**
  * Validate server settings before starting a service or using its configuration.
  * Pass an environment map such as `process.env`; load any .env file beforehand.
@@ -111,6 +131,14 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     );
   }
   const env = result.data;
+  if (env.OUTBOX_IDLE_MAX_MS < env.OUTBOX_POLL_MS)
+    throw new Error("Invalid outbox polling configuration");
+  if (
+    env.TRUSTED_PROXY_HOPS > 0 &&
+    (!env.TRUSTED_PROXY_HEADER ||
+      !/^[a-z][a-z0-9-]{0,79}$/.test(env.TRUSTED_PROXY_HEADER))
+  )
+    throw new Error("Invalid trusted proxy configuration");
   const origin = new URL(env.APP_ORIGIN);
   if (
     origin.origin !== env.APP_ORIGIN ||
@@ -123,6 +151,13 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
     throw new Error("Invalid application origin");
   if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD))
     throw new Error("Incomplete SMTP configuration");
+  const localSmtp = ["127.0.0.1", "localhost", "::1"].includes(
+    env.SMTP_HOST.toLowerCase()
+  );
+  if (!localSmtp && env.SMTP_FROM.toLowerCase().endsWith(".invalid"))
+    throw new Error(
+      "Invalid SMTP_FROM: external SMTP requires a real verified sender"
+    );
   /** Return whether a provider is fully configured; reject partial configuration. */
   function provider(name: string, values: (string | undefined)[]) {
     const configured = values.filter(Boolean).length;
@@ -171,3 +206,5 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
 
 export * from "./tracker.js";
 export * from "./auth.js";
+
+export * from "./messages.js";

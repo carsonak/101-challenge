@@ -44,6 +44,29 @@ test("complete provider configuration is accepted but does not implement login",
   });
   assert.equal(config.googleEnabled, true);
 });
+test("external SMTP rejects placeholder senders while local Mailpit keeps its defaults", () => {
+  for (const SMTP_FROM of [
+    undefined,
+    "challenge@example.invalid",
+    "owner@EXAMPLE.INVALID",
+  ]) {
+    assert.throws(
+      () => parseServerConfig({ SMTP_HOST: "smtp-relay.brevo.com", SMTP_FROM }),
+      {
+        message:
+          "Invalid SMTP_FROM: external SMTP requires a real verified sender",
+      }
+    );
+  }
+  assert.equal(parseServerConfig({}).SMTP_FROM, "challenge@example.invalid");
+  assert.equal(
+    parseServerConfig({
+      SMTP_HOST: "smtp-relay.brevo.com",
+      SMTP_FROM: "owner@example.org",
+    }).SMTP_FROM,
+    "owner@example.org"
+  );
+});
 test("readiness distinguishes dependency failure and never exposes its secret", async () => {
   assert.deepEqual(await readiness("web", async () => {}), {
     status: "ok",

@@ -1,7 +1,7 @@
 /**
  * @file Runs the worker queue connection and HTTP health service.
  * Use `pnpm dev:worker` during development or `pnpm start:worker` after building.
- * The commands load the root .env. When DATABASE_URL is configured, startup can
+ * Local commands select WORKER_DATABASE_URL from .env as this process's DATABASE_URL; production supplies a scoped environment. When DATABASE_URL is configured, startup can
  * create queue tables and requires applied tracker migrations and database access. Without it, liveness
  * remains available but readiness returns 503. The listener uses WORKER_HOST and
  * WORKER_PORT; startup failures are reported with a nonzero exit status.
@@ -30,6 +30,7 @@ async function main() {
     ? new PgBoss({
         connectionString: config.DATABASE_URL,
         schema: config.QUEUE_SCHEMA,
+        createSchema: false,
       })
     : undefined;
   boss?.on("error", (error) => logBackend("worker", "queue_failed", {}, error));
@@ -48,6 +49,8 @@ async function main() {
         : await readiness("worker", async () => {
             if (!database || !boss) throw new Error("Database not configured");
             await database.ready();
+            if (!(await boss.getQueue("tracker_projection")))
+              throw new Error("Worker queue unavailable");
           });
     response.writeHead(result.status === "ok" ? 200 : 503, {
       "content-type": "application/json",
@@ -92,7 +95,11 @@ async function main() {
     await boss?.start();
     if (stopping) return;
     startupStage = "job_registration";
-    if (database && boss) stopJobs = await startJobs(boss, database);
+    if (database && boss)
+      stopJobs = await startJobs(boss, database, {
+        activeMs: config.OUTBOX_POLL_MS,
+        idleMaxMs: config.OUTBOX_IDLE_MAX_MS,
+      });
   })();
   try {
     await startup;

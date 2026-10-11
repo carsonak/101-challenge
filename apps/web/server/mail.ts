@@ -68,7 +68,7 @@ export function createMailer(
               ? `Account deletion has been requested. You have seven days from the request to recover it. Sign in at ${config.APP_ORIGIN}/login to see the exact deadline and restore your account.`
               : `${mail.kind === "recover" ? "Choose a new password" : "Verify your email"}: ${url}\nThis link is private and expires. If you did not request it, you can ignore this message.`,
         });
-        logBackend("web", "mail_delivered", {
+        logBackend("web", "mail_accepted", {
           durationMs: performance.now() - started,
         });
       } catch (error) {

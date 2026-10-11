@@ -40,6 +40,22 @@ export async function handleApi(request: Request) {
   } catch (error) {
     return observeRequest(request, async (recordError) => {
       recordError(error);
+      if (
+        /^\/api\/auth\/(google|discord)\/callback$/.test(
+          new URL(request.url).pathname
+        )
+      ) {
+        const origin = process.env.APP_ORIGIN ?? "http://localhost:3000";
+        return new Response(null, {
+          status: 303,
+          headers: {
+            location: `${origin}/login?error=oauth`,
+            "cache-control": "no-store",
+            "referrer-policy": "no-referrer",
+            "set-cookie": `challenge_oauth=; Path=/; SameSite=Lax; Max-Age=0; HttpOnly${origin.startsWith("https:") ? "; Secure" : ""}`,
+          },
+        });
+      }
       return Response.json(
         { error: "Service unavailable" },
         { status: 503, headers: { "cache-control": "private, no-store" } }

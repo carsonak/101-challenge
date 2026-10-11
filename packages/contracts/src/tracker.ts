@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./validation.js";
 
 /** UUID used for tracker resources; ownership is checked by core services. */
 const resourceId = z.uuid();

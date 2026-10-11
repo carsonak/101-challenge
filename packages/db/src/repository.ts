@@ -1,4 +1,5 @@
 import pg from "pg";
+import { trackerMigrations } from "./migrations.js";
 import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
@@ -55,6 +56,23 @@ function transactionPort(client: pg.PoolClient): Transaction {
       );
   }
   return {
+    async reportSummary(attemptId, date) {
+      const metadata = await client.query(
+        'SELECT "reportingDate"::text,"streakAtReport" FROM reports WHERE "attemptId"=$1 ORDER BY "reportingDate"',
+        [attemptId]
+      );
+      const current = await client.query(
+        'SELECT * FROM reports WHERE "attemptId"=$1 AND "reportingDate"=$2',
+        [attemptId, date]
+      );
+      return {
+        dates: metadata.rows as {
+          reportingDate: string;
+          streakAtReport: number;
+        }[],
+        today: current.rows[0] ? decode("reports", current.rows[0]) : undefined,
+      };
+    },
     async eraseAttempt(userId, attemptId) {
       await db.execute(
         sql`SELECT erase_cancelled_attempt(${userId},${attemptId})`
@@ -193,7 +211,18 @@ export function createRepository(
     /** Create a ten-minute actor-bound interaction form with resource/version metadata only. */
     async interactionForm(input: {
       userId: string;
-      kind: "setup" | "update" | "edit" | "cancel" | "restart";
+      kind:
+        | "setup"
+        | "update"
+        | "edit"
+        | "cancel"
+        | "restart"
+        | "dashboard"
+        | "report"
+        | "start"
+        | "pause"
+        | "resume"
+        | "custom";
       resourceId: string;
       version: number;
       enrollmentId: string;
@@ -224,7 +253,18 @@ export function createRepository(
       ).rows[0] as
         | {
             id: string;
-            kind: "setup" | "update" | "edit" | "cancel" | "restart";
+            kind:
+              | "setup"
+              | "update"
+              | "edit"
+              | "cancel"
+              | "restart"
+              | "dashboard"
+              | "report"
+              | "start"
+              | "pause"
+              | "resume"
+              | "custom";
             resourceId: string;
             version: number;
             enrollmentId: string;
@@ -245,14 +285,7 @@ export function createRepository(
         await client.query(
           "CREATE TABLE IF NOT EXISTS tracker_migrations(version integer PRIMARY KEY)"
         );
-        for (const [version, file] of [
-          [1, "0001_tracker.sql"],
-          [2, "0002_identity.sql"],
-          [3, "0003_adapters.sql"],
-          [4, "0004_jobs.sql"],
-          [5, "0005_qa.sql"],
-          [6, "0006_streak_boundaries.sql"],
-        ] as const) {
+        for (const [version, file] of trackerMigrations) {
           if (
             !(
               await client.query(

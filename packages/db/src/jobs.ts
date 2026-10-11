@@ -1,5 +1,12 @@
 import pg from "pg";
+import { requireMigrations } from "./migrations.js";
 import { trackerEventSchema } from "@challenge/contracts";
+
+/** Retention policy for acknowledged and unread owner notifications. */
+export const notificationRetention = {
+  acknowledgedDays: 30,
+  unreadDays: 90,
+} as const;
 
 /** Metadata-only durable event envelope. */
 type Event = ReturnType<typeof trackerEventSchema.parse>;
@@ -18,13 +25,7 @@ export function createJobStore(
   return {
     /** Require every tracker migration before handlers or readiness are enabled. */
     async ready() {
-      const r = await pool.query(
-        "SELECT count(*)::int AS count FROM tracker_migrations WHERE version IN(1,2,3,4,5,6)"
-      );
-      if (r.rows[0]?.count !== 6)
-        throw Object.assign(new Error("Tracker migrations required"), {
-          code: "MIGRATIONS_REQUIRED",
-        });
+      await requireMigrations(pool);
     },
     /** Claim pending events with leases; publish failures retain metadata and bounded backoff. */
     async publish(publish: (event: Event) => Promise<void>) {
@@ -97,7 +98,7 @@ export function createJobStore(
         if (event.type === "source_changed") {
           const attempt = (
             await client.query(
-              "SELECT * FROM attempts WHERE id=$1 FOR UPDATE",
+              'SELECT id,"sourceVersion",status FROM attempts WHERE id=$1 FOR UPDATE',
               [event.aggregateId]
             )
           ).rows[0];
@@ -145,6 +146,16 @@ export function createJobStore(
         await client.query(
           `DELETE FROM outbox WHERE "publishedAt"<$1::timestamptz-interval '30 days'`,
           [now()]
+        );
+        await client.query(
+          `DELETE FROM notifications WHERE
+          (("readAt" IS NOT NULL OR "dismissedAt" IS NOT NULL) AND LEAST("readAt","dismissedAt")<$1::timestamptz-make_interval(days=>$2))
+          OR ("readAt" IS NULL AND "dismissedAt" IS NULL AND "createdAt"<$1::timestamptz-make_interval(days=>$3))`,
+          [
+            now(),
+            notificationRetention.acknowledgedDays,
+            notificationRetention.unreadDays,
+          ]
         );
         await client.query("COMMIT");
       } catch (error) {
