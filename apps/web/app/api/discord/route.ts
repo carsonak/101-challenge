@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         requestId,
         deliver: async (application, token, data) => {
           const response = await fetch(
-            `https://discord.com/api/v10/webhooks/${application}/${token}`,
+            `https://discord.com/api/v10/webhooks/${application}/${encodeURIComponent(token)}`,
             {
               method: "POST",
               headers: { "content-type": "application/json" },

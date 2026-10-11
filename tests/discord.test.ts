@@ -46,12 +46,13 @@ test(
         subject: otherSubject,
       });
     });
+    const seasonTitle = `Fictional guild fixture ${randomUUID()}`;
     const season = await tracker.execute(
       admin,
       {
         command: "CreateSeason",
         slug: randomUUID(),
-        title: "Fictional guild fixture",
+        title: seasonTitle,
       },
       randomUUID()
     );
@@ -118,131 +119,211 @@ test(
       while (tasks.length) await required(tasks.shift())();
       return response;
     };
+    /** Select an action by its visible label, not its opaque resource ID. */
+    const buttonId = (label: string) => {
+      const rows = delivered.at(-1)?.components as {
+        components: { label: string; custom_id: string }[];
+      }[];
+      return required(
+        rows.flatMap((row) => row.components).find((b) => b.label === label)
+      ).custom_id;
+    };
+    /** Current labelled modal submission shape. */
+    const submit = (
+      id: string,
+      body: string,
+      extra: Record<string, unknown>[] = []
+    ) => ({
+      type: 5,
+      data: {
+        custom_id: id,
+        components: [
+          { type: 18, component: { type: 4, custom_id: "body", value: body } },
+          ...extra,
+        ],
+      },
+    });
     try {
       assert.equal((await invoke({ type: 1 }, subject, 0, true)).status, 401);
       assert.equal((await invoke({ type: 1 }, subject, 301)).status, 401);
-      assert.equal(delivered.length, 0);
       assert.deepEqual(await (await invoke({ type: 1 })).json(), { type: 1 });
+      const longToken = `fictional_${"A".repeat(300)}`;
+      assert.equal(
+        (await invoke({ type: 2, token: longToken, data: { name: "help" } }))
+          .status,
+        200
+      );
+      assert.match(String(delivered.at(-1)?.content), /truthful report/);
+      assert.match(
+        String(delivered.at(-1)?.content),
+        /^## Your daily practice/
+      );
+      assert.match(String(delivered.at(-1)?.content), /- `\/report`/);
+      assert.equal(delivered.at(-1)?.flags, 64);
+      assert.deepEqual(delivered.at(-1)?.allowed_mentions, { parse: [] });
+      assert.equal(
+        (await invoke({ type: 2, token: "", data: { name: "help" } })).status,
+        400
+      );
+      const choices = await (
+        await invoke({
+          type: 4,
+          data: {
+            name: "join",
+            options: [{ name: "season", focused: true, value: seasonTitle }],
+          },
+        })
+      ).json();
+      assert.equal(choices.type, 8);
+      assert.equal(
+        choices.data.choices.some(
+          (c: { value: string }) => c.value === season.resourceId
+        ),
+        true
+      );
       const dm = await (
         await invoke({ type: 2, guild_id: null, data: { name: "join" } })
       ).json();
       assert.equal(dm.data.flags, 64);
-      assert.equal((await tracker.history(owner)).length, 0);
       const join = {
         type: 2,
         id: "999991",
         data: {
           name: "join",
-          options: [{ name: "id", value: season.resourceId }],
+          options: [{ name: "season", value: season.resourceId }],
         },
       };
       assert.equal((await (await invoke(join)).json()).type, 5);
       await invoke(join);
+      const enrollment = required((await tracker.history(owner))[0]);
       assert.equal((await tracker.history(owner)).length, 1);
-      const e = (await tracker.history(owner))[0];
-      assert.ok(e);
-      await invoke({
-        type: 2,
-        data: { name: "setup", options: [{ name: "id", value: e.id }] },
-      });
-      const setup = delivered.at(-1) as {
-        components: { components: { custom_id: string }[] }[];
-      };
-      const form = setup.components[0].components[0].custom_id;
+      const custom = buttonId("Custom goals");
       const stolen = await (
-        await invoke({ type: 3, data: { custom_id: form } }, otherSubject)
+        await invoke({ type: 3, data: { custom_id: custom } }, otherSubject)
       ).json();
       assert.equal(stolen.type, 4);
-      assert.match(stolen.data.content, /another account/);
       const opened = await (
-        await invoke({ type: 3, data: { custom_id: form } })
+        await invoke({ type: 3, data: { custom_id: custom } })
       ).json();
       assert.equal(opened.type, 9);
-      assert.equal(opened.data.components[0].components[0].type, 4);
-      const formId = opened.data.custom_id;
-      const setupSubmit = {
+      assert.equal(opened.data.components[0].type, 18);
+      assert.equal(opened.data.components[0].component.type, 4);
+      const customSubmit = {
         type: 5,
+        id: "999993",
         data: {
-          custom_id: formId,
+          custom_id: opened.data.custom_id,
           components: [
             {
-              components: [
-                {
-                  custom_id: "goals",
-                  value: JSON.stringify([
-                    { title: "Private guild goal", kind: "qualitative" },
-                  ]),
-                },
-                { custom_id: "timezone", value: "UTC" },
-              ],
+              type: 18,
+              component: {
+                type: 4,
+                custom_id: "goal1",
+                value: "Private guild goal",
+              },
             },
           ],
         },
       };
-      await invoke(setupSubmit);
-      await invoke(setupSubmit);
-      const h = (await tracker.history(owner))[0];
-      assert.equal(h.attempts.length, 1);
-      await invoke({
-        type: 2,
-        data: { name: "update", options: [{ name: "id", value: e.id }] },
-      });
-      const update = delivered.at(-1) as typeof setup;
-      const updateModal = await (
-        await invoke({
-          type: 3,
-          data: { custom_id: update.components[0].components[0].custom_id },
-        })
+      await invoke(customSubmit);
+      await invoke(customSubmit);
+      assert.equal((await tracker.history(owner))[0].attempts.length, 1);
+      const report = await (
+        await invoke({ type: 2, data: { name: "report" } })
       ).json();
-      const submit = {
-        type: 5,
-        data: {
-          custom_id: updateModal.data.custom_id,
-          components: [
-            {
-              components: [
-                { custom_id: "body", value: "fictional private guild report" },
-                { custom_id: "values", value: "[]" },
-                { custom_id: "milestones", value: "[]" },
-              ],
-            },
-          ],
-        },
+      assert.equal(report.type, 9);
+      const accepted = {
+        ...submit(report.data.custom_id, "fictional private guild report"),
+        id: "999994",
       };
-      await invoke(submit);
-      await invoke(submit);
-      assert.equal(
-        (await tracker.history(owner))[0].attempts[0].reportingDays,
-        1
-      );
+      await invoke(accepted);
+      await invoke(accepted);
+      assert.equal((await tracker.dailySummary(owner))[0].reportingDays, 1);
       assert.equal(
         JSON.stringify(delivered).includes("fictional private guild report"),
         false
       );
+      const editing = await (
+        await invoke({ type: 2, data: { name: "report" } })
+      ).json();
+      assert.equal(
+        editing.data.components[0].component.value,
+        "fictional private guild report"
+      );
+      // Force a version conflict, then prove that a complete escaped private copy is retained.
+      const history = (await tracker.history(owner))[0];
+      const acceptedReport = history.attempts[0].reports[0];
+      await tracker.execute(
+        owner,
+        {
+          command: "EditReport",
+          reportId: acceptedReport.id,
+          expectedReportVersion: acceptedReport.version,
+          body: "Changed on web",
+          goalValues: [],
+        },
+        randomUUID()
+      );
+      const recoveryText = `@everyone [private](https://example.invalid) ${"日".repeat(3900)}`;
+      const before = delivered.length;
+      await invoke(submit(editing.data.custom_id, recoveryText));
+      const recovery = delivered
+        .slice(before)
+        .filter((d) =>
+          String(d.content).startsWith("**Your private recovery copy**\n")
+        )
+        .map((d) =>
+          String(d.content).slice("**Your private recovery copy**\n".length)
+        )
+        .join("");
+      assert.equal(recovery.includes("日".repeat(3900)), true);
+      assert.match(recovery, /@\u200beveryone/);
+      assert.equal(
+        delivered.slice(before).every((d) => String(d.content).length <= 2000),
+        true
+      );
+      await invoke({ type: 2, data: { name: "dashboard" } });
+      const pause = buttonId("Pause");
+      const prompt = await (
+        await invoke({ type: 3, data: { custom_id: pause } })
+      ).json();
+      assert.match(prompt.data.content, /current streak resets/);
       await invoke({
-        type: 2,
-        data: { name: "cancel", options: [{ name: "id", value: e.id }] },
-      });
-      assert.match(String(delivered.at(-1)?.content), /Confirm cancellation/);
-      assert.equal((await tracker.history(owner))[0].participation, "active");
-      await invoke({
-        type: 2,
-        data: { name: "pause", options: [{ name: "id", value: e.id }] },
+        type: 3,
+        data: { custom_id: prompt.data.components[0].components[0].custom_id },
       });
       assert.equal((await tracker.history(owner))[0].participation, "paused");
+      failDelivery = true;
+      const resume = {
+        type: 3,
+        id: "999995",
+        data: { custom_id: buttonId("Resume") },
+      };
+      await invoke(resume);
+      await invoke(resume);
+      assert.equal((await tracker.history(owner))[0].participation, "active");
+      const resumes = await db.repository.transaction((tx) =>
+        tx.list("replays", {
+          userId: owner,
+          command: "ResumeEnrollment",
+          key: "discord:999995",
+        })
+      );
+      assert.equal(resumes.length, 1);
       assert.ok(
         delivered.every(
           (d) =>
             d.flags === 64 &&
-            JSON.stringify(d.allowed_mentions) === '{"parse":[]}'
+            JSON.stringify(d.allowed_mentions) ===
+              '{ "parse": [] }'.replaceAll(" ", "")
         )
       );
       const expired = await db.interactionForm({
         userId: owner,
-        kind: "setup",
-        resourceId: e.id,
+        kind: "report",
+        resourceId: enrollment.id,
         version: 0,
-        enrollmentId: e.id,
+        enrollmentId: enrollment.id,
         enrollmentVersion: 0,
       });
       const { Pool } = createRequire(
@@ -258,28 +339,169 @@ test(
         await fixturePool.end();
       }
       const expiredResponse = await (
-        await invoke({ type: 3, data: { custom_id: `open:${expired}` } })
+        await invoke({ type: 3, data: { custom_id: expired } })
       ).json();
       assert.equal(expiredResponse.type, 4);
-      assert.match(expiredResponse.data.content, /expired/);
-      failDelivery = true;
-      const resume = {
-        type: 2,
-        id: "999992",
-        data: { name: "resume", options: [{ name: "id", value: e.id }] },
-      };
-      await invoke(resume);
-      await invoke(resume);
-      assert.equal((await tracker.history(owner))[0].participation, "active");
-      const resumes = await db.repository.transaction((tx) =>
-        tx.list("replays", {
-          userId: owner,
-          command: "ResumeEnrollment",
-          key: "discord:999992",
+      failDelivery = false;
+      await tracker.execute(
+        admin,
+        {
+          command: "SaveSeasonTemplate",
+          seasonId: season.resourceId,
+          expectedSeasonVersion: 1,
+          goals: [{ title: "Read pages", kind: "count", target: "10" }],
+          milestones: [
+            {
+              title: "Finish the opening chapter",
+              targetReportingDay: 1,
+              achievementKind: "manual",
+            },
+          ],
+        },
+        randomUUID()
+      );
+      await invoke(
+        {
+          type: 2,
+          data: {
+            name: "join",
+            options: [{ name: "season", value: season.resourceId }],
+          },
+        },
+        otherSubject
+      );
+      await invoke(
+        { type: 3, data: { custom_id: buttonId("Start recommended plan") } },
+        otherSubject
+      );
+      const measuredModal = await (
+        await invoke({ type: 2, data: { name: "report" } }, otherSubject)
+      ).json();
+      assert.equal(measuredModal.type, 9);
+      assert.equal(measuredModal.data.components.length, 3);
+      const numeric = measuredModal.data.components[1].component;
+      const checkbox = measuredModal.data.components[2].component;
+      assert.equal(checkbox.type, 22);
+      const achievedId = checkbox.options[0].value;
+      await invoke(
+        submit(measuredModal.data.custom_id, "Fictional measured report", [
+          {
+            type: 18,
+            component: { type: 4, custom_id: numeric.custom_id, value: "7" },
+          },
+          {
+            type: 18,
+            component: {
+              type: 22,
+              custom_id: "milestones",
+              values: [achievedId],
+            },
+          },
+        ]),
+        otherSubject
+      );
+      const measuredHistory = (await tracker.history(other))[0].attempts[0];
+      assert.equal(measuredHistory.reports[0].goalValues[0].value, "7");
+      assert.equal(
+        (await tracker.source(other, measuredHistory.attemptId)).reports[0]
+          .milestoneFacts[0].achieved,
+        true
+      );
+      const acceptedRevision =
+        measuredHistory.reports[0].goalValues[0].goalRevisionId;
+      await tracker.execute(
+        other,
+        {
+          command: "SaveGoal",
+          attemptId: measuredHistory.attemptId,
+          expectedAttemptVersion: measuredHistory.version,
+          goalId: measuredHistory.goals[0].id,
+          goal: { title: "Revised pages", kind: "count", target: "20" },
+        },
+        randomUUID()
+      );
+      const summary = (await tracker.dailySummary(other))[0];
+      assert.equal(summary.goals[0].revisionId, acceptedRevision);
+      const measuredEdit = await (
+        await invoke({ type: 2, data: { name: "report" } }, otherSubject)
+      ).json();
+      assert.equal(
+        measuredEdit.data.components[1].component.custom_id,
+        `goal:${acceptedRevision}`
+      );
+      assert.equal(measuredEdit.data.components[1].component.value, "7");
+      assert.deepEqual(
+        await tracker.dailySummary(await tracker.createUser()),
+        []
+      );
+      const oversizedUser = await tracker.createUser(),
+        oversizedSubject = `${Date.now()}3`;
+      await db.repository.transaction((tx) =>
+        tx.insert("identities", {
+          id: randomUUID(),
+          userId: oversizedUser,
+          provider: "discord",
+          subject: oversizedSubject,
         })
       );
-      assert.equal(resumes.length, 1);
-      assert.equal(guildCommands.length, 14);
+      const oversizedEnrollment = await tracker.execute(
+        oversizedUser,
+        { command: "Enroll", seasonId: season.resourceId },
+        randomUUID()
+      );
+      await tracker.execute(
+        oversizedUser,
+        {
+          command: "StartAttempt",
+          enrollmentId: oversizedEnrollment.resourceId,
+          expectedEnrollmentVersion: 0,
+          goals: Array.from({ length: 5 }, (_, index) => ({
+            title: `Measured ${index}`,
+            kind: "count",
+            target: "10",
+          })),
+          milestones: [],
+        },
+        randomUUID()
+      );
+      const fallback = await (
+        await invoke({ type: 2, data: { name: "report" } }, oversizedSubject)
+      ).json();
+      assert.equal(fallback.type, 4);
+      assert.match(fallback.data.content, /more fields than Discord can show/);
+      assert.equal(
+        (await tracker.dailySummary(oversizedUser))[0].reportingDays,
+        0
+      );
+      assert.ok(
+        JSON.stringify(fallback).includes(
+          `/challenge/${oversizedEnrollment.resourceId}`
+        )
+      );
+      const beforeUnlink = delivered.length;
+      await db.repository.transaction(async (tx) => {
+        const identity = required(
+          (
+            await tx.list("identities", { userId: owner, provider: "discord" })
+          )[0]
+        );
+        await tx.remove("identities", identity.id);
+      });
+      const unlinkedText = "Fictional text retained after unlinking";
+      await invoke(submit(editing.data.custom_id, unlinkedText));
+      assert.ok(
+        delivered
+          .slice(beforeUnlink)
+          .some((message) => String(message.content).includes(unlinkedText))
+      );
+      assert.equal(
+        (await tracker.dailySummary(owner))[0].report.body,
+        "Changed on web"
+      );
+      assert.deepEqual(
+        guildCommands.map((c) => c.name),
+        ["dashboard", "report", "seasons", "join", "help"]
+      );
     } finally {
       await db.close();
     }
