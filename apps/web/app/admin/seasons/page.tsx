@@ -5,3 +5,6 @@ export const dynamic = "force-dynamic";
 export default function Page() {
   return <TrackerScreen view="admin-seasons" />;
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Manage seasons" };

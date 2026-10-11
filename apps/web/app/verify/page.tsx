@@ -4,3 +4,6 @@ import AuthScreen from "../../components/auth-screen";
 export default function Page() {
   return <AuthScreen view="verify" />;
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Verify email" };

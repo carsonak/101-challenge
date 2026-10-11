@@ -10,3 +10,6 @@ export default async function Page({
   const value = await params;
   return <TrackerScreen view="season" id={value.id} />;
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Seasons" };

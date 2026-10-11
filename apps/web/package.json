@@ -6,20 +6,25 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build --webpack && node ../../scripts/prepare-web-runtime.mjs",
+    "start": "node ../../scripts/web.mjs start",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@challenge/contracts": "workspace:*",
     "@challenge/core": "workspace:*",
     "@challenge/db": "workspace:*",
+    "@radix-ui/react-dropdown-menu": "2.1.25",
+    "@tailwindcss/postcss": "4.3.3",
     "jose": "6.2.12",
+    "lucide-react": "1.54.0",
     "next": "16.3.8",
     "nodemailer": "10.0.15",
+    "postcss": "8.5.29",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "tailwindcss": "4.3.3"
   },
   "devDependencies": {
     "@types/nodemailer": "8.0.2",

@@ -7,7 +7,9 @@ export default defineConfig({
   testDir: "./tests/browser",
   workers: 1,
   retries: 0,
-  timeout: 45000,
+  timeout: 90000,
+  // Real Argon2 work and cold route hydration share the small local host with services.
+  expect: { timeout: 15000 },
   outputDir:
     process.env.QA_BROWSER_OUTPUT ??
     join(tmpdir(), "challenge-browser-results"),
@@ -15,6 +17,6 @@ export default defineConfig({
     baseURL: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
     launchOptions: { executablePath: process.env.QA_CHROMIUM_EXECUTABLE },
     trace: "off",
-    screenshot: "off",
+    screenshot: "only-on-failure",
   },
 });

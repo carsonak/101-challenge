@@ -117,6 +117,80 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
   ).toBe("0s");
 });
 
+test("anonymous auth bootstrap clears stale cookies and exposes the configured provider buttons", async ({
+  page,
+}) => {
+  const base = process.env.QA_BASE_URL ?? "http://127.0.0.1:3101";
+  const expected = await (await page.request.get("/api/v1/session")).json();
+  await page.context().addCookies([
+    {
+      name: "challenge_session",
+      value: "a".repeat(64),
+      url: base,
+      httpOnly: true,
+    },
+    { name: "challenge_csrf", value: "b".repeat(64), url: base },
+  ]);
+  const output = process.env.QA_VISUAL_OUTPUT;
+  if (output) {
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(output, { recursive: true });
+  }
+  for (const theme of ["light", "dark"]) {
+    await page.addInitScript(
+      (value) => localStorage.setItem("theme", value),
+      theme
+    );
+    for (const width of [320, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of ["login", "signup"]) {
+        const bootstrap = page.waitForResponse((response) =>
+          response.url().endsWith("/api/v1/session")
+        );
+        await page.goto(`/${route}`);
+        expect((await bootstrap).status()).toBe(200);
+        await expect(
+          page.getByRole("heading", {
+            name: route === "login" ? "Welcome back" : "Start your 101 days",
+          })
+        ).toBeVisible();
+        for (const provider of ["google", "discord"] as const) {
+          const button = page.getByRole("button", {
+            name: `Continue with ${provider === "google" ? "Google" : "Discord"}`,
+          });
+          await expect(button).toHaveCount(
+            expected.providers[provider] ? 1 : 0
+          );
+          if (expected.providers[provider]) await expect(button).toBeVisible();
+        }
+        await expect(
+          page.getByText(
+            "The service is unavailable. Please try again shortly.",
+            { exact: true }
+          )
+        ).toHaveCount(0);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth
+          )
+        ).toBe(true);
+        if (output) {
+          const { join } = await import("node:path");
+          await page.screenshot({
+            path: join(output, `auth-${theme}-${width}-${route}.png`),
+            fullPage: true,
+          });
+        }
+      }
+    }
+  }
+  expect(
+    (await page.context().cookies()).filter((cookie) =>
+      ["challenge_session", "challenge_csrf"].includes(cookie.name)
+    )
+  ).toEqual([]);
+});
+
 test("account menu, provider placeholders, devices, typed deletion and recovery", async ({
   page,
 }) => {
@@ -127,7 +201,7 @@ test("account menu, provider placeholders, devices, typed deletion and recovery"
       page.getByRole("heading", { name: "Keep showing up." })
     ).toBeVisible();
     await page.getByLabel("Open profile menu").click();
-    await page.getByRole("link", { name: "Account settings" }).click();
+    await page.getByRole("menuitem", { name: "Account settings" }).click();
     await expect(
       page.getByRole("button", { name: "Link google" })
     ).toBeDisabled();
@@ -294,7 +368,7 @@ test("signup mail verification and password recovery change pages and credential
     page.getByRole("heading", { name: "Keep showing up." })
   ).toBeVisible();
   await page.getByLabel("Open profile menu").click();
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("menuitem", { name: "Log out" }).click();
   await page.getByText("Forgot your password?").click();
   await page.getByLabel("Email address").fill(email);
   await page.getByRole("button", { name: "Send recovery link" }).click();
@@ -453,6 +527,161 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
     await expect(
       page.getByText("Skipped dates (not counted)", { exact: true })
     ).toBeVisible();
+  } finally {
+    await f.db.close();
+  }
+});
+
+test("route review covers both themes, responsive layouts, CSP, enlarged text and accessibility", async ({
+  page,
+}, testInfo) => {
+  testInfo.setTimeout(600000);
+  const { default: AxeBuilder } = await import("@axe-core/playwright");
+  const { mkdir } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const violations: string[] = [];
+  const hydration: string[] = [];
+  page.on("console", (message) => {
+    if (/hydration|hydrating/i.test(message.text()))
+      hydration.push(message.text());
+  });
+  await page.exposeFunction("recordCspViolation", (directive: string) =>
+    violations.push(directive)
+  );
+  await page.addInitScript(() =>
+    document.addEventListener("securitypolicyviolation", (event) => {
+      void (
+        window as unknown as {
+          recordCspViolation: (value: string) => Promise<void>;
+        }
+      ).recordCspViolation(event.violatedDirective);
+    })
+  );
+  const f = await fixture(page, true);
+  const slug = `visual-${randomUUID()}`;
+  try {
+    const season = await f.tracker.execute(
+      f.id,
+      { command: "CreateSeason", title: "A steady practice", slug },
+      randomUUID()
+    );
+    await f.tracker.execute(
+      f.id,
+      {
+        command: "PublishSeason",
+        seasonId: season.resourceId,
+        expectedSeasonVersion: 0,
+      },
+      randomUUID()
+    );
+    const enrollment = await f.tracker.execute(
+      f.id,
+      { command: "Enroll", seasonId: season.resourceId },
+      randomUUID()
+    );
+    await f.tracker.execute(
+      f.id,
+      {
+        command: "StartAttempt",
+        enrollmentId: enrollment.resourceId,
+        expectedEnrollmentVersion: enrollment.version,
+        goals: [{ title: "Make room for reading", kind: "qualitative" }],
+      },
+      randomUUID()
+    );
+    const routes = [
+      "/",
+      "/login",
+      "/signup",
+      "/verify",
+      "/recover",
+      "/reset",
+      "/home",
+      "/seasons",
+      `/seasons/${season.resourceId}`,
+      `/seasons/${season.resourceId}/setup`,
+      `/challenge/${enrollment.resourceId}`,
+      "/account",
+      "/history",
+      "/notifications",
+      "/admin/seasons",
+      `/admin/seasons/${season.resourceId}`,
+      "/admin/corrections",
+      "/privacy",
+      "/terms",
+      "/fictional-missing-route",
+    ];
+    const output = process.env.QA_VISUAL_OUTPUT;
+    if (output) await mkdir(output, { recursive: true });
+    for (const theme of ["light", "dark"]) {
+      await page.addInitScript(
+        (value) => localStorage.setItem("theme", value),
+        theme
+      );
+      for (const width of [320, 768, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const [index, route] of routes.entries()) {
+          const response = await page.goto(route);
+          expect(response?.headers()["content-security-policy"]).toContain(
+            "'nonce-"
+          );
+          await expect(page.locator("main h1")).toBeVisible();
+          await expect(
+            page.getByRole("status", { name: "Loading…" })
+          ).toHaveCount(0);
+          // Wait for the client route controller rather than examining the skeleton.
+          await expect(page.locator("main [aria-busy=true]")).toHaveCount(0);
+          expect(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth
+            ),
+            `${theme} ${width} ${route}`
+          ).toBe(true);
+          const scan = await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+            .analyze();
+          expect(
+            scan.violations.map((v) => ({
+              id: v.id,
+              nodes: v.nodes.map((n) => n.target),
+            })),
+            `${theme} ${width} ${route}`
+          ).toEqual([]);
+          if (output)
+            await page.screenshot({
+              path: join(output, `${theme}-${width}-${index}.png`),
+              fullPage: true,
+            });
+        }
+      }
+    }
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(`/challenge/${enrollment.resourceId}`);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth
+      )
+    ).toBe(true);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(
+      await page
+        .locator(".app-header")
+        .evaluate((el) => getComputedStyle(el).transitionDuration)
+    ).toBe("0s");
+    await page.goto("/home");
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Skip to content" })
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+    await page.getByLabel("Open profile menu").click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByLabel("Open profile menu")).toBeFocused();
+    expect(violations).toEqual([]);
+    expect(hydration).toEqual([]);
   } finally {
     await f.db.close();
   }

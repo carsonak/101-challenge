@@ -22,5 +22,10 @@
   },
   "javascript": {
     "jsxRuntime": "reactClassic"
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }

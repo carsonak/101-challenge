@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import * as Menu from "@radix-ui/react-dropdown-menu";
+import { LogOut, Settings, Bell, History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 /** Shared navigation and non-sensitive theme preference for all public/private routes. */
@@ -34,7 +36,7 @@ export default function Shell() {
       const y = window.scrollY;
       const pinned =
         header.current?.contains(document.activeElement) ||
-        header.current?.querySelector("details[open]");
+        header.current?.querySelector('[data-state="open"]');
       setHidden(!pinned && y > previous && y > 100);
       previous = y;
     };
@@ -83,8 +85,11 @@ export default function Shell() {
             <option value="dark">Dark</option>
           </select>
           {account ? (
-            <details className="profile-menu">
-              <summary aria-label="Open profile menu">
+            <Menu.Root modal={false}>
+              <Menu.Trigger
+                className="profile-trigger"
+                aria-label="Open profile menu"
+              >
                 <span className="avatar">
                   {account.avatar ? (
                     <Image
@@ -98,30 +103,43 @@ export default function Shell() {
                     (account.username ?? "You").slice(0, 2).toUpperCase()
                   )}
                 </span>
-              </summary>
-              <div className="menu">
-                <strong>{account.username ?? "Your account"}</strong>
-                <a href="/account">Account settings</a>
-                <a href="/notifications">Notifications</a>
-                <a href="/history">History</a>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const r = await fetch("/api/v1/auth", {
-                      method: "POST",
-                      headers: {
-                        "content-type": "application/json",
-                        "x-csrf-token": csrf.current,
-                      },
-                      body: JSON.stringify({ action: "logout" }),
-                    });
-                    if (r.ok) window.location.assign("/login");
-                  }}
-                >
-                  Log out
-                </button>
-              </div>
-            </details>
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Content className="menu" align="end" sideOffset={8}>
+                  <strong>{account.username ?? "Your account"}</strong>
+                  <Menu.Item asChild>
+                    <a href="/account">
+                      <Settings aria-hidden="true" size={18} /> Account settings
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild>
+                    <a href="/notifications">
+                      <Bell aria-hidden="true" size={18} /> Notifications
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item asChild>
+                    <a href="/history">
+                      <History aria-hidden="true" size={18} /> History
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item
+                    onSelect={async () => {
+                      const r = await fetch("/api/v1/auth", {
+                        method: "POST",
+                        headers: {
+                          "content-type": "application/json",
+                          "x-csrf-token": csrf.current,
+                        },
+                        body: JSON.stringify({ action: "logout" }),
+                      });
+                      if (r.ok) window.location.assign("/login");
+                    }}
+                  >
+                    <LogOut aria-hidden="true" size={18} /> Log out
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Portal>
+            </Menu.Root>
           ) : (
             <>
               <a href="/login">Log in</a>

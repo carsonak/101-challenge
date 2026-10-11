@@ -47,3 +47,6 @@ export default async function Home() {
     </main>
   );
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Build a steady practice" };

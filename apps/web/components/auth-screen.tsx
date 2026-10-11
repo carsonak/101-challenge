@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { errorMessage } from "@challenge/contracts";
 import { Field, PasswordInput, Toast } from "./ui";
 
 /** Dedicated authentication routes; verification/reset proofs never appear in other forms. */
@@ -18,6 +19,11 @@ export default function AuthScreen({
   const dismiss = useCallback(() => setMessage(""), []);
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
+    if (query.get("error") === "oauth") {
+      setError(true);
+      setMessage(errorMessage("oauth"));
+      history.replaceState(null, "", window.location.pathname);
+    }
     if (view === "login" && (query.has("verify") || query.has("recover"))) {
       const kind = query.has("verify") ? "verify" : "reset";
       window.location.replace(

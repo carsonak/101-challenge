@@ -6,10 +6,10 @@ export default function Privacy() {
       <section className="card">
         <h2>Your challenge data</h2>
         <p>
-          Your logs, goals and milestones are private. Administrators can see
-          timestamps, reporting counts, streaks and selected perks, but not
-          their private text. Your username and profile picture identify your
-          account; they do not make your history public.
+          Your logs, goals and milestones are private. Within the application,
+          administrators can see timestamps, reporting counts, streaks and
+          selected perks, but not their private text. Your username and profile
+          picture identify your account; they do not make your history public.
         </p>
         <h2>Sign-in and retention</h2>
         <p>
@@ -17,6 +17,16 @@ export default function Privacy() {
           recovery email and your challenge history. Operational logs and
           backups default to 30-day retention. Participant history remains until
           you erase it.
+        </p>
+        <h2>Google and Discord</h2>
+        <p>
+          Provider sign-in stores the provider name and stable account
+          identifier. Discord may suggest a username and avatar; Google may
+          supply an avatar. Loading a provider-hosted avatar connects your
+          browser to that provider. We do not request Google email or use
+          provider email claims to merge accounts. Discord reports are private
+          ephemeral interactions, but their text passes through Discord; private
+          error recovery copies may contain your submitted report.
         </p>
         <h2>Your choices</h2>
         <p>
@@ -26,6 +36,15 @@ export default function Privacy() {
           deletion process removes private data. Backup restores replay the
           deletion ledger before serving traffic.
         </p>
+        {process.env.CONTACT_EMAIL && (
+          <p>
+            Privacy questions:{" "}
+            <a href={`mailto:${process.env.CONTACT_EMAIL}`}>
+              {process.env.CONTACT_EMAIL}
+            </a>
+            .
+          </p>
+        )}
         <h2>Artwork</h2>
         <p>
           Artwork is a separate release. Private text is not published by
@@ -36,3 +55,6 @@ export default function Privacy() {
     </main>
   );
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Privacy" };

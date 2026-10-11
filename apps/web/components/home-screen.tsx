@@ -1,4 +1,5 @@
 "use client";
+import { ProgressGrid } from "./progress-grid";
 import { useEffect, useState } from "react";
 import type { createTracker } from "@challenge/core";
 /** Small rotating collection of helpful, nonessential challenge tips. */
@@ -61,45 +62,80 @@ export default function HomeScreen({
                   "Your season"}
               </a>
             </h2>
-            <div className="metrics">
-              <div>
-                <strong>{a?.currentStreak ?? 0}</strong>
-                <span>Current streak</span>
-              </div>
-              <div>
-                <strong>{a?.reportingDays ?? 0}/101</strong>
-                <span>Reporting days</span>
-              </div>
-              <div>
-                <strong>{a?.rerollCredits ?? 0}</strong>
-                <span>Reroll credits</span>
+            <a className="button" href={`/challenge/${e.id}`}>
+              {!a
+                ? "Set up your goals"
+                : e.participation === "paused"
+                  ? "Review paused challenge"
+                  : a.attemptState === "completed"
+                    ? "View completed challenge"
+                    : a.reports.some((r) => r.reportingDate === a.today)
+                      ? "Edit today's report"
+                      : "Write today's report"}
+            </a>
+            <div className="home-overview">
+              {a && (
+                <ProgressGrid
+                  count={a.reportingDays}
+                  todayReported={a.reports.some(
+                    (r) => r.reportingDate === a.today
+                  )}
+                  milestoneIndexes={a.milestoneRevisions
+                    .filter((r) =>
+                      a.milestones.some(
+                        (m) => !m.archived && m.currentRevisionId === r.id
+                      )
+                    )
+                    .map((r) => r.input.targetReportingDay)}
+                />
+              )}
+              <div className="home-notes">
+                <div className="metrics">
+                  <div>
+                    <strong>{a?.currentStreak ?? 0}</strong>
+                    <span>Current streak</span>
+                  </div>
+                  <div>
+                    <strong>{a?.reportingDays ?? 0}/101</strong>
+                    <span>Reporting days</span>
+                  </div>
+                  <div>
+                    <strong>{a?.rerollCredits ?? 0}</strong>
+                    <span>Reroll credits</span>
+                  </div>
+                </div>
+                <h3>Upcoming milestones</h3>
+                {!a?.milestones.some((m) => !m.archived && !m.locked) && (
+                  <p className="muted">No upcoming milestones in this plan.</p>
+                )}
+                {a?.milestones
+                  .filter((m) => !m.archived && !m.locked)
+                  .map((m) => (
+                    <p key={m.id}>
+                      {
+                        a.milestoneRevisions.find(
+                          (r) => r.id === m.currentRevisionId
+                        )?.input.title
+                      }
+                    </p>
+                  ))}
+                <h3>Latest logs</h3>
+                {!a?.reports.length && (
+                  <p className="muted">
+                    Your private notes will appear here after your first report.
+                  </p>
+                )}
+                {a?.reports
+                  .slice(-3)
+                  .reverse()
+                  .map((r) => (
+                    <article key={r.id}>
+                      <strong>{r.reportingDate}</strong>
+                      <p className="private-text">{r.body}</p>
+                    </article>
+                  ))}
               </div>
             </div>
-            <h3>Upcoming milestones</h3>
-            {a?.milestones
-              .filter((m) => !m.archived && !m.locked)
-              .map((m) => (
-                <p key={m.id}>
-                  {
-                    a.milestoneRevisions.find(
-                      (r) => r.id === m.currentRevisionId
-                    )?.input.title
-                  }
-                </p>
-              ))}
-            <a className="button" href={`/challenge/${e.id}`}>
-              {a ? "Continue" : "Set up your goals"}
-            </a>
-            <h3>Latest logs</h3>
-            {a?.reports
-              .slice(-3)
-              .reverse()
-              .map((r) => (
-                <article key={r.id}>
-                  <strong>{r.reportingDate}</strong>
-                  <p className="private-text">{r.body}</p>
-                </article>
-              ))}
           </section>
         );
       })}

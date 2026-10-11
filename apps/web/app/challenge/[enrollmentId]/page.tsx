@@ -10,3 +10,6 @@ export default async function Page({
   const value = await params;
   return <TrackerScreen view="challenge" id={value.enrollmentId} />;
 }
+
+/** Safe route title contains no participant data. */
+export const metadata = { title: "Your challenge" };
