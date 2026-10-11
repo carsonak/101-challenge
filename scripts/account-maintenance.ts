@@ -1,26 +1,38 @@
 /**
  * @file Run one account-mail retry and due-erasure sweep with a separately supplied privileged connection.
- * Invoke `pnpm accounts:maintain` every minute from an operator-owned scheduler. Does not load web runtime credentials.
+ * Invoke `pnpm accounts:maintain` once, or `pnpm accounts:schedule` for minute sweeps. Local commands scope .env/.env.operator to maintenance.
  * Sends private recovery notices, removes due accounts, and closes resources; never prints recipients or secrets.
  */
-import { parseServerConfig } from "@challenge/contracts";
+import { parseServerConfig } from "../packages/contracts/src/index.js";
 import { createRepository } from "@challenge/db";
 import { createMailer } from "../apps/web/server/mail";
+/** Shared redacted CLI reporter; direct container execution also uses it. */
+const { reportCliFailure } = await import("./cli-diagnostics.mjs" as string);
 
-/** Explicit privileged connection belongs only to this maintenance process. */
-const connection = process.env.ERASURE_DATABASE_URL;
-if (!connection)
-  throw new Error("ERASURE_DATABASE_URL is required for account maintenance");
-/** Separate short-lived service handles. */
-const database = createRepository(connection);
-/** Mail transport uses the same private delivery configuration as verification. */
-const mail = createMailer(parseServerConfig(process.env));
+// The privileged connection belongs only to this maintenance process.
 try {
-  await database.maintainAccounts(
-    (recipient) => mail.send({ recipient, kind: "deletion", token: "" }),
-    process.env.QUEUE_SCHEMA
+  const connection = process.env.ERASURE_DATABASE_URL;
+  if (!connection)
+    throw new Error(
+      "Set ERASURE_DATABASE_URL in .env.operator for account maintenance"
+    );
+  const config = parseServerConfig(process.env);
+  const database = createRepository(connection);
+  const mail = createMailer(config);
+  try {
+    await database.maintainAccounts(
+      (recipient) => mail.send({ recipient, kind: "deletion", token: "" }),
+      process.env.QUEUE_SCHEMA
+    );
+  } finally {
+    mail.close();
+    await database.close();
+  }
+} catch (error) {
+  reportCliFailure(
+    "accounts:maintain",
+    error,
+    "Check ERASURE_DATABASE_URL in .env.operator and SMTP settings in .env."
   );
-} finally {
-  mail.close();
-  await database.close();
+  process.exitCode = 1;
 }

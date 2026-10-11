@@ -1,0 +1,107 @@
+name: challenge-production
+x-service: &service
+  restart: unless-stopped
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+services:
+  postgres:
+    <<: *service
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_USER: challenge_operator
+      POSTGRES_DB: challenge
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: ["postgres:/var/lib/postgresql"]
+    networks: [database]
+    mem_limit: 768m
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U challenge_operator -d challenge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  web:
+    <<: *service
+    build: { context: .., target: web }
+    env_file: [secrets/web.env]
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    expose: ["3000"]
+    networks: [database, ingress]
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 768m
+    cpus: 1
+    read_only: true
+    tmpfs: [/tmp, /app/apps/web/.next/cache]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  worker:
+    <<: *service
+    build: { context: .., target: worker }
+    env_file: [secrets/worker.env]
+    networks: [database]
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 384m
+    cpus: 0.5
+    read_only: true
+    tmpfs: [/tmp]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  maintenance:
+    <<: *service
+    build: { context: .., target: maintenance }
+    env_file: [secrets/maintenance.env]
+    networks: [database, delivery]
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 384m
+    cpus: 0.5
+    read_only: true
+    tmpfs: [/tmp]
+  caddy:
+    <<: *service
+    image: docker.io/library/caddy:2-alpine
+    environment: { APP_DOMAIN: "${APP_DOMAIN:?Set the production domain}" }
+    ports: ["80:80", "443:443"]
+    volumes:
+      [
+        "./Caddyfile:/etc/caddy/Caddyfile:ro",
+        "caddy_data:/data",
+        "caddy_config:/config",
+      ]
+    networks: [ingress]
+    depends_on: { web: { condition: service_healthy } }
+    mem_limit: 128m
+    cpus: 0.25
+secrets:
+  postgres_password: { file: secrets/postgres-password }
+networks:
+  database: { internal: true }
+  ingress: {}
+  delivery: {}
+volumes:
+  postgres: {}
+  caddy_data: {}
+  caddy_config: {}
