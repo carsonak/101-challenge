@@ -9,6 +9,7 @@ import { readdir, readFile, access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { createHash, createHmac } from "node:crypto";
 import assert from "node:assert/strict";
+import { markdownLinks } from "./markdown-links.mjs";
 
 /** Directories excluded from documentation discovery. */
 const ignored = new Set([
@@ -33,8 +34,12 @@ async function walk(directory) {
 const errors = [];
 for (const file of await walk(".")) {
   const body = await readFile(file, "utf8");
-  for (const match of body.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
-    const target = match[1].split("#")[0];
+  const links = markdownLinks(body);
+  errors.push(
+    ...links.malformed.map((name) => `${file}: malformed link ${name}`)
+  );
+  for (const value of links.targets) {
+    const target = value.split("#")[0];
     if (!target || /^[a-z]+:/i.test(target)) continue;
     try {
       await access(resolve(dirname(file), decodeURIComponent(target)));
