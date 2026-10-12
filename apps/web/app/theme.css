@@ -1,0 +1,56 @@
+:root {
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --surface-2: #f1ece3;
+  --line: #d9d2c5;
+  --control-line: #7c827d;
+  --text: #14232b;
+  --muted: #4d626c;
+  --accent: #f7931a;
+  --on-accent: #14232b;
+  --lake: #0b6e7a;
+  --success: #2e7d4f;
+  --danger: #b3261e;
+  --danger-bg: #fbe9e7;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1a20;
+  --surface: #17262e;
+  --surface-2: #1f313b;
+  --line: #35505c;
+  --control-line: #7e9aa6;
+  --text: #eef4f6;
+  --muted: #a9bec8;
+  --lake: #5fd0dc;
+  --success: #6ccb92;
+  --danger: #ff8a80;
+  --danger-bg: #3a1f1f;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1a20;
+    --surface: #17262e;
+    --surface-2: #1f313b;
+    --line: #35505c;
+    --control-line: #7e9aa6;
+    --text: #eef4f6;
+    --muted: #a9bec8;
+    --lake: #5fd0dc;
+    --success: #6ccb92;
+    --danger: #ff8a80;
+    --danger-bg: #3a1f1f;
+    color-scheme: dark;
+  }
+}
+@theme inline {
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-lake: var(--lake);
+  --font-sans: var(--font-body), sans-serif;
+  --font-serif: var(--font-display), Georgia, serif;
+}

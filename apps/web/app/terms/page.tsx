@@ -1,10 +1,11 @@
+import uiStyles from "./../../styles/ui.module.css";
 /** Plain-language pilot terms require operator review before participant release. */
 export default function Terms() {
   const contact = process.env.CONTACT_EMAIL;
   return (
     <main>
       <h1>Terms of use</h1>
-      <section className="card">
+      <section className={uiStyles.card}>
         <h2>Your practice</h2>
         <p>
           Use the tracker to record truthful reports and goals. A report can

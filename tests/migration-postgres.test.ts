@@ -13,6 +13,7 @@ import { createRepository } from "../packages/db/src/index.js";
 const { Pool } = createRequire(
   new URL("../packages/db/package.json", import.meta.url)
 )("pg");
+
 /** Disposable database opt-in follows the rest of the integration suite. */
 const connection = process.env.TRACKER_TEST_DATABASE_URL;
 if (connection && !/_(test|ci)$/.test(new URL(connection).pathname))
@@ -33,6 +34,7 @@ test(
       await sql.query(
         "CREATE TABLE tracker_migrations(version integer PRIMARY KEY)"
       );
+
       for (const [index, file] of [
         "0001_tracker.sql",
         "0002_identity.sql",
@@ -45,31 +47,38 @@ test(
             "utf8"
           )
         );
+
         await sql.query("INSERT INTO tracker_migrations VALUES($1)", [
           index + 1,
         ]);
       }
+
       const user = randomUUID(),
         season = randomUUID(),
         enrollment = randomUUID(),
         attempt = randomUUID();
+
       await sql.query("BEGIN");
       await sql.query(
         "INSERT INTO users VALUES($1,decode(repeat('01',32),'hex'),false,now(),now())",
         [user]
       );
+
       await sql.query(
         "INSERT INTO seasons VALUES($1,'Legacy season',NULL,'published',false,decode(repeat('02',32),'hex'),'[]','[]',NULL,0,now(),now())",
         [season]
       );
+
       await sql.query(
         "INSERT INTO enrollments VALUES($1,$2,$3,'cancelled','America/New_York',$4,false,1,now(),now())",
         [enrollment, user, season, attempt]
       );
+
       await sql.query(
         "INSERT INTO attempts VALUES($1,$2,1,'cancelled','qualifying',decode(repeat('03',32),'hex'),'attempt-v1',decode(repeat('04',32),'hex'),'[]','[]',now(),1,1,now(),now())",
         [attempt, enrollment]
       );
+
       await sql.query("COMMIT");
       await db.migrate();
       await db.repository.transaction(async (tx) => {
@@ -77,14 +86,17 @@ test(
           (await tx.get("enrollments", enrollment))?.participation,
           "paused"
         );
+
         assert.equal(
           (await tx.get("enrollments", enrollment))?.timezone,
           "America/New_York"
         );
+
         assert.equal((await tx.get("attempts", attempt))?.status, "paused");
         assert.equal((await tx.get("seasons", season))?.publishedAt, null);
         assert.equal((await tx.get("profiles", user))?.provisional, true);
       });
+
       await db.migrate();
       assert.equal(
         (await sql.query("SELECT count(*)::int n FROM tracker_migrations"))

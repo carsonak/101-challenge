@@ -1,0 +1,34 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  userId:
+    type: string
+    format: uuid
+  message:
+    type: string
+  href:
+    type: string
+  createdAt:
+    type: string
+    format: date-time
+  readAt:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  dismissedAt:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+required:
+  - id
+  - userId
+  - message
+  - href
+  - createdAt
+  - readAt
+  - dismissedAt
+additionalProperties: false

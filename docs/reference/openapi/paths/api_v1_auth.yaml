@@ -1,0 +1,66 @@
+post:
+  operationId: executeAuth
+  summary: executeAuth
+  description: >-
+    Anonymous actions: signup, login, recover, verify, reset,
+    verify_recovery_email. All other actions require the session cookie and
+    x-csrf-token. add_email, unlink, request_erasure and recovery_email also
+    require authentication within the last ten minutes. Usernames are trimmed
+    and lowercased; email addresses are lowercased. Payload limit: 2 MiB. Avatar
+    accepts null or a PNG/JPEG/WebP base64 data URL (max 400000 characters);
+    decoding is limited to 16 million pixels and output is sanitized WebP up to
+    256×256. Accepted signup/recovery does not disclose whether an address
+    exists. Login and restore_account set session cookies; logout, unlink, reset
+    and request_erasure clear them.
+  security:
+    - {}
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AuthResult.yaml
+      headers:
+        Set-Cookie:
+          schema:
+            type: string
+          description: >-
+            challenge_session (HttpOnly) and challenge_csrf; Path=/,
+            SameSite=Lax, Secure when APP_ORIGIN uses HTTPS.
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "404":
+      $ref: ../components/responses/Error404.yaml
+    "409":
+      $ref: ../components/responses/Error409.yaml
+    "429":
+      $ref: ../components/responses/Error429.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/authCommandSchema.yaml
+  parameters:
+    - name: Origin
+      in: header
+      required: true
+      description: Must exactly match configured APP_ORIGIN.
+      schema:
+        type: string
+    - name: x-csrf-token
+      in: header
+      required: false
+      description: >-
+        CSRF proof associated with the session, available through
+        /api/v1/session or challenge_csrf cookie.
+      schema:
+        type: string

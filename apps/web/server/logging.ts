@@ -21,6 +21,7 @@ export async function observeRequest(
     const response = await handle((error) => {
       failure = error;
     }, requestId);
+
     status = response.status;
     response.headers.set("x-request-id", requestId);
     return response;

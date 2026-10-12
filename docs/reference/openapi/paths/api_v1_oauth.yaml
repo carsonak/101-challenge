@@ -1,0 +1,70 @@
+post:
+  operationId: beginOAuth
+  summary: beginOAuth
+  description: >-
+    Begin provider sign-in (link:false) or explicit account linking (link:true).
+    Linking requires a session, CSRF and authentication within ten minutes. Sets
+    the ten-minute HttpOnly challenge_oauth browser-binding cookie.
+  security:
+    - {}
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+            required:
+              - url
+            additionalProperties: false
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "404":
+      $ref: ../components/responses/Error404.yaml
+    "409":
+      $ref: ../components/responses/Error409.yaml
+    "429":
+      $ref: ../components/responses/Error429.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            provider:
+              enum:
+                - google
+                - discord
+            link:
+              type: boolean
+          required:
+            - provider
+            - link
+          additionalProperties: false
+  parameters:
+    - name: Origin
+      in: header
+      required: true
+      description: Must exactly match configured APP_ORIGIN.
+      schema:
+        type: string
+    - name: x-csrf-token
+      in: header
+      required: false
+      description: >-
+        CSRF proof associated with the session, available through
+        /api/v1/session or challenge_csrf cookie.
+      schema:
+        type: string

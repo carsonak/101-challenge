@@ -1,0 +1,68 @@
+type: object
+properties:
+  enrollmentId:
+    type: string
+    format: uuid
+    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+  attemptId:
+    type: string
+    format: uuid
+    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+  participation:
+    type: string
+    enum:
+      - active
+      - paused
+      - cancelled
+      - completed
+  attemptState:
+    type: string
+    enum:
+      - active
+      - paused
+      - cancelled
+      - restarted
+      - completed
+  mode:
+    type: string
+    enum:
+      - qualifying
+      - progress_only
+  reportingDays:
+    type: integer
+    minimum: 0
+    maximum: 101
+  currentStreak:
+    type: integer
+    minimum: 0
+    maximum: 101
+  longestStreak:
+    type: integer
+    minimum: 0
+    maximum: 101
+  perkTier:
+    default: 0
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+  rerollCredits:
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+  version:
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+required:
+  - enrollmentId
+  - attemptId
+  - participation
+  - attemptState
+  - mode
+  - reportingDays
+  - currentStreak
+  - longestStreak
+  - perkTier
+  - rerollCredits
+  - version
+additionalProperties: false

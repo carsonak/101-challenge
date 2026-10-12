@@ -1,0 +1,48 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  userId:
+    type: string
+    format: uuid
+  attemptId:
+    type: string
+    format: uuid
+  reportId:
+    anyOf:
+      - type: string
+        format: uuid
+      - type: "null"
+  kind:
+    enum:
+      - single_report
+      - attempt_window
+      - backfill
+  expiresAt:
+    type: string
+    format: date-time
+  usedAt:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  revokedAt:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  createdAt:
+    type: string
+    format: date-time
+required:
+  - id
+  - userId
+  - attemptId
+  - reportId
+  - kind
+  - expiresAt
+  - usedAt
+  - revokedAt
+  - createdAt
+additionalProperties: false

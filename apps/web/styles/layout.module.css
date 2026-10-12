@@ -1,0 +1,22 @@
+/* Establish the cascade even when route modules load before global styles. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .site-footer {
+    display: flex;
+    gap: 1.5rem;
+    border-top: 1px solid var(--line);
+    padding: 2rem max(1.5rem, calc((100% - 68rem) / 2));
+  }
+  .skip-link {
+    position: fixed;
+    top: -10rem;
+    left: 1rem;
+    z-index: 100;
+    padding: 1rem;
+    background: var(--surface);
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+}

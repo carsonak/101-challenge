@@ -1,0 +1,24 @@
+get:
+  operationId: exportHistory
+  summary: exportHistory
+  description: Owner-only projection.
+  security:
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Export.yaml
+      headers:
+        Content-Disposition:
+          schema:
+            type: string
+            const: attachment; filename="challenge-history.json"
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml

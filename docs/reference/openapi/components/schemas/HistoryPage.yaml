@@ -1,0 +1,14 @@
+type: object
+properties:
+  items:
+    type: array
+    items:
+      $ref: ./EnrollmentHistory.yaml
+  nextCursor:
+    anyOf:
+      - type: string
+      - type: "null"
+required:
+  - items
+  - nextCursor
+additionalProperties: false

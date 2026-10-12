@@ -26,3 +26,5 @@ Working artifacts are not plans and must remain untracked outside repositories/w
 - [QA improvements](qa-improvements/README.md): approved usability, account and lifecycle changes.
 
 - [Pre-launch hardening](pre-launch-hardening/README.md): verification, security, usability and live-test gates.
+
+- [Maintainability](maintainability/README.md): modular production code, CSS Modules, formatting and YAML API reference.

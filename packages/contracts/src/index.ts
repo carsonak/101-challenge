@@ -11,6 +11,7 @@ export const healthResponseSchema = z.object({
   /** Web or worker service identified by the health payload. */
   service: z.enum(["web", "worker"]),
 });
+
 /** Health payload type for web/worker handlers and readiness-check results. */
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
@@ -19,6 +20,7 @@ const optionalString = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().min(1).optional()
 );
+
 /** Validate an optional PostgreSQL URL, treating an empty value as absent. */
 const databaseUrl = z.preprocess(
   (value) => (value === "" ? undefined : value),
@@ -27,6 +29,7 @@ const databaseUrl = z.preprocess(
     .refine((value) => /^postgres(?:ql)?:\/\//.test(value))
     .optional()
 );
+
 /** Server settings and defaults accepted during service configuration. */
 const envSchema = z.object({
   /** Header overwritten by an isolated trusted ingress; unset ignores all forwarding headers. */
@@ -130,15 +133,18 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
       `Invalid configuration: ${[...new Set(result.error.issues.map((issue) => issue.path.join(".")))].join(", ")}`
     );
   }
+
   const env = result.data;
   if (env.OUTBOX_IDLE_MAX_MS < env.OUTBOX_POLL_MS)
     throw new Error("Invalid outbox polling configuration");
+
   if (
     env.TRUSTED_PROXY_HOPS > 0 &&
     (!env.TRUSTED_PROXY_HEADER ||
       !/^[a-z][a-z0-9-]{0,79}$/.test(env.TRUSTED_PROXY_HEADER))
   )
     throw new Error("Invalid trusted proxy configuration");
+
   const origin = new URL(env.APP_ORIGIN);
   if (
     origin.origin !== env.APP_ORIGIN ||
@@ -149,33 +155,41 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
       !["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname))
   )
     throw new Error("Invalid application origin");
+
   if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD))
     throw new Error("Incomplete SMTP configuration");
+
   const localSmtp = ["127.0.0.1", "localhost", "::1"].includes(
     env.SMTP_HOST.toLowerCase()
   );
+
   if (!localSmtp && env.SMTP_FROM.toLowerCase().endsWith(".invalid"))
     throw new Error(
       "Invalid SMTP_FROM: external SMTP requires a real verified sender"
     );
+
   /** Return whether a provider is fully configured; reject partial configuration. */
   function provider(name: string, values: (string | undefined)[]) {
     const configured = values.filter(Boolean).length;
     if (configured !== 0 && configured !== values.length) {
       throw new Error(`Incomplete ${name} configuration`);
     }
+
     return configured === values.length;
   }
+
   const googleEnabled = provider("Google", [
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
     env.GOOGLE_REDIRECT_URI,
   ]);
+
   const discordEnabled = provider("Discord OAuth", [
     env.DISCORD_CLIENT_ID,
     env.DISCORD_CLIENT_SECRET,
     env.DISCORD_REDIRECT_URI,
   ]);
+
   for (const [providerName, uri] of [
     ["google", env.GOOGLE_REDIRECT_URI],
     ["discord", env.DISCORD_REDIRECT_URI],
@@ -189,12 +203,14 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
         throw new Error("Invalid OAuth redirect URI");
     }
   }
+
   if (
     env.DISCORD_PUBLIC_KEY &&
     !/^[a-fA-F0-9]{64}$/.test(env.DISCORD_PUBLIC_KEY)
   ) {
     throw new Error("Invalid Discord public key");
   }
+
   return {
     ...env,
     /** Whether complete Google login settings are available when enabling that provider. */

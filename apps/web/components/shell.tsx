@@ -1,4 +1,6 @@
 "use client";
+import shellStyles from "./../styles/shell.module.css";
+import uiStyles from "./../styles/ui.module.css";
 
 import Image from "next/image";
 import * as Menu from "@radix-ui/react-dropdown-menu";
@@ -12,6 +14,7 @@ export default function Shell() {
     username?: string;
     avatar?: string | null;
   } | null>(null);
+
   const [hidden, setHidden] = useState(false);
   const [theme, setTheme] = useState("system");
   const header = useRef<HTMLElement>(null);
@@ -20,6 +23,7 @@ export default function Shell() {
     try {
       setTheme(localStorage.getItem("theme") || "system");
     } catch {}
+
     const refresh = () => {
       void fetch("/api/v1/session", { cache: "no-store" })
         .then((r) => r.json())
@@ -29,6 +33,7 @@ export default function Shell() {
         })
         .catch(() => {});
     };
+
     refresh();
     window.addEventListener("account-changed", refresh);
     let previous = window.scrollY;
@@ -37,9 +42,11 @@ export default function Shell() {
       const pinned =
         header.current?.contains(document.activeElement) ||
         header.current?.querySelector('[data-state="open"]');
+
       setHidden(!pinned && y > previous && y > 100);
       previous = y;
     };
+
     const focus = () => setHidden(false);
     document.addEventListener("focusin", focus);
     window.addEventListener("scroll", scroll, { passive: true });
@@ -49,6 +56,7 @@ export default function Shell() {
       window.removeEventListener("account-changed", refresh);
     };
   }, []);
+
   function chooseTheme(value: string) {
     setTheme(value);
     document.documentElement.dataset.theme = value;
@@ -56,10 +64,21 @@ export default function Shell() {
       localStorage.setItem("theme", value);
     } catch {}
   }
+
   return (
-    <header ref={header} className={`app-header ${hidden ? "nav-hidden" : ""}`}>
+    <header
+      ref={header}
+      data-nav-hidden={hidden}
+      className={
+        "" +
+        shellStyles["app-header"] +
+        " " +
+        (hidden ? shellStyles["nav-hidden"] : "") +
+        " "
+      }
+    >
       <nav aria-label="Challenge navigation">
-        <a className="brand" href={account ? "/home" : "/"}>
+        <a className={shellStyles.brand} href={account ? "/home" : "/"}>
           101<span> / Kisumu</span>
         </a>
         <a href={account ? "/home" : "/"}>Home</a>
@@ -70,8 +89,8 @@ export default function Shell() {
             <a href="/admin/corrections">Corrections</a>
           </>
         )}
-        <div className="nav-end">
-          <label className="sr-only" htmlFor="theme">
+        <div className={shellStyles["nav-end"]}>
+          <label className={uiStyles["sr-only"]} htmlFor="theme">
             Theme
           </label>
           <select
@@ -87,10 +106,10 @@ export default function Shell() {
           {account ? (
             <Menu.Root modal={false}>
               <Menu.Trigger
-                className="profile-trigger"
+                className={`${uiStyles.button} ${shellStyles["profile-trigger"]}`}
                 aria-label="Open profile menu"
               >
-                <span className="avatar">
+                <span className={shellStyles.avatar}>
                   {account.avatar ? (
                     <Image
                       src={account.avatar}
@@ -105,7 +124,11 @@ export default function Shell() {
                 </span>
               </Menu.Trigger>
               <Menu.Portal>
-                <Menu.Content className="menu" align="end" sideOffset={8}>
+                <Menu.Content
+                  className={shellStyles.menu}
+                  align="end"
+                  sideOffset={8}
+                >
                   <strong>{account.username ?? "Your account"}</strong>
                   <Menu.Item asChild>
                     <a href="/account">
@@ -132,6 +155,7 @@ export default function Shell() {
                         },
                         body: JSON.stringify({ action: "logout" }),
                       });
+
                       if (r.ok) window.location.assign("/login");
                     }}
                   >
@@ -143,7 +167,7 @@ export default function Shell() {
           ) : (
             <>
               <a href="/login">Log in</a>
-              <a className="button" href="/signup">
+              <a className={uiStyles.button} href="/signup">
                 Sign up
               </a>
             </>

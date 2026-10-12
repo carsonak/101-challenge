@@ -6,6 +6,7 @@ import {
   readLocalSettings,
 } from "./local-env.mjs";
 import { reportCliFailure } from "./cli-diagnostics.mjs";
+import { assertSupportedRuntime } from "./runtime.mjs";
 
 /** Supported commands select their executable; remaining arguments are forwarded verbatim. */
 const commands = {
@@ -25,6 +26,7 @@ const commands = {
 };
 
 try {
+  assertSupportedRuntime();
   const selected = commands[process.argv[2]];
   if (!selected)
     throw new Error(`Usage: local.mjs ${Object.keys(commands).join("|")}`);
@@ -55,7 +57,9 @@ try {
   reportCliFailure(
     "local configuration",
     error,
-    "See docs/configuration.md and the two example files."
+    error.code === "UNSUPPORTED_NODE"
+      ? "Select Node 24 using mise or nvm, then rerun the command."
+      : "See docs/configuration.md and the two example files."
   );
   process.exitCode = 1;
 }

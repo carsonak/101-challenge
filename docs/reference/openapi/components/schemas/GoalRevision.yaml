@@ -1,0 +1,26 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  goalId:
+    type: string
+    format: uuid
+  attemptId:
+    type: string
+    format: uuid
+  input:
+    $ref: ./initialGoalSchema.yaml
+  archived:
+    type: boolean
+  createdAt:
+    type: string
+    format: date-time
+required:
+  - id
+  - goalId
+  - attemptId
+  - input
+  - archived
+  - createdAt
+additionalProperties: false

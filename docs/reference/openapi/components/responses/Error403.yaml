@@ -1,0 +1,5 @@
+description: "FORBIDDEN: origin, CSRF, recent authentication or authorization check failed."
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/Error.yaml

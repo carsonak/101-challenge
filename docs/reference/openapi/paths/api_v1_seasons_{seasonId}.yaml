@@ -1,0 +1,23 @@
+get:
+  operationId: getPublishedSeason
+  summary: getPublishedSeason
+  description: ""
+  security: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/seasonSchema.yaml
+    "404":
+      $ref: ../components/responses/Error404.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml
+  parameters:
+    - name: seasonId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

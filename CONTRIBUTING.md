@@ -57,6 +57,13 @@ Use [directory READMEs](plans/README.md) to discover current planning groups. Re
 
 Requirements: the runtime and package manager specified in [package.json](package.json), plus Docker Compose (or compatible Podman Compose).
 
+Check `node --version` before starting commands. The repository's `.nvmrc` selects
+Node 24; with nvm run `nvm use`. With mise, run commands through
+`mise exec node@24 -- pnpm dev:worker` (or the desired pnpm command). Installing
+Node 24 does not change an existing shell's active Node version. Local launchers
+reject unsupported versions before loading application code; authentication uses
+Node 24's built-in Argon2 support.
+
 ```sh
 pnpm install --frozen-lockfile
 cp .env.example .env
@@ -111,3 +118,25 @@ Avatar uploads use Sharp's default metadata stripping, resize and explicit WebP 
 Describe behavior and link to the manifest, configuration or source that owns a changing value. Keep versions, test totals and dated pass/fail results in explicitly historical verification records. Preserve normative domain and security limits. Provider pricing and quotas belong in provider documentation.
 
 Read [the design brief](docs/design.md) and the frontend-design skill before UI changes. [Live testing](docs/live-testing.md) describes private local OAuth and the Discord-only tunnel. This owner-authorized hardening initiative works on main; local develop was fast-forwarded to its starting point. Future contribution defaults above still apply.
+
+## Source structure and readability
+
+Keep handwritten production TypeScript, JavaScript and CSS files at 300 physical
+lines or fewer, including comments and blank lines. Generated output, dependencies
+and declarations are excluded. Tests have no strict ceiling; group them by feature
+when this improves maintenance. Preserve package exports through small facades and
+keep transaction ownership and private projections explicit.
+
+Use one blank line after completed blocks/declarations and multiline statements
+when another sibling statement follows. Keep else/catch/finally chains, switch cases
+and closing delimiters together. Internal object, argument and array spacing stays
+discretionary. `pnpm format` applies Prettier and AST-aware statement spacing;
+`pnpm source:check` enforces spacing and production file limits. Aggregate typechecking also checks operational TypeScript scripts.
+
+Keep Tailwind semantic utilities and global tokens/resets/document defaults. Put
+bespoke component styles in CSS Modules, preserving cascade layers and responsive
+behavior. Browser tests should locate accessible controls or stable state attributes
+rather than depend on generated class names.
+
+Maintain the modular YAML OpenAPI source with `pnpm openapi:lint`; see the
+[reference guide](docs/reference/README.md) for external bundle output.

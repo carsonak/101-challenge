@@ -19,6 +19,7 @@ test("attempt-v1 matches the checked fictional vector and normalizes equivalent 
       "utf8"
     )
   );
+
   const goals = [
     {
       title: "Study Bitcoin",
@@ -27,6 +28,7 @@ test("attempt-v1 matches the checked fictional vector and normalizes equivalent 
       target: "30.000",
     },
   ];
+
   const milestones = [
     {
       title: "Explain a transaction",
@@ -35,6 +37,7 @@ test("attempt-v1 matches the checked fictional vector and normalizes equivalent 
       achievementKind: "manual" as const,
     },
   ];
+
   const result = deriveAttemptSeed(
     fixture.initial.participantSeed,
     fixture.seasonSeed,
@@ -42,12 +45,14 @@ test("attempt-v1 matches the checked fictional vector and normalizes equivalent 
     goals,
     milestones
   );
+
   assert.equal(result.baseSeed, fixture.baseSeed);
   assert.equal(result.initialInputDigest, fixture.initialInputDigest);
   assert.equal(
     canonicalJson({ b: "e\u0301\r\n", a: 1 }),
     canonicalJson({ a: 1, b: "é\n" })
   );
+
   assert.notEqual(
     deriveAttemptSeed(
       fixture.initial.participantSeed,
@@ -59,24 +64,29 @@ test("attempt-v1 matches the checked fictional vector and normalizes equivalent 
     result.baseSeed
   );
 });
+
 test("reporting dates use frozen zones across DST and local midnight", () => {
   assert.equal(
     reportingDate(new Date("2026-10-06T21:00:00Z"), "Africa/Nairobi"),
     "2026-10-07"
   );
+
   assert.equal(
     reportingDate(new Date("2026-03-08T06:59:00Z"), "America/New_York"),
     "2026-03-08"
   );
+
   assert.equal(
     reportingDate(new Date("2026-03-09T03:59:00Z"), "America/New_York"),
     "2026-03-08"
   );
+
   assert.equal(
     reportingDate(new Date("2026-03-09T04:00:00Z"), "America/New_York"),
     "2026-03-09"
   );
 });
+
 test("streak gaps preserve longest and progress while separate runs earn separately", () => {
   const dates = [
     "2026-03-07",
@@ -85,11 +95,13 @@ test("streak gaps preserve longest and progress while separate runs earn separat
     "2026-03-12",
     "2026-03-13",
   ];
+
   assert.deepEqual(streaks(dates, "2026-03-14"), {
     current: 2,
     longest: 3,
     trailing: 2,
   });
+
   assert.equal(streaks(dates, "2026-03-15").current, 0);
 });
 
@@ -98,6 +110,7 @@ test("perk tiers degrade per missed date while pauses start a fresh tier", async
   const dates = Array.from({ length: 14 }, (_, i) =>
     new Date(Date.UTC(2026, 0, i + 1)).toISOString().slice(0, 10)
   );
+
   assert.equal(activePerkTier(dates, "2026-01-15"), 2);
   assert.equal(activePerkTier(dates, "2026-01-16"), 1);
   assert.equal(activePerkTier(dates, "2026-01-17"), 0);

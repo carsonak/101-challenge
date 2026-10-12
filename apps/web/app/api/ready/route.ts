@@ -13,6 +13,7 @@ export async function GET() {
   const result = await readiness("web", async () => {
     const config = parseServerConfig(process.env);
     if (!config.DATABASE_URL) throw new Error("Database not configured");
+
     const database = createDatabase(config.DATABASE_URL);
     try {
       await database.probe();
@@ -20,5 +21,6 @@ export async function GET() {
       await database.close();
     }
   });
+
   return Response.json(result, { status: result.status === "ok" ? 200 : 503 });
 }

@@ -5,6 +5,7 @@ const email = z
   .email()
   .max(254)
   .transform((value) => value.toLowerCase());
+
 /** Passwords preserve spaces and Unicode; impose bounded hashing work. */
 const password = z.string().min(12).max(128);
 /** Opaque one-use proof or session secret; store only its digest. */
@@ -17,6 +18,7 @@ export const usernameSchema = z
   .max(32)
   .regex(/^[a-zA-Z0-9_-]+$/)
   .transform((v) => v.toLowerCase());
+
 /** Email signup, login, verification and recovery payloads. */
 export const authCommandSchema = z.union([
   z.strictObject({
@@ -59,6 +61,7 @@ export const authCommandSchema = z.union([
     username: usernameSchema,
   }),
 ]);
+
 /** Validated auth request; actor/session proof is supplied by the server adapter. */
 export type AuthCommand = z.infer<typeof authCommandSchema>;
 /** Safe owner account settings; excludes password/session/provider secrets. */

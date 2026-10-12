@@ -1,0 +1,29 @@
+anyOf:
+  - $ref: ./archiveGoalSchema.yaml
+  - $ref: ./archiveMilestoneSchema.yaml
+  - $ref: ./backdateEnrollmentSchema.yaml
+  - $ref: ./backfillReportSchema.yaml
+  - $ref: ./cancelEnrollmentSchema.yaml
+  - $ref: ./correctReportSchema.yaml
+  - $ref: ./createSeasonSchema.yaml
+  - $ref: ./editReportSchema.yaml
+  - $ref: ./enrollSchema.yaml
+  - $ref: ./pauseEnrollmentSchema.yaml
+  - $ref: ./publishSeasonSchema.yaml
+  - $ref: ./restartAttemptSchema.yaml
+  - $ref: ./resumeEnrollmentSchema.yaml
+  - $ref: ./revokeCorrectionGrantSchema.yaml
+  - $ref: ./saveGoalSchema.yaml
+  - $ref: ./saveMilestoneSchema.yaml
+  - $ref: ./saveSeasonSchema.yaml
+  - $ref: ./saveSeasonTemplateSchema.yaml
+  - $ref: ./setSeasonFeaturedSchema.yaml
+  - $ref: ./startAttemptSchema.yaml
+  - $ref: ./submitReportSchema.yaml
+  - $ref: ./issueCorrectionGrantSchema.yaml
+description: >-
+  Strict command objects; server checks authorization, lifecycle, ownership and
+  custom refinements. Milestone goalIndex must reference the submitted goal
+  list; goalValues and milestoneAchievements must use distinct IDs. Timezones
+  must be valid IANA names. Decimal strings have at most 18 total digits and 6
+  fractional digits; supplied targets must be positive.

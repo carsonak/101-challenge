@@ -1,9 +1,10 @@
+import uiStyles from "./../../styles/ui.module.css";
 /** Public description of actual storage and administrator visibility. */
 export default function Privacy() {
   return (
     <main>
       <h1>Privacy</h1>
-      <section className="card">
+      <section className={uiStyles.card}>
         <h2>Your challenge data</h2>
         <p>
           Your logs, goals and milestones are private. Within the application,

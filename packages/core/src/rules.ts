@@ -6,7 +6,9 @@ export function canonicalJson(value: unknown): string {
   function normalize(input: unknown): unknown {
     if (typeof input === "string")
       return input.replace(/\r\n?/g, "\n").normalize("NFC");
+
     if (Array.isArray(input)) return input.map(normalize);
+
     if (input && typeof input === "object")
       return Object.fromEntries(
         Object.entries(input)
@@ -14,22 +16,28 @@ export function canonicalJson(value: unknown): string {
           .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
           .map(([k, v]) => [k, normalize(v)])
       );
+
     if (typeof input === "number" && !Number.isSafeInteger(input))
       throw new Error("Unsafe canonical number");
+
     return input;
   }
+
   return JSON.stringify(normalize(value));
 }
+
 /** Normalize a validated nonnegative decimal without converting to binary floating point. */
 export function canonicalDecimal(value: string): string {
   return value.includes(".")
     ? value.replace(/0+$/, "").replace(/\.$/, "")
     : value;
 }
+
 /** Private stable digest used for request equality and hashed opaque tokens. */
 export function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
+
 /** Derive a private attempt seed according to the accepted attempt-v1 fixture recipe. */
 export function deriveAttemptSeed(
   participantSeed: string,
@@ -56,6 +64,7 @@ export function deriveAttemptSeed(
       goalIndex: m.goalIndex ?? null,
     })),
   };
+
   const serialized = canonicalJson(initial);
   return {
     /** Private seed; never include in transport projections. */
@@ -66,6 +75,7 @@ export function deriveAttemptSeed(
     initialInputDigest: digest(serialized),
   };
 }
+
 /** Resolve the server instant once using the enrollment's frozen IANA timezone. */
 export function reportingDate(instant: Date, timezone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -74,22 +84,27 @@ export function reportingDate(instant: Date, timezone: string): string {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(instant);
+
   const part = (type: string) => parts.find((p) => p.type === type)?.value;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
+
 /** Streaks use civil-day ordinals, independent of DST's 23/25-hour days. */
 export function streaks(dates: string[], today: string) {
   const days = [...new Set(dates)]
     .sort()
     .map((d) => Date.parse(`${d}T00:00:00Z`) / 86400000);
+
   let run = 0,
     longest = 0,
     last: number | undefined;
+
   for (const day of days) {
     run = last !== undefined && day === last + 1 ? run + 1 : 1;
     longest = Math.max(longest, run);
     last = day;
   }
+
   const now = Date.parse(`${today}T00:00:00Z`) / 86400000;
   return {
     /** Trailing run remains current through the day following the last report. */
@@ -115,16 +130,20 @@ export function activePerkTier(
   let tier = 0,
     run = 0,
     last: number | undefined;
+
   for (const date of [...new Set(dates)]
     .filter((d) => !after || d > after)
     .sort()) {
     const current = day(date),
       gap = last === undefined ? 0 : Math.max(0, current - last - 1);
+
     tier = Math.max(0, tier - gap);
     run = last !== undefined && current === last + 1 ? run + 1 : 1;
     if (run % 7 === 0) tier++;
+
     last = current;
   }
+
   return last === undefined
     ? 0
     : Math.max(0, tier - Math.max(0, day(today) - last - 1));

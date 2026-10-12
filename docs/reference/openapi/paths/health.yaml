@@ -1,0 +1,15 @@
+get:
+  operationId: workerHealth
+  summary: Worker health
+  security: []
+  description: Liveness without external dependency checks.
+  responses:
+    "200":
+      description: Service available.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/WorkerHealth.yaml
+servers:
+  - url: http://localhost:3001
+    description: Worker origin; replace with configured WORKER_HOST/WORKER_PORT.

@@ -1,0 +1,20 @@
+get:
+  operationId: webReady
+  summary: Web ready
+  security: []
+  description: >-
+    Readiness requires configured database connectivity and applied tracker
+    migrations.
+  responses:
+    "200":
+      description: Service available.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/WebHealth.yaml
+    "503":
+      description: Service unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/WebHealth.yaml

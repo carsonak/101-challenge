@@ -20,6 +20,7 @@ export const errorMessages: Record<string, string> = {
   RATE_LIMITED: "Too many requests. Please wait before trying again.",
   oauth: "Sign-in could not be completed. Please try again.",
 };
+
 /** Return safe copy for an unknown or stable error code. */
 export function errorMessage(code: unknown) {
   return typeof code === "string"

@@ -1,0 +1,120 @@
+type: object
+properties:
+  enrollmentId:
+    type: string
+    format: uuid
+    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+  attemptId:
+    type: string
+    format: uuid
+    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+  participation:
+    type: string
+    enum:
+      - active
+      - paused
+      - cancelled
+      - completed
+  attemptState:
+    type: string
+    enum:
+      - active
+      - paused
+      - cancelled
+      - restarted
+      - completed
+  mode:
+    type: string
+    enum:
+      - qualifying
+      - progress_only
+  reportingDays:
+    type: integer
+    minimum: 0
+    maximum: 101
+  currentStreak:
+    type: integer
+    minimum: 0
+    maximum: 101
+  longestStreak:
+    type: integer
+    minimum: 0
+    maximum: 101
+  perkTier:
+    default: 0
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+  rerollCredits:
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+  version:
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+  startedAt:
+    type: string
+    format: date-time
+  backfillDeadline:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  backfillThrough:
+    type: string
+    format: date
+  backfillUntil:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  erased:
+    type: boolean
+  today:
+    type: string
+    format: date
+  goals:
+    type: array
+    items:
+      $ref: ./Goal.yaml
+  goalRevisions:
+    type: array
+    items:
+      $ref: ./GoalRevision.yaml
+  milestones:
+    type: array
+    items:
+      $ref: ./Milestone.yaml
+  milestoneRevisions:
+    type: array
+    items:
+      $ref: ./MilestoneRevision.yaml
+  reports:
+    type: array
+    items:
+      $ref: ./ownerReportSchema.yaml
+required:
+  - enrollmentId
+  - attemptId
+  - participation
+  - attemptState
+  - mode
+  - reportingDays
+  - currentStreak
+  - longestStreak
+  - perkTier
+  - rerollCredits
+  - version
+  - startedAt
+  - backfillDeadline
+  - backfillThrough
+  - backfillUntil
+  - erased
+  - today
+  - goals
+  - goalRevisions
+  - milestones
+  - milestoneRevisions
+  - reports
+additionalProperties: false

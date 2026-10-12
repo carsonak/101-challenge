@@ -1,4 +1,6 @@
 "use client";
+import uiStyles from "./../styles/ui.module.css";
+
 import { useState, type FormEvent } from "react";
 import { Field, PasswordInput, Help } from "./ui";
 import type { Attempt } from "./tracker-types";
@@ -27,15 +29,18 @@ export function ReportForm({
       )
     ),
     [achieved, setAchieved] = useState<string[]>([]);
+
   const activeGoals = attempt.goals
     .filter((g) => !g.archived)
     .map((g) => attempt.goalRevisions.find((r) => r.id === g.currentRevisionId))
     .filter((g): g is NonNullable<typeof g> => Boolean(g));
+
   const allowed = report
     ? attempt.goalRevisions.filter((r) =>
         report.applicableGoalRevisionIds.includes(r.id)
       )
     : activeGoals;
+
   /** Submit the explicit form draft without clearing it on errors. */
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -55,6 +60,7 @@ export function ReportForm({
           expectedAttemptVersion: attempt.version,
           milestoneAchievements: achieved,
         };
+
     if (
       await run({
         ...command,
@@ -69,11 +75,13 @@ export function ReportForm({
         setValues({});
         setAchieved([]);
       }
+
       setKey("");
     }
   }
+
   return (
-    <form className="card" onSubmit={submit}>
+    <form className={uiStyles.card} onSubmit={submit}>
       <h3>
         {report
           ? correction
@@ -174,7 +182,7 @@ export function ReportForm({
               revision.input.achievementKind === "manual"
           )
           .map(({ m, revision }) => (
-            <label key={m.id} className="check">
+            <label key={m.id} className={uiStyles.check}>
               <input
                 type="checkbox"
                 checked={achieved.includes(m.id)}
@@ -206,7 +214,7 @@ export function ReportForm({
             />
           </Field>
         )}
-      <button type="submit">
+      <button type="submit" className={uiStyles.button}>
         {report
           ? "Save report changes"
           : backfill

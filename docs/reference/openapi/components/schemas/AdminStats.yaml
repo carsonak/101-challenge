@@ -1,0 +1,44 @@
+type: object
+properties:
+  attempts:
+    type: array
+    items:
+      $ref: ./AdminAttempt.yaml
+  goals:
+    type: array
+    items:
+      $ref: ./AdminGoal.yaml
+  milestones:
+    type: array
+    items:
+      $ref: ./AdminMilestone.yaml
+  reports:
+    type: array
+    items:
+      $ref: ./adminReportSchema.yaml
+  users:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+      required:
+        - id
+        - username
+      additionalProperties: false
+  grants:
+    type: array
+    items:
+      $ref: ./AdminGrant.yaml
+required:
+  - attempts
+  - goals
+  - milestones
+  - reports
+  - users
+  - grants
+additionalProperties: false

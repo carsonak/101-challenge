@@ -1,0 +1,12 @@
+type: object
+properties:
+  status:
+    enum:
+      - ok
+      - unavailable
+  service:
+    const: worker
+required:
+  - status
+  - service
+additionalProperties: false

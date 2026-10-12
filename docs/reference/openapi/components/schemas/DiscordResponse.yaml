@@ -1,0 +1,14 @@
+type: object
+properties:
+  type:
+    type: integer
+    enum:
+      - 1
+      - 4
+      - 5
+      - 9
+  data:
+    type: object
+required:
+  - type
+additionalProperties: true

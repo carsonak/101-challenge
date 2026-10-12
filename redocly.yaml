@@ -1,0 +1,13 @@
+apis:
+  challenge:
+    root: docs/reference/openapi/openapi.yaml
+extends:
+  - minimal
+rules:
+  no-unresolved-refs: error
+  operation-operationId-unique: error
+  security-defined: error
+  # The reference intentionally describes localhost, not a hosted release.
+  no-server-example.com: off
+  # OAuth callbacks intentionally respond with redirects only.
+  operation-2xx-response: off

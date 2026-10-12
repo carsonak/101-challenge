@@ -16,6 +16,7 @@ try {
     throw new Error(
       "Set ERASURE_DATABASE_URL in .env.operator for account maintenance"
     );
+
   const config = parseServerConfig(process.env);
   const database = createRepository(connection);
   const mail = createMailer(config);
@@ -34,5 +35,6 @@ try {
     error,
     "Check ERASURE_DATABASE_URL in .env.operator and SMTP settings in .env."
   );
+
   process.exitCode = 1;
 }

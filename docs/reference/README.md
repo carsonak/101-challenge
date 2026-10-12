@@ -2,7 +2,7 @@
 
 - [Database schema](schema.dbml): PostgreSQL tables, columns, keys, indexes,
   checks and foreign keys defined by the tracked migrations.
-- [OpenAPI document](openapi.json): OpenAPI 3.1 description of the implemented
+- [OpenAPI document](openapi/openapi.yaml): OpenAPI 3.1 description of the implemented
   browser API, OAuth callbacks, Discord ingress and web/worker health endpoints.
 
 These files describe the current implementation; they do not create endpoints or
@@ -38,7 +38,7 @@ DBML exports are not replacements for the tracked migrations.
 
 ## HTTP API
 
-Import `openapi.json` into an OpenAPI 3.1 viewer or client tool. The format follows
+Import `openapi/openapi.yaml` into an OpenAPI 3.1 viewer or client tool. The format follows
 the [OpenAPI specification](https://spec.openapis.org/oas/v3.1.0). The default web
 server is `http://localhost:3000`; replace it with `APP_ORIGIN`. Worker health paths
 override the server to `http://localhost:3001`; use the configured worker listener
@@ -110,9 +110,13 @@ ALTER statements. Preserve notes for constraints that DBML cannot enforce.
 For OpenAPI, compare methods and paths with the dispatcher and native route
 handlers, request alternatives with the shared Zod schemas, and responses with
 actual safe projections. Request JSON Schemas were derived from the contracts;
-custom refinements and authorization rules need manual review. These are checked-in
-references, not automatically regenerated artifacts. Do not infer new API routes
+custom refinements and authorization rules need manual review. The YAML entrypoint references modular path and component files. Redocly validates
+and bundles the checked-in source; generated bundles stay outside repositories. Do not infer new API routes
 from UI pages or expose server-only source snapshots.
+
+Run `pnpm openapi:lint` to validate the source and its references. To produce a
+portable YAML document, run `pnpm openapi:bundle --output /absolute/external/openapi.yaml`.
+The CLI is pinned in the workspace; `pnpm check` and CI include its validation.
 
 After editing, parse DBML with a current DBML parser (use `dbmlv2` when calling
 `@dbml/core`'s `Parser.parse`; the legacy `dbml` parser does not support check

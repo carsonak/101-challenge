@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: 101 Challenge HTTP API
+  version: 0.1.0-dev
+  description:
+    Documentation of the current local tracker. Cookie-authenticated browser
+    API plus OAuth callbacks, signed Discord ingress and service health. JSON browser
+    responses use private, no-store caching. Custom domain validation remains authoritative;
+    no new endpoints are introduced by this document.
+servers:
+  - url: http://localhost:3000
+    description: Local web origin; replace with configured APP_ORIGIN.
+paths:
+  /api/v1/session:
+    $ref: paths/api_v1_session.yaml
+  /api/v1/seasons:
+    $ref: paths/api_v1_seasons.yaml
+  /api/v1/seasons/{seasonId}:
+    $ref: paths/api_v1_seasons_{seasonId}.yaml
+  /api/v1/sessions:
+    $ref: paths/api_v1_sessions.yaml
+  /api/v1/notifications:
+    $ref: paths/api_v1_notifications.yaml
+  /api/v1/history:
+    $ref: paths/api_v1_history.yaml
+  /api/v1/export:
+    $ref: paths/api_v1_export.yaml
+  /api/v1/admin/stats:
+    $ref: paths/api_v1_admin_stats.yaml
+  /api/v1/admin/seasons:
+    $ref: paths/api_v1_admin_seasons.yaml
+  /api/v1/auth:
+    $ref: paths/api_v1_auth.yaml
+  /api/v1/command:
+    $ref: paths/api_v1_command.yaml
+  /api/v1/oauth:
+    $ref: paths/api_v1_oauth.yaml
+  /api/auth/google/callback:
+    $ref: paths/api_auth_google_callback.yaml
+  /api/auth/discord/callback:
+    $ref: paths/api_auth_discord_callback.yaml
+  /api/health:
+    $ref: paths/api_health.yaml
+  /api/ready:
+    $ref: paths/api_ready.yaml
+  /health:
+    $ref: paths/health.yaml
+  /ready:
+    $ref: paths/ready.yaml
+  /api/discord:
+    $ref: paths/api_discord.yaml
+components:
+  securitySchemes:
+    sessionCookie:
+      $ref: components/securitySchemes/sessionCookie.yaml
+    csrfHeader:
+      $ref: components/securitySchemes/csrfHeader.yaml
+    oauthCookie:
+      $ref: components/securitySchemes/oauthCookie.yaml
+    discordSignature:
+      $ref: components/securitySchemes/discordSignature.yaml
+    discordTimestamp:
+      $ref: components/securitySchemes/discordTimestamp.yaml
+  schemas:
+    adminReportSchema:
+      $ref: components/schemas/adminReportSchema.yaml
+    archiveGoalSchema:
+      $ref: components/schemas/archiveGoalSchema.yaml
+    archiveMilestoneSchema:
+      $ref: components/schemas/archiveMilestoneSchema.yaml
+    backdateEnrollmentSchema:
+      $ref: components/schemas/backdateEnrollmentSchema.yaml
+    backfillReportSchema:
+      $ref: components/schemas/backfillReportSchema.yaml
+    cancelEnrollmentSchema:
+      $ref: components/schemas/cancelEnrollmentSchema.yaml
+    commandResultSchema:
+      $ref: components/schemas/commandResultSchema.yaml
+    correctReportSchema:
+      $ref: components/schemas/correctReportSchema.yaml
+    createSeasonSchema:
+      $ref: components/schemas/createSeasonSchema.yaml
+    decimalValueSchema:
+      $ref: components/schemas/decimalValueSchema.yaml
+    editReportSchema:
+      $ref: components/schemas/editReportSchema.yaml
+    enrollSchema:
+      $ref: components/schemas/enrollSchema.yaml
+    enrollmentSchema:
+      $ref: components/schemas/enrollmentSchema.yaml
+    initialGoalSchema:
+      $ref: components/schemas/initialGoalSchema.yaml
+    initialMilestoneSchema:
+      $ref: components/schemas/initialMilestoneSchema.yaml
+    issueCorrectionGrantSchema:
+      $ref: components/schemas/issueCorrectionGrantSchema.yaml
+    ownerReportSchema:
+      $ref: components/schemas/ownerReportSchema.yaml
+    pauseEnrollmentSchema:
+      $ref: components/schemas/pauseEnrollmentSchema.yaml
+    progressSchema:
+      $ref: components/schemas/progressSchema.yaml
+    publishSeasonSchema:
+      $ref: components/schemas/publishSeasonSchema.yaml
+    restartAttemptSchema:
+      $ref: components/schemas/restartAttemptSchema.yaml
+    resumeEnrollmentSchema:
+      $ref: components/schemas/resumeEnrollmentSchema.yaml
+    revokeCorrectionGrantSchema:
+      $ref: components/schemas/revokeCorrectionGrantSchema.yaml
+    saveGoalSchema:
+      $ref: components/schemas/saveGoalSchema.yaml
+    saveMilestoneSchema:
+      $ref: components/schemas/saveMilestoneSchema.yaml
+    saveSeasonSchema:
+      $ref: components/schemas/saveSeasonSchema.yaml
+    saveSeasonTemplateSchema:
+      $ref: components/schemas/saveSeasonTemplateSchema.yaml
+    seasonSchema:
+      $ref: components/schemas/seasonSchema.yaml
+    setSeasonFeaturedSchema:
+      $ref: components/schemas/setSeasonFeaturedSchema.yaml
+    startAttemptSchema:
+      $ref: components/schemas/startAttemptSchema.yaml
+    submitReportSchema:
+      $ref: components/schemas/submitReportSchema.yaml
+    trackerErrorCodeSchema:
+      $ref: components/schemas/trackerErrorCodeSchema.yaml
+    trackerEventSchema:
+      $ref: components/schemas/trackerEventSchema.yaml
+    accountSchema:
+      $ref: components/schemas/accountSchema.yaml
+    authCommandSchema:
+      $ref: components/schemas/authCommandSchema.yaml
+    usernameSchema:
+      $ref: components/schemas/usernameSchema.yaml
+    TrackerCommand:
+      $ref: components/schemas/TrackerCommand.yaml
+    SessionRecord:
+      $ref: components/schemas/SessionRecord.yaml
+    Notification:
+      $ref: components/schemas/Notification.yaml
+    Goal:
+      $ref: components/schemas/Goal.yaml
+    Milestone:
+      $ref: components/schemas/Milestone.yaml
+    GoalRevision:
+      $ref: components/schemas/GoalRevision.yaml
+    MilestoneRevision:
+      $ref: components/schemas/MilestoneRevision.yaml
+    Completion:
+      $ref: components/schemas/Completion.yaml
+    AttemptHistory:
+      $ref: components/schemas/AttemptHistory.yaml
+    EnrollmentHistory:
+      $ref: components/schemas/EnrollmentHistory.yaml
+    SeasonPage:
+      $ref: components/schemas/SeasonPage.yaml
+    HistoryPage:
+      $ref: components/schemas/HistoryPage.yaml
+    Session:
+      $ref: components/schemas/Session.yaml
+    AuthResult:
+      $ref: components/schemas/AuthResult.yaml
+    Export:
+      $ref: components/schemas/Export.yaml
+    AdminAttempt:
+      $ref: components/schemas/AdminAttempt.yaml
+    AdminGoal:
+      $ref: components/schemas/AdminGoal.yaml
+    AdminMilestone:
+      $ref: components/schemas/AdminMilestone.yaml
+    AdminGrant:
+      $ref: components/schemas/AdminGrant.yaml
+    AdminStats:
+      $ref: components/schemas/AdminStats.yaml
+    Error:
+      $ref: components/schemas/Error.yaml
+    Unavailable:
+      $ref: components/schemas/Unavailable.yaml
+    WebHealth:
+      $ref: components/schemas/WebHealth.yaml
+    WorkerHealth:
+      $ref: components/schemas/WorkerHealth.yaml
+    DiscordInteraction:
+      $ref: components/schemas/DiscordInteraction.yaml
+    DiscordResponse:
+      $ref: components/schemas/DiscordResponse.yaml
+  responses:
+    Error400:
+      $ref: components/responses/Error400.yaml
+    Error401:
+      $ref: components/responses/Error401.yaml
+    Error403:
+      $ref: components/responses/Error403.yaml
+    Error404:
+      $ref: components/responses/Error404.yaml
+    Error409:
+      $ref: components/responses/Error409.yaml
+    Error429:
+      $ref: components/responses/Error429.yaml
+    ServiceUnavailable:
+      $ref: components/responses/ServiceUnavailable.yaml

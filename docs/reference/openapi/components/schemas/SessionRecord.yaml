@@ -1,0 +1,28 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  device:
+    type: string
+  authenticatedAt:
+    type: string
+    format: date-time
+  expiresAt:
+    type: string
+    format: date-time
+  revokedAt:
+    anyOf:
+      - type: string
+        format: date-time
+      - type: "null"
+  current:
+    type: boolean
+required:
+  - id
+  - device
+  - authenticatedAt
+  - expiresAt
+  - revokedAt
+  - current
+additionalProperties: false

@@ -1,0 +1,10 @@
+type: object
+properties:
+  accepted:
+    const: true
+  requestId:
+    type: string
+    format: uuid
+required:
+  - accepted
+additionalProperties: false

@@ -1,4 +1,6 @@
 "use client";
+import uiStyles from "./../styles/ui.module.css";
+
 import { useState, type FormEvent } from "react";
 import type { GoalInput, MilestoneInput } from "@challenge/core";
 import {
@@ -29,6 +31,7 @@ export function Setup({
       season?.milestones.map((m) => ({ ...m })) ?? []
     ),
     [confirmed, setConfirmed] = useState(false);
+
   /** Submit the explicit form draft without clearing it on errors. */
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -47,10 +50,12 @@ export function Setup({
           }
         : {}),
     };
+
     await run(payload);
   }
+
   return (
-    <form onSubmit={submit} className="card">
+    <form onSubmit={submit} className={uiStyles.card}>
       <h3>{attempt ? "Start a new attempt" : "Choose your initial goals"}</h3>
       <p>
         {attempt
@@ -60,7 +65,7 @@ export function Setup({
       {season && season.goals.length > 0 && (
         <button
           type="button"
-          className="secondary"
+          className={`${uiStyles.button} ${uiStyles.secondary}`}
           onClick={() => {
             setGoals(season.goals.map((g) => ({ ...g })));
             setMilestones(season.milestones.map((m) => ({ ...m })));
@@ -72,7 +77,7 @@ export function Setup({
       {attempt && (
         <button
           type="button"
-          className="secondary"
+          className={`${uiStyles.button} ${uiStyles.secondary}`}
           onClick={() => {
             setGoals(
               attempt.goals
@@ -102,7 +107,7 @@ export function Setup({
           {goals.length > 0 && (
             <button
               type="button"
-              className="secondary"
+              className={`${uiStyles.button} ${uiStyles.secondary}`}
               onClick={() => {
                 setGoals(goals.filter((_, i) => i !== index));
                 setMilestones(
@@ -125,7 +130,7 @@ export function Setup({
       ))}
       <button
         type="button"
-        className="secondary"
+        className={`${uiStyles.button} ${uiStyles.secondary}`}
         disabled={goals.length >= 20}
         onClick={() => setGoals([...goals, { ...emptyGoal }])}
       >
@@ -147,7 +152,7 @@ export function Setup({
               }
             />
             <button
-              className="secondary"
+              className={`${uiStyles.button} ${uiStyles.secondary}`}
               type="button"
               onClick={() =>
                 setMilestones(milestones.filter((_, i) => i !== index))
@@ -159,7 +164,7 @@ export function Setup({
         ))}
         <button
           type="button"
-          className="secondary"
+          className={`${uiStyles.button} ${uiStyles.secondary}`}
           disabled={milestones.length >= 101}
           onClick={() =>
             setMilestones([
@@ -172,7 +177,7 @@ export function Setup({
         </button>
       </details>
       {attempt && (
-        <label className="check">
+        <label className={uiStyles.check}>
           <input
             type="checkbox"
             required
@@ -193,6 +198,7 @@ export function Setup({
             ) ||
             (Boolean(attempt) && !confirmed)
           }
+          className={uiStyles.button}
         >
           {attempt ? "Restart with these goals" : "Start my challenge"}
         </button>

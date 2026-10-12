@@ -122,7 +122,7 @@ Design for phones first; many participants will use a phone. Single column below
 
 ## Implementation notes
 
-- Styling uses Tailwind. Tokens above are CSS variables that switch under the theme attribute and the system preference; Tailwind's theme maps them to semantic utilities. Avoid arbitrary one-off values; if a value is needed twice, it becomes a token.
+- Styling uses Tailwind semantic utilities and component-owned CSS Modules. Every module declares the shared cascade-layer order so route loading cannot move components ahead of base resets. Tokens above are CSS variables that switch under the theme attribute and the system preference; Tailwind's theme maps them to semantic utilities. Avoid arbitrary one-off values; if a value is needed twice, it becomes a token.
 - Use accessible headless primitives for dialog, menu, tabs and toast rather than hand-rolling focus management.
 - Icons come from one consistent set, used sparingly, always with a text label or accessible name.
 - Keep client JavaScript small: server-render what can be rendered, load interactive widgets only where used.

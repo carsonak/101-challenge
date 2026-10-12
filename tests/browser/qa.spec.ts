@@ -16,6 +16,7 @@ import {
 const url = process.env.TRACKER_TEST_DATABASE_URL;
 if (!url || !/_(test|ci)$/.test(new URL(url).pathname))
   throw new Error("Browser tests require an isolated _test or _ci database");
+
 /** Local fixture password; never used outside disposable tests. */
 const password = "fictional browser QA password 123";
 /** Establish a real account/session and optionally a published recommended season. */
@@ -24,9 +25,11 @@ async function fixture(page: Page, admin = false) {
   await db.migrate();
   const tracker = createTracker(db.repository),
     auth = createAuth(db.repository, { sendMail: async () => {} });
+
   const id = await tracker.createUser(admin),
     username = `browser-${randomUUID().slice(0, 16)}`,
     email = `${username}@example.test`;
+
   await db.repository.transaction(async (tx) => {
     await tx.insert("credentials", {
       id,
@@ -35,16 +38,20 @@ async function fixture(page: Page, admin = false) {
       passwordHash: await hashPassword(password),
       verified: true,
     });
+
     const p = await tx.get("profiles", id, true);
     if (!p) throw new Error("Missing fixture profile");
+
     p.username = username;
     p.provisional = false;
     p.recoveryEmail = email;
     await tx.save("profiles", p);
   });
+
   const session = await auth.execute({ action: "login", email, password });
   if (!("token" in session) || !session.token || !session.csrf)
     throw new Error("No fixture session");
+
   await page.context().addCookies([
     {
       name: "challenge_session",
@@ -58,6 +65,7 @@ async function fixture(page: Page, admin = false) {
       url: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
     },
   ]);
+
   return { db, tracker, auth, id, username, email, session };
 }
 
@@ -68,6 +76,7 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
   await expect(
     page.getByRole("heading", { name: "Start your 101 days" })
   ).toBeVisible();
+
   await expect(page.getByText("Forgot your password?")).toHaveCount(0);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Show password" }).click();
@@ -75,11 +84,13 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
     "type",
     "text"
   );
+
   await page.getByRole("button", { name: "Hide password" }).click();
   await page.goto("/verify");
   await expect(
     page.getByRole("heading", { name: "Verify your email" })
   ).toBeVisible();
+
   await expect(page.locator("form")).toHaveCount(0);
   await expect(page.getByText("Forgot your password?")).toHaveCount(0);
   await page.goto("/login");
@@ -88,6 +99,7 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
   await expect(
     page.getByRole("button", { name: "Send recovery link" })
   ).toBeVisible();
+
   await page.goto(`/login?verify=${"a".repeat(64)}`);
   await expect(page).toHaveURL(/\/verify\?token=/);
   await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
@@ -96,10 +108,12 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
   const before = await page
     .getByRole("heading", { name: "Welcome back" })
     .boundingBox();
+
   await page.getByRole("button", { name: "Dismiss notification" }).click();
   expect(
     await page.getByRole("heading", { name: "Welcome back" }).boundingBox()
   ).toEqual(before);
+
   await page.getByLabel("Theme", { exact: true }).selectOption("dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -109,10 +123,11 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
     )
     .toBe(true);
+
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(
     await page
-      .locator(".app-header")
+      .getByRole("banner")
       .evaluate((el) => getComputedStyle(el).transitionDuration)
   ).toBe("0s");
 });
@@ -131,22 +146,26 @@ test("anonymous auth bootstrap clears stale cookies and exposes the configured p
     },
     { name: "challenge_csrf", value: "b".repeat(64), url: base },
   ]);
+
   const output = process.env.QA_VISUAL_OUTPUT;
   if (output) {
     const { mkdir } = await import("node:fs/promises");
     await mkdir(output, { recursive: true });
   }
+
   for (const theme of ["light", "dark"]) {
     await page.addInitScript(
       (value) => localStorage.setItem("theme", value),
       theme
     );
+
     for (const width of [320, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of ["login", "signup"]) {
         const bootstrap = page.waitForResponse((response) =>
           response.url().endsWith("/api/v1/session")
         );
+
         await page.goto(`/${route}`);
         expect((await bootstrap).status()).toBe(200);
         await expect(
@@ -154,26 +173,32 @@ test("anonymous auth bootstrap clears stale cookies and exposes the configured p
             name: route === "login" ? "Welcome back" : "Start your 101 days",
           })
         ).toBeVisible();
+
         for (const provider of ["google", "discord"] as const) {
           const button = page.getByRole("button", {
             name: `Continue with ${provider === "google" ? "Google" : "Discord"}`,
           });
+
           await expect(button).toHaveCount(
             expected.providers[provider] ? 1 : 0
           );
+
           if (expected.providers[provider]) await expect(button).toBeVisible();
         }
+
         await expect(
           page.getByText(
             "The service is unavailable. Please try again shortly.",
             { exact: true }
           )
         ).toHaveCount(0);
+
         expect(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth
           )
         ).toBe(true);
+
         if (output) {
           const { join } = await import("node:path");
           await page.screenshot({
@@ -184,6 +209,7 @@ test("anonymous auth bootstrap clears stale cookies and exposes the configured p
       }
     }
   }
+
   expect(
     (await page.context().cookies()).filter((cookie) =>
       ["challenge_session", "challenge_csrf"].includes(cookie.name)
@@ -200,24 +226,30 @@ test("account menu, provider placeholders, devices, typed deletion and recovery"
     await expect(
       page.getByRole("heading", { name: "Keep showing up." })
     ).toBeVisible();
+
     await page.getByLabel("Open profile menu").click();
     await page.getByRole("menuitem", { name: "Account settings" }).click();
     await expect(
       page.getByRole("button", { name: "Link google" })
     ).toBeDisabled();
+
     await expect(
       page.getByRole("button", { name: "Link discord" })
     ).toBeDisabled();
+
     await expect(
       page.getByRole("heading", { name: "Recent sign-ins and devices" })
     ).toBeVisible();
+
     const deletion = page.getByRole("button", {
       name: "Schedule account deletion",
     });
+
     await expect(deletion).toBeDisabled();
     await page
       .getByLabel(`Type ${f.username} to confirm deletion`)
       .fill(f.username);
+
     await deletion.click();
     await page.getByLabel("Current password").fill(password);
     await page.getByRole("button", { name: "Confirm and continue" }).click();
@@ -228,6 +260,7 @@ test("account menu, provider placeholders, devices, typed deletion and recovery"
     await expect(
       page.getByRole("heading", { name: "Account deletion scheduled" })
     ).toBeVisible();
+
     await page.getByRole("button", { name: "Restore my account" }).click();
     await expect(
       page.getByRole("heading", { name: "Keep showing up." })
@@ -248,22 +281,27 @@ test("admin draft editor and participant template, reporting, pause, cancellatio
     await page
       .getByLabel("Season title", { exact: true })
       .fill("Browser season");
+
     await page.getByRole("button", { name: "Create draft season" }).click();
     await expect(page).toHaveURL(/\/admin\/seasons\/[a-f0-9-]+$/);
     const details = page.locator("form").filter({
       has: page.getByRole("button", { name: "Save season details" }),
     });
+
     await details
       .getByLabel("Description", { exact: true })
       .fill("Edited after draft creation");
+
     await details.getByRole("button", { name: "Save season details" }).click();
     await expect(page.getByRole("status")).toHaveText("Saved.");
     await page
       .getByText("Recommended plan and study sessions", { exact: true })
       .click();
+
     await expect(
       page.getByRole("heading", { name: "Milestones", exact: true })
     ).toBeVisible();
+
     await page.getByRole("button", { name: "Add recommended goal" }).click();
     await page.getByLabel("Goal title", { exact: true }).fill("Read a little");
     await page.getByRole("button", { name: "Save recommended plan" }).click();
@@ -272,20 +310,24 @@ test("admin draft editor and participant template, reporting, pause, cancellatio
     await expect(
       details.getByLabel("URL identifier", { exact: true })
     ).toHaveAttribute("readonly", "");
+
     await page.goto(`/seasons/${slug}`);
     await page.getByRole("button", { name: "Join", exact: true }).click();
     await expect(page).toHaveURL(/\/setup$/);
     await expect(page.getByLabel("Goal title", { exact: true })).toHaveValue(
       "Read a little"
     );
+
     await expect(
       page.getByRole("button", { name: "Pause", exact: true })
     ).toHaveCount(0);
+
     await expect(page.getByText("Previous attempts and logs")).toHaveCount(0);
     await page.getByRole("button", { name: "Remove", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Start my challenge" })
     ).toBeDisabled();
+
     await page.getByRole("button", { name: "Apply season plan" }).click();
     await page.getByRole("button", { name: "Start my challenge" }).click();
     await expect(page).toHaveURL(/\/challenge\//);
@@ -293,22 +335,27 @@ test("admin draft editor and participant template, reporting, pause, cancellatio
       .getByLabel("Your private report")
       .first()
       .fill("Fictional browser progress");
+
     await page.getByRole("button", { name: "Submit today’s report" }).click();
     await expect(
       page.getByText("Fictional browser progress", { exact: true })
     ).toBeVisible();
+
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Resume enrollment" })
     ).toBeVisible();
+
     await page.getByRole("button", { name: "Resume enrollment" }).click();
     await page.getByLabel(`Type ${slug} to confirm cancellation`).fill(slug);
     await page
       .getByRole("button", { name: "Cancel season", exact: true })
       .click();
+
     await expect(
       page.getByRole("button", { name: "Resume enrollment" })
     ).toHaveCount(0);
+
     await page.goto(`/seasons/${slug}`);
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page).toHaveURL(/\/setup$/);
@@ -327,6 +374,7 @@ test("signup mail verification and password recovery change pages and credential
 }) => {
   const username = `mail-${randomUUID().slice(0, 16)}`,
     email = `${username}@example.test`;
+
   const mailbox = process.env.QA_MAILPIT_URL ?? "http://127.0.0.1:8026";
   /** Read only this test's isolated Mailpit message, never a shared or external mailbox. */
   async function link(kind: string) {
@@ -339,16 +387,20 @@ test("signup mail verification and password recovery change pages and credential
           (m: { ID: string; To: { Address: string }[]; Subject: string }) =>
             m.To.some((to) => to.Address === email) && m.Subject.includes(kind)
         );
+
         messageId = message?.ID ?? "";
         return Boolean(messageId);
       })
       .toBe(true);
+
     const r = await request.get(`${mailbox}/api/v1/message/${messageId}`);
     const data = await r.json();
     const match = String(data.Text).match(/http:\/\/[^\s]+/);
     if (!match) throw new Error("Verification link missing");
+
     return match[0];
   }
+
   await page.goto("/signup");
   await page.getByLabel("Username", { exact: true }).fill(username);
   await page.getByLabel("Email address").fill(email);
@@ -356,6 +408,7 @@ test("signup mail verification and password recovery change pages and credential
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
+
   await expect(page).toHaveURL(/\/verify$/);
   await page.goto(await link("Verify"));
   await page.getByRole("button", { name: "Verify my email" }).click();
@@ -367,6 +420,7 @@ test("signup mail verification and password recovery change pages and credential
   await expect(
     page.getByRole("heading", { name: "Keep showing up." })
   ).toBeVisible();
+
   await page.getByLabel("Open profile menu").click();
   await page.getByRole("menuitem", { name: "Log out" }).click();
   await page.getByText("Forgot your password?").click();
@@ -377,12 +431,14 @@ test("signup mail verification and password recovery change pages and credential
   await page
     .getByLabel("New password", { exact: true })
     .fill(`${password} changed`);
+
   await page.getByRole("button", { name: "Save password" }).click();
   await expect(page).toHaveURL(/\/login\?reset=1$/);
   await page.getByLabel("Email address").fill(email);
   await page
     .getByLabel("Password", { exact: true })
     .fill(`${password} changed`);
+
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Keep showing up." })
@@ -400,9 +456,11 @@ test("avatar validation, notification inbox, tips preference and sticky navigati
       mimeType: "text/plain",
       buffer: Buffer.from("not an image"),
     });
+
     await expect(
       page.getByRole("alert").filter({ hasText: "JPG, PNG or WebP" })
     ).toContainText("JPG, PNG or WebP");
+
     await page.getByLabel("Profile picture").setInputFiles({
       name: "pixel.png",
       mimeType: "image/png",
@@ -411,12 +469,16 @@ test("avatar validation, notification inbox, tips preference and sticky navigati
         "base64"
       ),
     });
-    await expect(page.locator(".avatar img")).toHaveAttribute(
-      "src",
-      /^data:image\/webp;base64,/
-    );
+
+    await expect(
+      page.getByRole("button", { name: "Open profile menu" }).locator("img")
+    ).toHaveAttribute("src", /^data:image\/webp;base64,/);
+
     await page.getByRole("button", { name: "Remove picture" }).click();
-    await expect(page.locator(".avatar img")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Open profile menu" }).locator("img")
+    ).toHaveCount(0);
+
     const noticeId = randomUUID();
     await f.db.repository.transaction((tx) =>
       tx.insert("notifications", {
@@ -429,6 +491,7 @@ test("avatar validation, notification inbox, tips preference and sticky navigati
         dismissedAt: null,
       })
     );
+
     await page.goto("/notifications");
     await expect(page.getByText("Unread")).toBeVisible();
     await page.getByRole("button", { name: "Mark read" }).click();
@@ -442,12 +505,23 @@ test("avatar validation, notification inbox, tips preference and sticky navigati
     await page.goto("/account");
     await page.locator("h1").click();
     await page.evaluate(() => scrollTo(0, 500));
-    await expect(page.locator(".app-header")).toHaveClass(/nav-hidden/);
+    await expect(page.getByRole("banner")).toHaveAttribute(
+      "data-nav-hidden",
+      "true"
+    );
+
     await page.evaluate(() => scrollTo(0, 300));
-    await expect(page.locator(".app-header")).not.toHaveClass(/nav-hidden/);
+    await expect(page.getByRole("banner")).toHaveAttribute(
+      "data-nav-hidden",
+      "false"
+    );
+
     await page.getByLabel("Open profile menu").click();
     await page.evaluate(() => scrollTo(0, 650));
-    await expect(page.locator(".app-header")).not.toHaveClass(/nav-hidden/);
+    await expect(page.getByRole("banner")).toHaveAttribute(
+      "data-nav-hidden",
+      "false"
+    );
   } finally {
     await f.db.close();
   }
@@ -464,6 +538,7 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
         new Date(earlier.getTime() + 86400000),
         "Africa/Nairobi"
       );
+
     const oldTracker = createTracker(f.db.repository, { now: () => earlier });
     const season = await oldTracker.execute(
       f.id,
@@ -474,6 +549,7 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
       },
       randomUUID()
     );
+
     await oldTracker.execute(
       f.id,
       {
@@ -485,6 +561,7 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
       },
       randomUUID()
     );
+
     await oldTracker.execute(
       f.id,
       {
@@ -494,6 +571,7 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
       },
       randomUUID()
     );
+
     const enrollment = await f.tracker.execute(
       f.id,
       {
@@ -504,26 +582,32 @@ test("backdated participation exposes only eligible unoccupied dates and preserv
       },
       randomUUID()
     );
+
     await page.goto(`/challenge/${enrollment.resourceId}`);
     const form = page.locator("form").filter({
       has: page.getByRole("heading", { name: "Fill a skipped date" }),
     });
+
     await form.getByLabel("Reporting date").selectOption(start);
     await form
       .getByLabel("Your private report")
       .fill("Fictional backfilled report");
+
     await form.getByRole("button", { name: "Save backdated report" }).click();
     await expect(page.getByRole("status")).toHaveText("Saved.");
     await expect(
       form.getByLabel("Reporting date").locator(`option[value="${start}"]`)
     ).toHaveCount(0);
+
     const history = (await f.tracker.history(f.id)).find(
       (e) => e.id === enrollment.resourceId
     );
+
     expect(history?.attempts[0]?.reportingDays).toBe(1);
     await page
       .getByText("Skipped dates (not counted)", { exact: true })
       .click();
+
     await expect(
       page.getByText("Skipped dates (not counted)", { exact: true })
     ).toBeVisible();
@@ -545,9 +629,11 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
     if (/hydration|hydrating/i.test(message.text()))
       hydration.push(message.text());
   });
+
   await page.exposeFunction("recordCspViolation", (directive: string) =>
     violations.push(directive)
   );
+
   await page.addInitScript(() =>
     document.addEventListener("securitypolicyviolation", (event) => {
       void (
@@ -557,6 +643,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       ).recordCspViolation(event.violatedDirective);
     })
   );
+
   const f = await fixture(page, true);
   const slug = `visual-${randomUUID()}`;
   try {
@@ -565,6 +652,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       { command: "CreateSeason", title: "A steady practice", slug },
       randomUUID()
     );
+
     await f.tracker.execute(
       f.id,
       {
@@ -574,11 +662,13 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       },
       randomUUID()
     );
+
     const enrollment = await f.tracker.execute(
       f.id,
       { command: "Enroll", seasonId: season.resourceId },
       randomUUID()
     );
+
     await f.tracker.execute(
       f.id,
       {
@@ -589,6 +679,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       },
       randomUUID()
     );
+
     const routes = [
       "/",
       "/login",
@@ -611,13 +702,16 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       "/terms",
       "/fictional-missing-route",
     ];
+
     const output = process.env.QA_VISUAL_OUTPUT;
     if (output) await mkdir(output, { recursive: true });
+
     for (const theme of ["light", "dark"]) {
       await page.addInitScript(
         (value) => localStorage.setItem("theme", value),
         theme
       );
+
       for (const width of [320, 768, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         for (const [index, route] of routes.entries()) {
@@ -625,10 +719,12 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
           expect(response?.headers()["content-security-policy"]).toContain(
             "'nonce-"
           );
+
           await expect(page.locator("main h1")).toBeVisible();
           await expect(
             page.getByRole("status", { name: "Loading…" })
           ).toHaveCount(0);
+
           // Wait for the client route controller rather than examining the skeleton.
           await expect(page.locator("main [aria-busy=true]")).toHaveCount(0);
           expect(
@@ -637,9 +733,11 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
             ),
             `${theme} ${width} ${route}`
           ).toBe(true);
+
           const scan = await new AxeBuilder({ page })
             .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
             .analyze();
+
           expect(
             scan.violations.map((v) => ({
               id: v.id,
@@ -647,6 +745,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
             })),
             `${theme} ${width} ${route}`
           ).toEqual([]);
+
           if (output)
             await page.screenshot({
               path: join(output, `${theme}-${width}-${index}.png`),
@@ -655,27 +754,32 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
         }
       }
     }
+
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto(`/challenge/${enrollment.resourceId}`);
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
+
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth
       )
     ).toBe(true);
+
     await page.emulateMedia({ reducedMotion: "reduce" });
     expect(
       await page
-        .locator(".app-header")
+        .getByRole("banner")
         .evaluate((el) => getComputedStyle(el).transitionDuration)
     ).toBe("0s");
+
     await page.goto("/home");
     await page.keyboard.press("Tab");
     await expect(
       page.getByRole("link", { name: "Skip to content" })
     ).toBeFocused();
+
     await page.keyboard.press("Enter");
     await page.getByLabel("Open profile menu").click();
     await page.keyboard.press("Escape");

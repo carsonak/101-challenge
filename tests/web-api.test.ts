@@ -15,6 +15,7 @@ import { createProviders } from "../apps/web/server/providers.js";
 const url = process.env.TRACKER_TEST_DATABASE_URL;
 if (url && !/_(test|ci)$/.test(new URL(url).pathname))
   throw new Error("Disposable test database required");
+
 /** Require a fictional fixture and preserve its inferred type. */
 function required<T>(value: T | null | undefined): T {
   assert.ok(value != null);
@@ -33,6 +34,7 @@ test(
         mail.push(m);
       },
     });
+
     const tracker = createTracker(db.repository);
     const config = parseServerConfig({ APP_ORIGIN: "http://localhost:3000" });
     const api = createWebApi({
@@ -41,8 +43,10 @@ test(
       tracker,
       providers: createProviders(config),
     });
+
     let cookies = "",
       csrf = "";
+
     const request = async (
       path: string,
       body?: unknown,
@@ -61,21 +65,26 @@ test(
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         })
       );
+
       return response;
     };
+
     try {
       const stale = await request("/api/v1/session", undefined, {
         cookie: `challenge_session=${"a".repeat(64)}; challenge_csrf=${"b".repeat(64)}`,
       });
+
       assert.equal(stale.status, 200);
       assert.deepEqual(await stale.json(), {
         account: null,
         csrf: null,
         providers: { google: false, discord: false },
       });
+
       assert.equal(stale.headers.getSetCookie().length, 2);
       const email = `browser-${randomUUID()}@example.invalid`,
         password = "fictional browser password";
+
       assert.equal(
         (
           await request(
@@ -91,6 +100,7 @@ test(
         ).status,
         403
       );
+
       assert.equal(mail.length, 0);
       assert.equal(
         (
@@ -103,6 +113,7 @@ test(
         ).status,
         200
       );
+
       const proof = required(mail.at(-1));
       assert.equal(
         (
@@ -113,11 +124,13 @@ test(
         ).status,
         200
       );
+
       const login = await request("/api/v1/auth", {
         action: "login",
         email,
         password,
       });
+
       assert.deepEqual(await login.json(), { accepted: true });
       const headers = login.headers.getSetCookie();
       assert.ok(headers[0].includes("HttpOnly"));
@@ -127,6 +140,7 @@ test(
           .find((h) => h.startsWith("challenge_csrf="))
           ?.split(";")[0]
           .split("=")[1] ?? "";
+
       const context = await (await request("/api/v1/session")).json();
       const owner = context.account.id;
       assert.equal(JSON.stringify(context).includes(password), false);
@@ -140,8 +154,10 @@ test(
         },
         randomUUID()
       );
+
       const rows = await tracker.seasons(admin, true),
         draft = required(rows.find((s) => s.id === season.resourceId));
+
       await tracker.execute(
         admin,
         {
@@ -151,6 +167,7 @@ test(
         },
         randomUUID()
       );
+
       const enrollment = { command: "Enroll", seasonId: draft.id };
       assert.equal(
         (
@@ -160,15 +177,18 @@ test(
         ).status,
         403
       );
+
       assert.equal(
         (await request("/api/v1/command", { ...enrollment, userId: admin }))
           .status,
         400
       );
+
       const key = randomUUID(),
         first = await request("/api/v1/command", enrollment, {
           "idempotency-key": key,
         });
+
       assert.equal(first.status, 200);
       const ref = await first.json();
       assert.deepEqual(
@@ -179,23 +199,27 @@ test(
         ).json(),
         { ...ref, replayed: true }
       );
+
       assert.equal((await tracker.history(owner)).length, 1);
       assert.equal((await request("/api/v1/admin/stats")).status, 403);
       const exported = await request("/api/v1/export");
       assert.ok(
         exported.headers.get("content-disposition")?.includes("attachment")
       );
+
       const text = await exported.text();
       assert.equal(
         /seed|passwordHash|tokenHash|contentDigest/.test(text),
         false
       );
+
       assert.equal((await request("/api/v1/seasons?limit=1")).status, 200);
       assert.equal((await request("/api/v1/seasons?limit=101")).status, 400);
       assert.equal(
         (await request("/api/v1/history?cursor=invalid")).status,
         400
       );
+
       assert.equal((await request("/api/v1/command", null)).status, 400);
     } finally {
       await db.close();

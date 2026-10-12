@@ -13,25 +13,31 @@ export function createThrottle(now: () => number = Date.now, maximum = 10000) {
       if (instant >= nextSweep || entries.size >= maximum) {
         for (const [key, value] of entries)
           if (value.expires <= instant) entries.delete(key);
+
         nextSweep = instant + 60000;
       }
+
       const key = createHmac("sha256", salt)
         .update(`${action}\n${identity}`)
         .digest("hex");
+
       const old = entries.get(key);
       if (!old && entries.size >= maximum)
         throw Object.assign(new DomainError("RATE_LIMITED"), {
           retryAfter: 60,
         });
+
       const value =
         old && old.expires > instant
           ? old
           : { count: 0, expires: instant + windowMs };
+
       entries.set(key, value);
       if (value.count >= limit)
         throw Object.assign(new DomainError("RATE_LIMITED"), {
           retryAfter: Math.max(1, Math.ceil((value.expires - instant) / 1000)),
         });
+
       value.count++;
     },
     /** Reserve a cooldown without exposing whether an address is known. */
@@ -42,6 +48,7 @@ export function createThrottle(now: () => number = Date.now, maximum = 10000) {
       } catch (error) {
         if (error instanceof DomainError && error.code === "RATE_LIMITED")
           return false;
+
         throw error;
       }
     },

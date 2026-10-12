@@ -1,0 +1,64 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  enrollmentId:
+    type: string
+    format: uuid
+  status:
+    type: string
+    enum:
+      - active
+      - paused
+      - cancelled
+      - restarted
+      - completed
+  mode:
+    type: string
+    enum:
+      - qualifying
+      - progress_only
+  startedAt:
+    type: string
+    format: date-time
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time
+  reportingDays:
+    type: integer
+    minimum: 0
+  currentStreak:
+    type: integer
+    minimum: 0
+  longestStreak:
+    type: integer
+    minimum: 0
+  perkTier:
+    type: integer
+    minimum: 0
+  selectedPerks:
+    type: array
+    items:
+      type: string
+  rerollCredits:
+    type: integer
+    minimum: 0
+required:
+  - id
+  - enrollmentId
+  - status
+  - mode
+  - startedAt
+  - createdAt
+  - updatedAt
+  - reportingDays
+  - currentStreak
+  - longestStreak
+  - perkTier
+  - selectedPerks
+  - rerollCredits
+additionalProperties: false

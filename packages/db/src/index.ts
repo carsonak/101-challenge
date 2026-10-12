@@ -19,6 +19,7 @@ export function createDatabase(connectionString: string) {
     idleTimeoutMillis: 10000,
     statement_timeout: 2000,
   });
+
   // An idle connection error must not crash a process or print credentials.
   pool.on("error", () => console.error("Database connection unavailable"));
   const db = drizzle(pool);

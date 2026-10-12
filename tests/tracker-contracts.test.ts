@@ -28,6 +28,7 @@ const setup = {
     },
   ],
 };
+
 /** Fictional truthful report with no goal activity. */
 const report = {
   command: "SubmitReport",
@@ -36,11 +37,13 @@ const report = {
   body: "No practice today.",
   goalValues: [],
 };
+
 test("setup supports custom goals and validates milestone references", () => {
   assert.equal(
     startAttemptSchema.parse(setup).goals[0]?.title,
     "Practice drawing"
   );
+
   for (const override of [
     { goals: [] },
     { timezone: "invalid" },
@@ -61,11 +64,14 @@ test("setup supports custom goals and validates milestone references", () => {
     );
   }
 });
+
 test("decimal precision is preserved without floating point conversion", () => {
   for (const value of ["0", "0.000001", "123456789012.123456"])
     assert.equal(decimalValueSchema.parse(value), value);
+
   for (const value of ["-1", "1e3", "01", "1.0000001", "1234567890123.123456"])
     assert.equal(decimalValueSchema.safeParse(value).success, false);
+
   assert.equal(
     startAttemptSchema.safeParse({
       ...setup,
@@ -74,6 +80,7 @@ test("decimal precision is preserved without floating point conversion", () => {
     false
   );
 });
+
 test("commands reject authoritative fields and duplicate revision values", () => {
   assert.equal(submitReportSchema.parse(report).body, report.body);
   for (const field of [
@@ -88,11 +95,13 @@ test("commands reject authoritative fields and duplicate revision values", () =>
       submitReportSchema.safeParse({ ...report, [field]: id }).success,
       false
     );
+
     assert.equal(
       startAttemptSchema.safeParse({ ...setup, [field]: id }).success,
       false
     );
   }
+
   assert.equal(
     submitReportSchema.safeParse({
       ...report,
@@ -103,11 +112,13 @@ test("commands reject authoritative fields and duplicate revision values", () =>
     }).success,
     false
   );
+
   assert.equal(
     submitReportSchema.safeParse({ ...report, body: "  " }).success,
     false
   );
 });
+
 test("metadata projections reject private fields rather than serializing them", () => {
   const progress = {
     enrollmentId: id,
@@ -121,6 +132,7 @@ test("metadata projections reject private fields rather than serializing them", 
     rerollCredits: 1,
     version: 101,
   };
+
   assert.equal(progressSchema.safeParse(progress).success, true);
   for (const field of ["body", "baseSeed", "goals", "participantSeed"])
     assert.equal(
@@ -132,6 +144,7 @@ test("metadata projections reject private fields rather than serializing them", 
 test("correction windows and confirmed restarts have bounded payloads", async () => {
   const { trackerCommandSchema } =
     await import("../packages/contracts/src/index.js");
+
   assert.equal(
     trackerCommandSchema.safeParse({
       command: "IssueCorrectionGrant",
@@ -141,6 +154,7 @@ test("correction windows and confirmed restarts have bounded payloads", async ()
     }).success,
     false
   );
+
   assert.equal(
     trackerCommandSchema.safeParse({
       ...setup,
@@ -151,6 +165,7 @@ test("correction windows and confirmed restarts have bounded payloads", async ()
     }).success,
     true
   );
+
   assert.equal(
     trackerCommandSchema.safeParse({
       ...setup,
@@ -160,6 +175,7 @@ test("correction windows and confirmed restarts have bounded payloads", async ()
     }).success,
     false
   );
+
   assert.equal(
     trackerCommandSchema.safeParse({ command: "Reroll", attemptId: id })
       .success,

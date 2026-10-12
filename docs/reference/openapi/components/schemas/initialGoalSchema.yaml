@@ -1,0 +1,27 @@
+type: object
+properties:
+  title:
+    type: string
+    minLength: 1
+    maxLength: 200
+  description:
+    type: string
+    maxLength: 4000
+  kind:
+    type: string
+    enum:
+      - qualitative
+      - count
+      - duration
+      - quantity
+  unit:
+    type: string
+    minLength: 1
+    maxLength: 40
+  target:
+    type: string
+    pattern: ^(0|[1-9]\d*)(\.\d{1,6})?$
+required:
+  - title
+  - kind
+additionalProperties: false

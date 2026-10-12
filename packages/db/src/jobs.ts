@@ -21,6 +21,7 @@ export function createJobStore(
     connectionTimeoutMillis: 3000,
     statement_timeout: 10000,
   });
+
   pool.on("error", () => console.error("Worker database unavailable"));
   return {
     /** Require every tracker migration before handlers or readiness are enabled. */
@@ -33,8 +34,10 @@ export function createJobStore(
         await pool.query(`WITH pending AS (SELECT id FROM outbox WHERE "publishedAt" IS NULL AND deliveries<8 AND ("leasedUntil" IS NULL OR "leasedUntil"<=now()) ORDER BY "occurredAt",id FOR UPDATE SKIP LOCKED LIMIT 20)
         UPDATE outbox o SET "leasedUntil"=now()+interval '1 minute',deliveries=o.deliveries+1 FROM pending p WHERE o.id=p.id RETURNING o.*`)
       ).rows;
+
       let delivered = 0,
         failed = 0;
+
       for (const row of rows) {
         const event = trackerEventSchema.parse({
           eventId: row.id,
@@ -44,27 +47,32 @@ export function createJobStore(
           sourceVersion: row.sourceVersion,
           occurredAt: row.occurredAt.toISOString(),
         });
+
         try {
           await publish(event);
           await pool.query(
             'UPDATE outbox SET "publishedAt"=now(),"leasedUntil"=NULL WHERE id=$1 AND "publishedAt" IS NULL',
             [row.id]
           );
+
           delivered++;
         } catch {
           await pool.query(
             `UPDATE outbox SET "lastFailureAt"=now(),"leasedUntil"=now()+make_interval(secs=>least(3600,5*power(2,deliveries)::int)) WHERE id=$1`,
             [row.id]
           );
+
           failed++;
         }
       }
+
       return { delivered, failed };
     },
     /** Reload current attempt state transactionally; stale, erased and duplicate deliveries have no logical effect. */
     async process(input: unknown) {
       const event = trackerEventSchema.parse(input),
         client = await pool.connect();
+
       try {
         await client.query("BEGIN");
         // Take the account lock before attempt/outbox, matching command and erasure order.
@@ -73,11 +81,13 @@ export function createJobStore(
             'SELECT u.id FROM users u JOIN enrollments e ON e."userId"=u.id JOIN attempts a ON a."enrollmentId"=e.id WHERE a.id=$1 FOR UPDATE OF u',
             [event.aggregateId]
           );
+
         const persisted = (
           await client.query("SELECT * FROM outbox WHERE id=$1 FOR UPDATE", [
             event.eventId,
           ])
         ).rows[0];
+
         if (
           !persisted ||
           persisted.aggregateId !== event.aggregateId ||
@@ -87,14 +97,17 @@ export function createJobStore(
           await client.query("COMMIT");
           return "ignored";
         }
+
         const inserted = await client.query(
           "INSERT INTO event_receipts VALUES($1,now()) ON CONFLICT DO NOTHING RETURNING id",
           [event.eventId]
         );
+
         if (!inserted.rowCount) {
           await client.query("COMMIT");
           return "duplicate";
         }
+
         if (event.type === "source_changed") {
           const attempt = (
             await client.query(
@@ -102,6 +115,7 @@ export function createJobStore(
               [event.aggregateId]
             )
           ).rows[0];
+
           if (attempt && attempt.sourceVersion === event.sourceVersion) {
             const count = (
               await client.query(
@@ -109,12 +123,14 @@ export function createJobStore(
                 [event.aggregateId]
               )
             ).rows[0].count;
+
             await client.query(
               `INSERT INTO source_projections VALUES($1,$2,$3,$4,now()) ON CONFLICT("attemptId") DO UPDATE SET "sourceVersion"=EXCLUDED."sourceVersion",state=EXCLUDED.state,"reportingDays"=EXCLUDED."reportingDays","checkedAt"=now() WHERE source_projections."sourceVersion"<=EXCLUDED."sourceVersion"`,
               [attempt.id, attempt.sourceVersion, attempt.status, count]
             );
           }
         }
+
         await client.query("COMMIT");
         return "processed";
       } catch (error) {
@@ -139,14 +155,17 @@ export function createJobStore(
           await client.query(`DELETE FROM ${table} WHERE "expiresAt"<=$1`, [
             now(),
           ]);
+
         await client.query(
           `DELETE FROM grants WHERE "expiresAt"<$1::timestamptz-interval '30 days'`,
           [now()]
         );
+
         await client.query(
           `DELETE FROM outbox WHERE "publishedAt"<$1::timestamptz-interval '30 days'`,
           [now()]
         );
+
         await client.query(
           `DELETE FROM notifications WHERE
           (("readAt" IS NOT NULL OR "dismissedAt" IS NOT NULL) AND LEAST("readAt","dismissedAt")<$1::timestamptz-make_interval(days=>$2))
@@ -157,6 +176,7 @@ export function createJobStore(
             notificationRetention.unreadDays,
           ]
         );
+
         await client.query("COMMIT");
       } catch (error) {
         await client.query("ROLLBACK");

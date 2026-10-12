@@ -1,0 +1,12 @@
+get:
+  operationId: webHealth
+  summary: Web health
+  security: []
+  description: Liveness without external dependency checks.
+  responses:
+    "200":
+      description: Service available.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/WebHealth.yaml

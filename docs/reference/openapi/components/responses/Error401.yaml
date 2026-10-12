@@ -1,0 +1,5 @@
+description: "UNAUTHENTICATED: missing, expired or revoked proof."
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/Error.yaml

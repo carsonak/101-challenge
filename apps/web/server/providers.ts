@@ -15,6 +15,7 @@ import type { parseServerConfig } from "@challenge/contracts";
 /** Accept only credential-free HTTPS image URLs on provider-owned hosts. */
 export function googleAvatar(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2048) return;
+
   try {
     const url = new URL(value);
     if (
@@ -27,6 +28,7 @@ export function googleAvatar(value: unknown): string | undefined {
       return url.toString();
   } catch {}
 }
+
 /** Validated server configuration; all credentials remain inside this adapter. */
 type Config = ReturnType<typeof parseServerConfig>;
 /** Provider transports with injectable HTTP/JWKS for deterministic local tests. */
@@ -41,26 +43,33 @@ export function createProviders(
       [customFetch]: http,
       timeoutDuration: 5000,
     });
+
   /** Resolve only a fully enabled provider and its exact allowlisted callback. */
   function settings(provider: "google" | "discord") {
     const enabled =
       provider === "google" ? config.googleEnabled : config.discordEnabled;
+
     const clientId =
       provider === "google"
         ? config.GOOGLE_CLIENT_ID
         : config.DISCORD_CLIENT_ID;
+
     const clientSecret =
       provider === "google"
         ? config.GOOGLE_CLIENT_SECRET
         : config.DISCORD_CLIENT_SECRET;
+
     const redirect =
       provider === "google"
         ? config.GOOGLE_REDIRECT_URI
         : config.DISCORD_REDIRECT_URI;
+
     if (!enabled || !clientId || !clientSecret || !redirect)
       throw new DomainError("VALIDATION");
+
     return { clientId, clientSecret, redirect };
   }
+
   return {
     /** Build authorization with browser-bound state; Google also uses PKCE and OIDC nonce. */
     authorization(
@@ -73,6 +82,7 @@ export function createProviders(
           ? "https://accounts.google.com/o/oauth2/v2/auth"
           : "https://discord.com/oauth2/authorize"
       );
+
       url.search = new URLSearchParams({
         client_id: s.clientId,
         redirect_uri: s.redirect,
@@ -80,14 +90,17 @@ export function createProviders(
         scope: provider === "google" ? "openid profile" : "identify",
         state: state.state,
       }).toString();
+
       if (provider === "google") {
         url.searchParams.set("nonce", state.nonce);
         url.searchParams.set(
           "code_challenge",
           createHash("sha256").update(state.verifier).digest("base64url")
         );
+
         url.searchParams.set("code_challenge_method", "S256");
       }
+
       return url.toString();
     },
     /** Exchange a code and validate stable subject proof; ignore all provider email claims. */
@@ -101,8 +114,10 @@ export function createProviders(
           grant_type: "authorization_code",
           code,
         });
+
         if (state.provider === "google")
           fields.set("code_verifier", state.verifier);
+
         const response = await http(
           state.provider === "google"
             ? "https://oauth2.googleapis.com/token"
@@ -114,15 +129,19 @@ export function createProviders(
             signal: AbortSignal.timeout(5000),
           }
         );
+
         if (!response.ok) throw new Error("Provider unavailable");
+
         const tokens = (await response.json()) as {
           id_token?: unknown;
           access_token?: unknown;
           token_type?: unknown;
         };
+
         if (state.provider === "google") {
           if (typeof tokens.id_token !== "string")
             throw new Error("Invalid proof");
+
           const { payload } = await jwtVerify(tokens.id_token, jwks, {
             issuer: ["https://accounts.google.com", "accounts.google.com"],
             audience: s.clientId,
@@ -131,12 +150,14 @@ export function createProviders(
             clockTolerance: 30,
             requiredClaims: ["exp", "iat", "sub", "nonce", "aud", "iss"],
           });
+
           if (
             payload.nonce !== state.nonce ||
             typeof payload.sub !== "string" ||
             !payload.sub
           )
             throw new Error("Invalid proof");
+
           return {
             provider: "google",
             subject: payload.sub,
@@ -145,23 +166,29 @@ export function createProviders(
               : {}),
           };
         }
+
         if (
           typeof tokens.access_token !== "string" ||
           tokens.token_type !== "Bearer"
         )
           throw new Error("Invalid proof");
+
         const profile = await http("https://discord.com/api/v10/users/@me", {
           headers: { authorization: `Bearer ${tokens.access_token}` },
           signal: AbortSignal.timeout(5000),
         });
+
         if (!profile.ok) throw new Error("Invalid proof");
+
         const identity = (await profile.json()) as {
           id?: unknown;
           username?: unknown;
           avatar?: unknown;
         };
+
         if (typeof identity.id !== "string" || !/^\d{1,30}$/.test(identity.id))
           throw new Error("Invalid proof");
+
         return {
           provider: "discord",
           subject: identity.id,

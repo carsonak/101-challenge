@@ -1,0 +1,119 @@
+/* Establish the cascade even when route modules load before global styles. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    transition: transform 0.15s ease;
+  }
+  .nav-hidden {
+    transform: translateY(-100%);
+  }
+  .app-header nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.2rem;
+    width: min(100% - 3rem, 80rem);
+    padding-block: 0.8rem;
+    margin: auto;
+  }
+  .app-header :where(nav > a) {
+    font-size: 1rem;
+    text-decoration: none;
+    padding-block: 0.5rem;
+  }
+  .app-header .brand {
+    font-family: var(--font-display), serif;
+    font-size: 1.8rem;
+    color: var(--text);
+    letter-spacing: -0.04em;
+  }
+  .brand span {
+    font-family: var(--font-body), sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .nav-end {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-left: auto;
+  }
+  .nav-end select {
+    width: auto;
+    font-size: 1rem;
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    color: var(--text);
+    background: var(--surface-2);
+    font-size: 0.9rem;
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .profile-trigger {
+    padding: 0.15rem;
+    margin: 0;
+    background: none;
+    border-color: var(--control-line);
+    border-radius: 50%;
+  }
+  .menu {
+    min-width: 14rem;
+    z-index: 50;
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    box-shadow: 0 8px 30px #0002;
+  }
+  .menu a,
+  .menu [role="menuitem"] {
+    padding: 0.65rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+  }
+  .menu [data-highlighted] {
+    outline: 2px solid var(--lake);
+    background: var(--surface-2);
+  }
+  .menu strong {
+    padding: 0.5rem 0.65rem;
+  }
+}
+@media (max-width: 40rem) {
+  .app-header nav {
+    width: calc(100% - 2rem);
+    gap: 0.5rem 0.8rem;
+  }
+  .nav-end {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .brand span {
+    display: none;
+  }
+}
+.menu a,
+.menu [role="menuitem"] {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+}

@@ -1,0 +1,23 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  attemptId:
+    type: string
+    format: uuid
+  archived:
+    type: boolean
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time
+required:
+  - id
+  - attemptId
+  - archived
+  - createdAt
+  - updatedAt
+additionalProperties: false

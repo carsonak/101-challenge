@@ -1,0 +1,37 @@
+get:
+  operationId: getHistory
+  summary: getHistory
+  description: Owner-only projection.
+  security:
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/HistoryPage.yaml
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    - name: cursor
+      in: query
+      schema:
+        type: string
+        maxLength: 1000
+      description: >-
+        Opaque cursor scoped to this collection; omit on the first page. Other
+        query parameters are rejected.

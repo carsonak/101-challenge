@@ -1,6 +1,6 @@
 # Browser and guild adapters
 
-See the [OpenAPI specification](../../docs/reference/openapi.json) and
+See the [OpenAPI specification](../../docs/reference/openapi/openapi.yaml) and
 [reference guide](../../docs/reference/README.md) for HTTP requests, responses,
 authentication, command payloads and endpoint coverage.
 

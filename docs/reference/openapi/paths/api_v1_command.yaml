@@ -1,0 +1,61 @@
+post:
+  operationId: executeTrackerCommand
+  summary: executeTrackerCommand
+  description: >-
+    Payload limit: 2 MiB. Identity, reporting date for SubmitReport, timestamps,
+    mode and seeds are server-owned. Ownership and optimistic versions are
+    checked by core. Administrator commands require admin access;
+    IssueCorrectionGrant and RevokeCorrectionGrant additionally require
+    authentication within ten minutes. Replays reauthorize and reload the
+    resource; reuse the key only for the same logical command.
+  security:
+    - sessionCookie: []
+      csrfHeader: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/commandResultSchema.yaml
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "404":
+      $ref: ../components/responses/Error404.yaml
+    "409":
+      $ref: ../components/responses/Error409.yaml
+    "429":
+      $ref: ../components/responses/Error429.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/TrackerCommand.yaml
+  parameters:
+    - name: Origin
+      in: header
+      required: true
+      description: Must exactly match configured APP_ORIGIN.
+      schema:
+        type: string
+    - name: x-csrf-token
+      in: header
+      required: true
+      description: >-
+        CSRF proof associated with the session, available through
+        /api/v1/session or challenge_csrf cookie.
+      schema:
+        type: string
+    - name: idempotency-key
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: ^[-\w:]{1,200}$

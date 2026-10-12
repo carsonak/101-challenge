@@ -1,4 +1,6 @@
 "use client";
+import screensStyles from "./../styles/screens.module.css";
+import uiStyles from "./../styles/ui.module.css";
 
 import { useEffect, useState, useCallback } from "react";
 import { errorMessage } from "@challenge/contracts";
@@ -24,19 +26,24 @@ export default function AuthScreen({
       setMessage(errorMessage("oauth"));
       history.replaceState(null, "", window.location.pathname);
     }
+
     if (view === "login" && (query.has("verify") || query.has("recover"))) {
       const kind = query.has("verify") ? "verify" : "reset";
       window.location.replace(
         `/${kind}?token=${encodeURIComponent(query.get(kind === "verify" ? "verify" : "recover") ?? "")}`
       );
+
       return;
     }
+
     setToken(query.get("token") ?? query.get("recoveryEmail") ?? "");
     setRecoveryEmail(query.has("recoveryEmail"));
     if (query.has("verified"))
       setMessage("Email verified. You can now log in.");
+
     if (query.has("reset"))
       setMessage("Password updated. Log in with your new password.");
+
     void fetch("/api/v1/session", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
@@ -44,6 +51,7 @@ export default function AuthScreen({
       })
       .catch(() => {});
   }, [view]);
+
   async function submit(data: FormData) {
     setBusy(true);
     setMessage("");
@@ -63,14 +71,17 @@ export default function AuthScreen({
                 token,
               }
             : { action: "reset", token, password: data.get("password") };
+
     try {
       const r = await fetch("/api/v1/auth", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (!r.ok)
         throw new Error("Please check your details or request a new link.");
+
       setError(false);
       if (view === "login") window.location.assign("/home");
       else if (view === "signup") window.location.assign("/verify");
@@ -90,6 +101,7 @@ export default function AuthScreen({
       setBusy(false);
     }
   }
+
   async function oauth(provider: "google" | "discord") {
     setBusy(true);
     try {
@@ -98,7 +110,9 @@ export default function AuthScreen({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ provider, link: false }),
       });
+
       if (!r.ok) throw new Error();
+
       const data = await r.json();
       window.location.assign(data.url);
     } catch {
@@ -107,6 +121,7 @@ export default function AuthScreen({
       setBusy(false);
     }
   }
+
   const titles = {
     login: "Welcome back",
     signup: "Start your 101 days",
@@ -114,13 +129,14 @@ export default function AuthScreen({
     recover: "Recover your password",
     reset: "Choose a new password",
   };
+
   return (
-    <main className="auth-page">
-      <p className="eyebrow">Small steps. Lasting progress.</p>
+    <main className={screensStyles["auth-page"]}>
+      <p className={uiStyles.eyebrow}>Small steps. Lasting progress.</p>
       <h1>{titles[view]}</h1>
       <Toast message={message} error={error} dismiss={dismiss} />
       {view === "verify" && !token ? (
-        <section className="card">
+        <section className={uiStyles.card}>
           <p>
             Check your email and follow the verification link to finish creating
             your account.
@@ -128,13 +144,13 @@ export default function AuthScreen({
         </section>
       ) : (
         <form
-          className="card"
+          className={uiStyles.card}
           onSubmit={(e) => {
             e.preventDefault();
             void submit(new FormData(e.currentTarget));
           }}
         >
-          <fieldset className="screen" disabled={busy}>
+          <fieldset className={"screen"} disabled={busy}>
             {view === "signup" && (
               <Field label="Username">
                 <input
@@ -171,7 +187,7 @@ export default function AuthScreen({
                 />
               </Field>
             )}
-            <button type="submit">
+            <button type="submit" className={uiStyles.button}>
               {busy
                 ? "Please wait…"
                 : {
@@ -193,7 +209,7 @@ export default function AuthScreen({
                 <button
                   key={provider}
                   type="button"
-                  className="secondary"
+                  className={`${uiStyles.button} ${uiStyles.secondary}`}
                   disabled={busy}
                   onClick={() => void oauth(provider)}
                 >

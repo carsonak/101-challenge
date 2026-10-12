@@ -13,17 +13,21 @@ test("migration registry exactly matches ordered files and gates readiness", asy
   )
     .filter((f) => f.endsWith(".sql"))
     .sort();
+
   assert.deepEqual(
     trackerMigrations.map(([, file]) => file),
     files
   );
+
   assert.equal(
     new Set(trackerMigrations.map(([version]) => version)).size,
     files.length
   );
+
   await requireMigrations({
     query: async () => ({ rowCount: files.length }),
   } as never);
+
   await assert.rejects(
     requireMigrations({
       query: async () => ({ rowCount: files.length - 1 }),
@@ -37,6 +41,7 @@ test("Markdown file references distinguish links, definitions and code", async (
   const { markdownLinks } = await import(
     "../scripts/markdown-links.mjs" as string
   );
+
   assert.deepEqual(markdownLinks("[broken.md]").malformed, ["broken.md"]);
   assert.deepEqual(
     markdownLinks(
@@ -58,6 +63,7 @@ test("test-runner enumerates named failures and returns a nonzero exit locally a
       file,
       'import test from "node:test"; import assert from "node:assert/strict"; test("intentional sentinel failure", () => assert.fail("sentinel"));'
     );
+
     const childEnvironment = { ...process.env };
     delete childEnvironment.NODE_TEST_CONTEXT;
     const result = spawnSync(
@@ -65,6 +71,7 @@ test("test-runner enumerates named failures and returns a nonzero exit locally a
       ["--test", "--test-isolation=none", file],
       { encoding: "utf8", env: childEnvironment }
     );
+
     assert.equal(result.status, 1);
     assert.match(result.stdout + result.stderr, /intentional sentinel failure/);
     assert.match(result.stdout + result.stderr, /fail 1/);
@@ -83,18 +90,22 @@ test("action buckets are independent, storage is bounded, and cooldown expiry us
     code: "RATE_LIMITED",
     retryAfter: 1,
   });
+
   assert.throws(() => limiter.take("login", "different", 1, 1000), {
     code: "RATE_LIMITED",
   });
+
   instant = 1000;
   assert.equal(
     limiter.allow("verification", "normalized@example.test", 1000),
     true
   );
+
   assert.equal(
     limiter.allow("verification", "normalized@example.test", 1000),
     false
   );
+
   instant = 2000;
   assert.equal(
     limiter.allow("verification", "normalized@example.test", 1000),
@@ -108,15 +119,18 @@ test("hash capacity rejects saturation and releases slots after errors without o
   let release: (() => void) | undefined;
   let active = 0,
     maximum = 0;
+
   const first = capacity.run(async () => {
     active++;
     maximum = Math.max(maximum, active);
     await new Promise<void>((resolve) => {
       release = resolve;
     });
+
     active--;
     throw new Error("fixture");
   });
+
   const firstFailure = assert.rejects(first, /fixture/);
   const second = capacity.run(async () => {
     active++;
@@ -124,10 +138,12 @@ test("hash capacity rejects saturation and releases slots after errors without o
     active--;
     return "released";
   });
+
   await assert.rejects(
     capacity.run(async () => "overflow"),
     { code: "RATE_LIMITED" }
   );
+
   assert.ok(release);
   release();
   await firstFailure;
@@ -139,9 +155,11 @@ test("hash capacity rejects saturation and releases slots after errors without o
 test("Discord payload limits reject oversized fields and deadline timeouts never mutate", async () => {
   const { createDiscordAdapter, validateDiscordPayload } =
     await import("../apps/web/server/discord.js");
+
   assert.throws(() =>
     validateDiscordPayload({ type: 4, data: { content: "x".repeat(2001) } })
   );
+
   assert.throws(() =>
     validateDiscordPayload({
       type: 9,
@@ -152,10 +170,12 @@ test("Discord payload limits reject oversized fields and deadline timeouts never
       },
     })
   );
+
   const { generateKeyPairSync, sign } = await import("node:crypto");
   const keys = generateKeyPairSync("ed25519");
   let mutations = 0,
     scheduled = 0;
+
   const deps = {
     publicKey: keys.publicKey
       .export({ format: "der", type: "spki" })
@@ -180,9 +200,11 @@ test("Discord payload limits reject oversized fields and deadline timeouts never
     },
     deliver: async () => {},
   };
+
   const adapter = createDiscordAdapter(
     deps as unknown as Parameters<typeof createDiscordAdapter>[0]
   );
+
   const body = JSON.stringify({
     type: 2,
     id: "1",
@@ -192,6 +214,7 @@ test("Discord payload limits reject oversized fields and deadline timeouts never
     member: { user: { id: "4" } },
     data: { name: "report" },
   });
+
   const timestamp = String(Math.floor(Date.now() / 1000));
   const before = performance.now();
   const response = await adapter.handle(
@@ -208,6 +231,7 @@ test("Discord payload limits reject oversized fields and deadline timeouts never
       body,
     })
   );
+
   assert.ok(performance.now() - before < 2150);
   assert.match((await response.json()).data.content, /taking too long/);
   await new Promise((resolve) => setTimeout(resolve, 300));
@@ -219,6 +243,7 @@ test("OAuth failure redirects require bound linking state and never reflect prov
   const { createWebApi } = await import("../apps/web/server/api.js");
   const { parseServerConfig } =
     await import("../packages/contracts/src/index.js");
+
   const config = parseServerConfig({ APP_ORIGIN: "http://localhost:3000" });
   for (const mode of ["invalid", "login", "link"]) {
     const api = createWebApi({
@@ -226,27 +251,32 @@ test("OAuth failure redirects require bound linking state and never reflect prov
       auth: {
         oauthState: async () => {
           if (mode === "invalid") throw new Error("private provider error");
+
           return { userId: mode === "link" ? "fictional" : null };
         },
       } as never,
       tracker: {} as never,
       providers: {} as never,
     });
+
     const response = await api.handle(
       new Request(
         "http://localhost:3000/api/auth/google/callback?state=fixture&error=provider_private_text",
         { headers: { cookie: "challenge_oauth=fixture" } }
       )
     );
+
     assert.equal(response.status, 303);
     assert.equal(
       response.headers.get("location"),
       `http://localhost:3000/${mode === "link" ? "account" : "login"}?error=oauth`
     );
+
     assert.match(
       response.headers.get("set-cookie") ?? "",
       /challenge_oauth=;.*Max-Age=0/
     );
+
     assert.ok(response.headers.has("x-request-id"));
     assert.equal(
       (await response.text()).includes("provider_private_text"),
@@ -259,6 +289,7 @@ test("forwarded-address spoofing cannot evade default action limits; independent
   const { createWebApi } = await import("../apps/web/server/api.js");
   const { parseServerConfig } =
     await import("../packages/contracts/src/index.js");
+
   const api = createWebApi({
     config: parseServerConfig({ APP_ORIGIN: "http://localhost:3000" }),
     auth: { execute: async () => ({ accepted: true }) } as never,
@@ -266,6 +297,7 @@ test("forwarded-address spoofing cannot evade default action limits; independent
     providers: {} as never,
     now: () => 0,
   });
+
   const invoke = (action: string, n: number) =>
     api.handle(
       new Request("http://localhost:3000/api/v1/auth", {
@@ -281,8 +313,10 @@ test("forwarded-address spoofing cannot evade default action limits; independent
         }),
       })
     );
+
   for (let n = 0; n < 20; n++)
     assert.equal((await invoke("login", n)).status, 200);
+
   const blocked = await invoke("login", 21);
   assert.equal(blocked.status, 429);
   assert.equal(blocked.headers.get("retry-after"), "60");

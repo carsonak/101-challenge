@@ -14,6 +14,7 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
     DISCORD_CLIENT_SECRET: "fictional-secret",
     DISCORD_REDIRECT_URI: "http://localhost:3000/api/auth/discord/callback",
   });
+
   const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const jwk = {
     ...keys.publicKey.export({ format: "jwk" }),
@@ -21,13 +22,16 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
     alg: "RS256",
     use: "sig",
   };
+
   let claims: Record<string, unknown> = {},
     badSignature = false;
+
   const calls: string[] = [];
   const http: typeof fetch = async (input, init) => {
     const address = String(input);
     calls.push(address);
     if (address.includes("/certs")) return Response.json({ keys: [jwk] });
+
     if (address.includes("googleapis.com/token")) {
       const fields = init?.body as URLSearchParams;
       assert.equal(fields.get("code_verifier"), "fictional-verifier");
@@ -52,21 +56,26 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
           Buffer.from(`${header}.${payload}`),
           keys.privateKey
         ).toString("base64url");
+
       return Response.json({
         id_token: `${header}.${payload}.${badSignature ? "A".repeat(signature.length) : signature}`,
       });
     }
+
     if (address.endsWith("/oauth2/token"))
       return Response.json({
         access_token: "fictional-transient-access",
         token_type: "Bearer",
       });
+
     assert.equal(
       new Headers(init?.headers).get("authorization"),
       "Bearer fictional-transient-access"
     );
+
     return Response.json({ id: "123456789", email: "ignored@example.invalid" });
   };
+
   const providers = createProviders(config, http);
   const state: OAuthState = {
     id: "00000000-0000-4000-8000-000000000000",
@@ -79,6 +88,7 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
     expiresAt: new Date(Date.now() + 60000).toISOString(),
     usedAt: null,
   };
+
   const authURL = new URL(
     providers.authorization("google", {
       state: "state",
@@ -86,12 +96,14 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
       verifier: state.verifier,
     })
   );
+
   assert.equal(authURL.searchParams.get("code_challenge_method"), "S256");
   assert.equal(authURL.searchParams.get("scope"), "openid profile");
   assert.deepEqual(await providers.exchange(state, "code"), {
     provider: "google",
     subject: "stable-google-subject",
   });
+
   for (const invalid of [
     { iss: "https://evil.invalid" },
     { aud: "wrong" },
@@ -103,15 +115,18 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
       code: "UNAUTHENTICATED",
     });
   }
+
   claims = {};
   badSignature = true;
   await assert.rejects(providers.exchange(state, "code"), {
     code: "UNAUTHENTICATED",
   });
+
   assert.deepEqual(
     await providers.exchange({ ...state, provider: "discord" }, "code"),
     { provider: "discord", subject: "123456789" }
   );
+
   assert.ok(calls.every((c) => !c.includes("email")));
 });
 
@@ -120,6 +135,7 @@ test("Google avatars reject lookalike hosts, credentials, non-HTTPS and arbitrar
     googleAvatar("https://lh3.googleusercontent.com/a/fixture"),
     "https://lh3.googleusercontent.com/a/fixture"
   );
+
   for (const value of [
     "https://lh3.googleusercontent.com.evil.invalid/a",
     "https://user:secret@lh3.googleusercontent.com/a",

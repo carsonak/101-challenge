@@ -25,6 +25,7 @@ const reportSource = ownerReportSchema.extend({
     })
   ),
 });
+
 /** Server-only source projection, read consistently and reauthorized for each use. */
 export const attemptSourceV1Schema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -51,5 +52,6 @@ export const attemptSourceV1Schema = z.strictObject({
     })
     .nullable(),
 });
+
 /** Private source type; never return it through owner, admin or public HTTP routes. */
 export type AttemptSourceV1 = z.infer<typeof attemptSourceV1Schema>;

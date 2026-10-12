@@ -19,6 +19,7 @@ export const setupFixture = startAttemptSchema.parse({
     },
   ],
 });
+
 /** Truthful fictional report showing that zero activity still counts as reporting. */
 export const reportFixture = submitReportSchema.parse({
   command: "SubmitReport",
@@ -27,6 +28,7 @@ export const reportFixture = submitReportSchema.parse({
   body: "No practice today.",
   goalValues: [],
 });
+
 /** Metadata-only completed progress with gaps in calendar reporting. */
 export const completedProgressFixture = progressSchema.parse({
   enrollmentId: setupFixture.enrollmentId,

@@ -18,9 +18,11 @@ if (
   throw new Error(
     "Private localhost live database and LIVE_TEST_EMAIL required"
   );
+
 /** Private service resources are released even if the provider refuses a message. */
 const database = createRepository(config.DATABASE_URL, true),
   mailer = createMailer(config);
+
 const messages: AuthMail[] = [];
 const auth = createAuth(database.repository, {
   sendMail: async (message) => {
@@ -28,6 +30,7 @@ const auth = createAuth(database.repository, {
     messages.push(message);
   },
 });
+
 try {
   const retry = process.argv.includes("--retry-recovery");
   if (!retry) {
@@ -37,13 +40,17 @@ try {
       email: recipient,
       password: randomBytes(32).toString("hex"),
     });
+
     const verification = messages.find((message) => message.kind === "verify");
     if (!verification) throw new Error("No verification delivery");
+
     await auth.execute({ action: "verify", token: verification.token });
   }
+
   await auth.execute({ action: "recover", email: recipient });
   if (!messages.some((message) => message.kind === "recover"))
     throw new Error("No recovery delivery");
+
   console.info(
     retry
       ? "Recovery retry accepted by SMTP; account password unchanged. Confirm inbox delivery separately."
@@ -53,6 +60,7 @@ try {
   console.error(
     "Live mail acceptance failed; inspect private configuration without exposing recipients or links."
   );
+
   process.exitCode = 1;
 } finally {
   mailer.close();

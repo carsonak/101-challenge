@@ -1,0 +1,258 @@
+anyOf:
+  - type: object
+    properties:
+      action:
+        type: string
+        const: signup
+      email:
+        type: string
+        maxLength: 254
+        format: email
+        pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+      username:
+        type: string
+        minLength: 3
+        maxLength: 32
+        pattern: ^[a-zA-Z0-9_-]+$
+    required:
+      - action
+      - email
+      - password
+      - username
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: login
+      email:
+        type: string
+        maxLength: 254
+        format: email
+        pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - email
+      - password
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: recover
+      email:
+        type: string
+        maxLength: 254
+        format: email
+        pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+    required:
+      - action
+      - email
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: verify
+      token:
+        type: string
+        pattern: ^[a-f0-9]{64}$
+    required:
+      - action
+      - token
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: reset
+      token:
+        type: string
+        pattern: ^[a-f0-9]{64}$
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - token
+      - password
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: logout
+    required:
+      - action
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: save_profile
+      username:
+        type: string
+        minLength: 3
+        maxLength: 32
+        pattern: ^[a-zA-Z0-9_-]+$
+    required:
+      - action
+      - username
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: set_avatar
+      avatar:
+        anyOf:
+          - type: string
+            maxLength: 400000
+          - type: "null"
+    required:
+      - action
+      - avatar
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: recovery_email
+      email:
+        type: string
+        maxLength: 254
+        format: email
+        pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+    required:
+      - action
+      - email
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: verify_recovery_email
+      token:
+        type: string
+        pattern: ^[a-f0-9]{64}$
+    required:
+      - action
+      - token
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: restore_account
+    required:
+      - action
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: revoke_session
+      sessionId:
+        type: string
+        format: uuid
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+    required:
+      - action
+      - sessionId
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: notification
+      id:
+        type: string
+        format: uuid
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      dismiss:
+        default: false
+        type: boolean
+    required:
+      - action
+      - id
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: reauthenticate
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - password
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: add_email
+      email:
+        type: string
+        maxLength: 254
+        format: email
+        pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - email
+      - password
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: unlink
+      provider:
+        type: string
+        enum:
+          - email
+          - google
+          - discord
+    required:
+      - action
+      - provider
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: request_erasure
+      confirmed:
+        type: boolean
+        const: true
+      username:
+        type: string
+        minLength: 3
+        maxLength: 32
+        pattern: ^[a-zA-Z0-9_-]+$
+    required:
+      - action
+      - confirmed
+      - username
+    additionalProperties: false
+description: >-
+  Anonymous actions: signup, login, recover, verify, reset,
+  verify_recovery_email. All other actions require the session cookie and
+  x-csrf-token. add_email, unlink, request_erasure and recovery_email also
+  require authentication within the last ten minutes. Usernames are trimmed and
+  lowercased; email addresses are lowercased.

@@ -18,12 +18,14 @@ export async function startJobs(
     expireInSeconds: 60,
     retentionSeconds: 30 * 86400,
   });
+
   await boss.createQueue("tracker_housekeeping", {
     policy: "singleton",
     retryLimit: 3,
     retryDelay: 60,
     retryBackoff: true,
   });
+
   await boss.work(
     "tracker_projection",
     { pollingIntervalSeconds: 5 },
@@ -33,6 +35,7 @@ export async function startJobs(
           const outcome = await store.process(
             trackerEventSchema.parse(job.data)
           );
+
           logBackend("worker", "projection_complete", { outcome });
         } catch (error) {
           logBackend("worker", "projection_failed", {}, error);
@@ -40,6 +43,7 @@ export async function startJobs(
         }
     }
   );
+
   await boss.work(
     "tracker_housekeeping",
     { pollingIntervalSeconds: 30 },
@@ -53,12 +57,14 @@ export async function startJobs(
       }
     }
   );
+
   await boss.schedule(
     "tracker_housekeeping",
     "0 * * * *",
     {},
     { singletonKey: "hourly" }
   );
+
   let publishing: Promise<unknown> | undefined;
   let stopped = false;
   let delay = polling.activeMs;
@@ -66,6 +72,7 @@ export async function startJobs(
   /** Publish without overlapping this worker's own scan; queue errors never disclose supplied content. */
   function tick() {
     if (publishing) return;
+
     publishing = store
       .publish(async (event) => {
         await boss.send("tracker_projection", event, {
@@ -80,6 +87,7 @@ export async function startJobs(
           result.delivered || result.failed
             ? polling.activeMs
             : Math.min(polling.idleMaxMs, delay * 2);
+
         if (result.delivered || result.failed)
           logBackend("worker", "outbox_complete", result);
       })
@@ -92,6 +100,7 @@ export async function startJobs(
         if (!stopped) timer = setTimeout(tick, delay).unref();
       });
   }
+
   tick();
   return async () => {
     stopped = true;

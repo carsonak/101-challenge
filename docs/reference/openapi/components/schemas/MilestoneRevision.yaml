@@ -1,0 +1,51 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+  milestoneId:
+    type: string
+    format: uuid
+  attemptId:
+    type: string
+    format: uuid
+  input:
+    type: object
+    properties:
+      title:
+        type: string
+        minLength: 1
+        maxLength: 200
+      description:
+        type: string
+        maxLength: 4000
+      targetReportingDay:
+        type: integer
+        minimum: 1
+        maximum: 101
+      achievementKind:
+        type: string
+        enum:
+          - manual
+          - reporting_count
+      goalId:
+        type: string
+        format: uuid
+    required:
+      - title
+      - targetReportingDay
+      - achievementKind
+    additionalProperties: false
+  archived:
+    type: boolean
+  createdAt:
+    type: string
+    format: date-time
+required:
+  - id
+  - milestoneId
+  - attemptId
+  - input
+  - archived
+  - createdAt
+additionalProperties: false

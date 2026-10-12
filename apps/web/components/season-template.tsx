@@ -1,4 +1,6 @@
 "use client";
+import uiStyles from "./../styles/ui.module.css";
+
 import { useState } from "react";
 import type { GoalInput, MilestoneInput } from "@challenge/core";
 import { Field } from "./ui";
@@ -15,6 +17,7 @@ export function SeasonTemplate({
   const [goals, setGoals] = useState<GoalInput[]>(season.goals),
     [url, setUrl] = useState(season.sessionUrl ?? ""),
     [milestones, setMilestones] = useState<MilestoneInput[]>(season.milestones);
+
   return (
     <details>
       <summary>Recommended plan and study sessions</summary>
@@ -44,7 +47,7 @@ export function SeasonTemplate({
             />
             <button
               type="button"
-              className="secondary"
+              className={`${uiStyles.button} ${uiStyles.secondary}`}
               onClick={() => {
                 setGoals(goals.filter((_, index) => index !== i));
                 setMilestones(
@@ -66,7 +69,7 @@ export function SeasonTemplate({
         ))}
         <button
           type="button"
-          className="secondary"
+          className={`${uiStyles.button} ${uiStyles.secondary}`}
           disabled={goals.length >= 20}
           onClick={() => setGoals([...goals, { ...emptyGoal }])}
         >
@@ -89,7 +92,7 @@ export function SeasonTemplate({
             />
             <button
               type="button"
-              className="secondary"
+              className={`${uiStyles.button} ${uiStyles.secondary}`}
               onClick={() =>
                 setMilestones(milestones.filter((_, index) => index !== i))
               }
@@ -100,7 +103,7 @@ export function SeasonTemplate({
         ))}
         <button
           type="button"
-          className="secondary"
+          className={`${uiStyles.button} ${uiStyles.secondary}`}
           disabled={milestones.length >= 101}
           onClick={() =>
             setMilestones([
@@ -118,7 +121,9 @@ export function SeasonTemplate({
             onChange={(e) => setUrl(e.target.value)}
           />
         </Field>
-        <button type="submit">Save recommended plan</button>
+        <button type="submit" className={uiStyles.button}>
+          Save recommended plan
+        </button>
       </form>
     </details>
   );

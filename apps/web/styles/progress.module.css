@@ -1,0 +1,51 @@
+/* Establish the cascade even when route modules load before global styles. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .progress-pattern {
+    width: min(100%, 24rem);
+    padding-block: 1.5rem;
+  }
+  .progress-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+  .progress-cell {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--control-line);
+    border-radius: 0.2rem;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .progress-cell.reported {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .today-cell {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .capstone {
+    width: calc((100% - 3.15rem) / 10);
+    min-width: 2rem;
+    margin: 0.75rem auto 0;
+    outline: 1px solid var(--control-line);
+    outline-offset: 3px;
+  }
+}
+
+@keyframes cell-saved {
+  from {
+    transform: scale(0.85);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.cell-saved {
+  animation: cell-saved 0.2s ease-out;
+}

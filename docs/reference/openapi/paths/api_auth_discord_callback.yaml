@@ -1,0 +1,44 @@
+get:
+  operationId: completeDiscordOAuth
+  summary: completeDiscordOAuth
+  description: >-
+    Provider callback verifies one-use state, browser binding and provider
+    proof. Success sets session/CSRF cookies and redirects to account. All
+    failures clear the browser-binding cookie and redirect with friendly generic
+    feedback to login, or account only for a valid bound linking flow. Provider
+    error text is never reflected.
+  security:
+    - oauthCookie: []
+  responses:
+    "303":
+      description: >-
+        Success redirects to APP_ORIGIN/account; failure redirects to
+        APP_ORIGIN/login?error=oauth or a valid bound linking flow to
+        APP_ORIGIN/account?error=oauth. Includes a safe request ID and clears
+        challenge_oauth.
+      headers:
+        Location:
+          schema:
+            type: string
+            format: uri
+        Set-Cookie:
+          schema:
+            type: string
+  parameters:
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: code
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 4096
+    - name: error
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Provider cancellation/error indicator; details are not reflected.

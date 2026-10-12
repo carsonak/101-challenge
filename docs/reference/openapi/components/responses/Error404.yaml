@@ -1,0 +1,5 @@
+description: "NOT_FOUND: route or resource unavailable."
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/Error.yaml

@@ -1,0 +1,37 @@
+post:
+  operationId: handleDiscordInteraction
+  summary: Handle signed Discord guild interaction
+  description: >-
+    Discord wire envelope, not a browser command endpoint. Requires Ed25519
+    signature of timestamp + raw body and timestamp within five minutes; maximum
+    body 65536 bytes. PING returns type 1. Guild replies are private, slow work
+    defers with type 5, and modals use type 9. Domain failures can be private
+    type 4 messages with HTTP 200. Provider-specific fields are extensible; this
+    document describes the supported envelope rather than the entire Discord
+    protocol.
+  security:
+    - discordSignature: []
+      discordTimestamp: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/DiscordInteraction.yaml
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DiscordResponse.yaml
+    "400":
+      description: Malformed JSON or invalid interaction identifiers.
+    "401":
+      description: Missing, invalid or stale signature.
+    "404":
+      description: Discord public key is not configured.
+    "413":
+      description: Body exceeds 65536 bytes.
+    "503":
+      description: Service initialization failed.

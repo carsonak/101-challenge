@@ -1,0 +1,18 @@
+get:
+  operationId: getSession
+  summary: getSession
+  description: >-
+    Anonymous callers receive account:null and csrf:null. Invalid, expired or revoked sessions receive HTTP 200 with
+    account:null and csrf:null, and both stale session cookies are cleared. Provider flags describe enabled integrations.
+  security:
+    - {}
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Session.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml

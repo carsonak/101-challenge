@@ -5,13 +5,16 @@ const { reportCliFailure } = await import("./cli-diagnostics.mjs" as string);
 /** Explicit write switch; bot token belongs only to this operator process. */
 const apply = process.argv.includes("--apply"),
   global = process.argv.includes("--global");
+
 /** Require a validated snowflake without printing private configuration. */
 function identifier(name: string) {
   const value = process.env[name];
   if (!value || !/^\d{1,30}$/.test(value))
     throw new Error(`Missing or invalid ${name}`);
+
   return value;
 }
+
 try {
   if (!apply)
     console.info(
@@ -25,9 +28,11 @@ try {
     const application = identifier("DISCORD_CLIENT_ID");
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token) throw new Error("DISCORD_BOT_TOKEN required for registration");
+
     const path = global
       ? `applications/${application}/commands`
       : `applications/${application}/guilds/${identifier("DISCORD_GUILD_ID")}/commands`;
+
     const response = await fetch(`https://discord.com/api/v10/${path}`, {
       method: "PUT",
       headers: {
@@ -37,11 +42,13 @@ try {
       body: JSON.stringify(guildCommands),
       signal: AbortSignal.timeout(10000),
     });
+
     if (!response.ok) {
       const details = (await response.json().catch(() => ({}))) as {
         message?: unknown;
         code?: unknown;
       };
+
       throw Object.assign(
         new Error(
           `Discord HTTP ${response.status}: ${typeof details.message === "string" ? details.message.slice(0, 500) : "Registration rejected"}`
@@ -52,6 +59,7 @@ try {
         }
       );
     }
+
     console.info("Commands registered.");
   }
 } catch (error) {
@@ -60,5 +68,6 @@ try {
     error,
     "Check DISCORD_CLIENT_ID in .env, bot token/guild in .env.operator and installation with bot + applications.commands scopes; --apply targets that guild."
   );
+
   process.exitCode = 1;
 }

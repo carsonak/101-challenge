@@ -9,6 +9,7 @@ if (process.argv.includes("--smtp")) {
       "nodemailer"
     )
   );
+
   const transport = nodemailer.createTransport({
     host: config.SMTP_HOST,
     port: config.SMTP_PORT,
@@ -21,6 +22,7 @@ if (process.argv.includes("--smtp")) {
     logger: false,
     debug: false,
   });
+
   try {
     await transport.verify();
     console.info("SMTP TLS/authentication verified; no message sent.");
@@ -28,6 +30,7 @@ if (process.argv.includes("--smtp")) {
     console.error(
       "SMTP verification failed; check private credentials, sender access and network connectivity."
     );
+
     process.exitCode = 1;
   } finally {
     transport.close();

@@ -1,0 +1,19 @@
+type: object
+properties:
+  type:
+    type: integer
+  id:
+    type: string
+  guild_id:
+    type: string
+  application_id:
+    type: string
+  token:
+    type: string
+  member:
+    type: object
+  data:
+    type: object
+required:
+  - type
+additionalProperties: true

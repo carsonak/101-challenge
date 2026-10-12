@@ -13,6 +13,7 @@ import {
 const url = process.env.TRACKER_TEST_DATABASE_URL;
 if (url && !/_(test|ci)$/.test(new URL(url).pathname))
   throw new Error("Disposable database required");
+
 /** Require a fictional fixture and preserve its inferred type. */
 function required<T>(value: T | null | undefined): T {
   assert.ok(value != null);
@@ -27,11 +28,13 @@ test(
     await db.migrate();
     const tracker = createTracker(db.repository),
       auth = createAuth(db.repository, { sendMail: async () => {} });
+
     const owner = await tracker.createUser(),
       other = await tracker.createUser(),
       admin = await tracker.createUser(true),
       subject = `${Date.now()}1`,
       otherSubject = `${Date.now()}2`;
+
     await db.repository.transaction(async (tx) => {
       await tx.insert("identities", {
         id: randomUUID(),
@@ -39,6 +42,7 @@ test(
         provider: "discord",
         subject,
       });
+
       await tx.insert("identities", {
         id: randomUUID(),
         userId: other,
@@ -46,6 +50,7 @@ test(
         subject: otherSubject,
       });
     });
+
     const seasonTitle = `Fictional guild fixture ${randomUUID()}`;
     const season = await tracker.execute(
       admin,
@@ -56,6 +61,7 @@ test(
       },
       randomUUID()
     );
+
     await tracker.execute(
       admin,
       {
@@ -65,6 +71,7 @@ test(
       },
       randomUUID()
     );
+
     const keys = generateKeyPairSync("ed25519"),
       publicKey = keys.publicKey
         .export({ format: "der", type: "spki" })
@@ -72,6 +79,7 @@ test(
         .toString("hex"),
       tasks: (() => Promise<void>)[] = [],
       delivered: Record<string, unknown>[] = [];
+
     let failDelivery = false;
     const adapter = createDiscordAdapter({
       publicKey,
@@ -82,9 +90,11 @@ test(
       schedule: (w) => tasks.push(w),
       deliver: async (_a, _t, data) => {
         if (failDelivery) throw new Error("Fictional delivery outage");
+
         delivered.push(data as Record<string, unknown>);
       },
     });
+
     let seq = 1;
     const invoke = async (
       value: Record<string, unknown>,
@@ -101,11 +111,13 @@ test(
           ...value,
         }),
         timestamp = String(Math.floor(Date.now() / 1000) - age);
+
       const signature = sign(
         null,
         Buffer.from(timestamp + body),
         keys.privateKey
       ).toString("hex");
+
       const response = await adapter.handle(
         new Request("http://localhost:3000/api/discord", {
           method: "POST",
@@ -116,18 +128,23 @@ test(
           body,
         })
       );
+
       while (tasks.length) await required(tasks.shift())();
+
       return response;
     };
+
     /** Select an action by its visible label, not its opaque resource ID. */
     const buttonId = (label: string) => {
       const rows = delivered.at(-1)?.components as {
         components: { label: string; custom_id: string }[];
       }[];
+
       return required(
         rows.flatMap((row) => row.components).find((b) => b.label === label)
       ).custom_id;
     };
+
     /** Current labelled modal submission shape. */
     const submit = (
       id: string,
@@ -143,6 +160,7 @@ test(
         ],
       },
     });
+
     try {
       assert.equal((await invoke({ type: 1 }, subject, 0, true)).status, 401);
       assert.equal((await invoke({ type: 1 }, subject, 301)).status, 401);
@@ -153,11 +171,13 @@ test(
           .status,
         200
       );
+
       assert.match(String(delivered.at(-1)?.content), /truthful report/);
       assert.match(
         String(delivered.at(-1)?.content),
         /^## Your daily practice/
       );
+
       assert.match(String(delivered.at(-1)?.content), /- `\/report`/);
       assert.equal(delivered.at(-1)?.flags, 64);
       assert.deepEqual(delivered.at(-1)?.allowed_mentions, { parse: [] });
@@ -165,6 +185,7 @@ test(
         (await invoke({ type: 2, token: "", data: { name: "help" } })).status,
         400
       );
+
       const choices = await (
         await invoke({
           type: 4,
@@ -174,6 +195,7 @@ test(
           },
         })
       ).json();
+
       assert.equal(choices.type, 8);
       assert.equal(
         choices.data.choices.some(
@@ -181,9 +203,11 @@ test(
         ),
         true
       );
+
       const dm = await (
         await invoke({ type: 2, guild_id: null, data: { name: "join" } })
       ).json();
+
       assert.equal(dm.data.flags, 64);
       const join = {
         type: 2,
@@ -193,6 +217,7 @@ test(
           options: [{ name: "season", value: season.resourceId }],
         },
       };
+
       assert.equal((await (await invoke(join)).json()).type, 5);
       await invoke(join);
       const enrollment = required((await tracker.history(owner))[0]);
@@ -201,10 +226,12 @@ test(
       const stolen = await (
         await invoke({ type: 3, data: { custom_id: custom } }, otherSubject)
       ).json();
+
       assert.equal(stolen.type, 4);
       const opened = await (
         await invoke({ type: 3, data: { custom_id: custom } })
       ).json();
+
       assert.equal(opened.type, 9);
       assert.equal(opened.data.components[0].type, 18);
       assert.equal(opened.data.components[0].component.type, 4);
@@ -225,17 +252,20 @@ test(
           ],
         },
       };
+
       await invoke(customSubmit);
       await invoke(customSubmit);
       assert.equal((await tracker.history(owner))[0].attempts.length, 1);
       const report = await (
         await invoke({ type: 2, data: { name: "report" } })
       ).json();
+
       assert.equal(report.type, 9);
       const accepted = {
         ...submit(report.data.custom_id, "fictional private guild report"),
         id: "999994",
       };
+
       await invoke(accepted);
       await invoke(accepted);
       assert.equal((await tracker.dailySummary(owner))[0].reportingDays, 1);
@@ -243,13 +273,16 @@ test(
         JSON.stringify(delivered).includes("fictional private guild report"),
         false
       );
+
       const editing = await (
         await invoke({ type: 2, data: { name: "report" } })
       ).json();
+
       assert.equal(
         editing.data.components[0].component.value,
         "fictional private guild report"
       );
+
       // Force a version conflict, then prove that a complete escaped private copy is retained.
       const history = (await tracker.history(owner))[0];
       const acceptedReport = history.attempts[0].reports[0];
@@ -264,6 +297,7 @@ test(
         },
         randomUUID()
       );
+
       const recoveryText = `@everyone [private](https://example.invalid) ${"日".repeat(3900)}`;
       const before = delivered.length;
       await invoke(submit(editing.data.custom_id, recoveryText));
@@ -276,22 +310,26 @@ test(
           String(d.content).slice("**Your private recovery copy**\n".length)
         )
         .join("");
+
       assert.equal(recovery.includes("日".repeat(3900)), true);
       assert.match(recovery, /@\u200beveryone/);
       assert.equal(
         delivered.slice(before).every((d) => String(d.content).length <= 2000),
         true
       );
+
       await invoke({ type: 2, data: { name: "dashboard" } });
       const pause = buttonId("Pause");
       const prompt = await (
         await invoke({ type: 3, data: { custom_id: pause } })
       ).json();
+
       assert.match(prompt.data.content, /current streak resets/);
       await invoke({
         type: 3,
         data: { custom_id: prompt.data.components[0].components[0].custom_id },
       });
+
       assert.equal((await tracker.history(owner))[0].participation, "paused");
       failDelivery = true;
       const resume = {
@@ -299,6 +337,7 @@ test(
         id: "999995",
         data: { custom_id: buttonId("Resume") },
       };
+
       await invoke(resume);
       await invoke(resume);
       assert.equal((await tracker.history(owner))[0].participation, "active");
@@ -309,6 +348,7 @@ test(
           key: "discord:999995",
         })
       );
+
       assert.equal(resumes.length, 1);
       assert.ok(
         delivered.every(
@@ -318,6 +358,7 @@ test(
               '{ "parse": [] }'.replaceAll(" ", "")
         )
       );
+
       const expired = await db.interactionForm({
         userId: owner,
         kind: "report",
@@ -326,9 +367,11 @@ test(
         enrollmentId: enrollment.id,
         enrollmentVersion: 0,
       });
+
       const { Pool } = createRequire(
         new URL("../packages/db/package.json", import.meta.url)
       )("pg");
+
       const fixturePool = new Pool({ connectionString: required(url), max: 1 });
       try {
         await fixturePool.query(
@@ -338,9 +381,11 @@ test(
       } finally {
         await fixturePool.end();
       }
+
       const expiredResponse = await (
         await invoke({ type: 3, data: { custom_id: expired } })
       ).json();
+
       assert.equal(expiredResponse.type, 4);
       failDelivery = false;
       await tracker.execute(
@@ -360,6 +405,7 @@ test(
         },
         randomUUID()
       );
+
       await invoke(
         {
           type: 2,
@@ -370,13 +416,16 @@ test(
         },
         otherSubject
       );
+
       await invoke(
         { type: 3, data: { custom_id: buttonId("Start recommended plan") } },
         otherSubject
       );
+
       const measuredModal = await (
         await invoke({ type: 2, data: { name: "report" } }, otherSubject)
       ).json();
+
       assert.equal(measuredModal.type, 9);
       assert.equal(measuredModal.data.components.length, 3);
       const numeric = measuredModal.data.components[1].component;
@@ -400,6 +449,7 @@ test(
         ]),
         otherSubject
       );
+
       const measuredHistory = (await tracker.history(other))[0].attempts[0];
       assert.equal(measuredHistory.reports[0].goalValues[0].value, "7");
       assert.equal(
@@ -407,8 +457,10 @@ test(
           .milestoneFacts[0].achieved,
         true
       );
+
       const acceptedRevision =
         measuredHistory.reports[0].goalValues[0].goalRevisionId;
+
       await tracker.execute(
         other,
         {
@@ -420,22 +472,27 @@ test(
         },
         randomUUID()
       );
+
       const summary = (await tracker.dailySummary(other))[0];
       assert.equal(summary.goals[0].revisionId, acceptedRevision);
       const measuredEdit = await (
         await invoke({ type: 2, data: { name: "report" } }, otherSubject)
       ).json();
+
       assert.equal(
         measuredEdit.data.components[1].component.custom_id,
         `goal:${acceptedRevision}`
       );
+
       assert.equal(measuredEdit.data.components[1].component.value, "7");
       assert.deepEqual(
         await tracker.dailySummary(await tracker.createUser()),
         []
       );
+
       const oversizedUser = await tracker.createUser(),
         oversizedSubject = `${Date.now()}3`;
+
       await db.repository.transaction((tx) =>
         tx.insert("identities", {
           id: randomUUID(),
@@ -444,11 +501,13 @@ test(
           subject: oversizedSubject,
         })
       );
+
       const oversizedEnrollment = await tracker.execute(
         oversizedUser,
         { command: "Enroll", seasonId: season.resourceId },
         randomUUID()
       );
+
       await tracker.execute(
         oversizedUser,
         {
@@ -464,20 +523,24 @@ test(
         },
         randomUUID()
       );
+
       const fallback = await (
         await invoke({ type: 2, data: { name: "report" } }, oversizedSubject)
       ).json();
+
       assert.equal(fallback.type, 4);
       assert.match(fallback.data.content, /more fields than Discord can show/);
       assert.equal(
         (await tracker.dailySummary(oversizedUser))[0].reportingDays,
         0
       );
+
       assert.ok(
         JSON.stringify(fallback).includes(
           `/challenge/${oversizedEnrollment.resourceId}`
         )
       );
+
       const beforeUnlink = delivered.length;
       await db.repository.transaction(async (tx) => {
         const identity = required(
@@ -485,8 +548,10 @@ test(
             await tx.list("identities", { userId: owner, provider: "discord" })
           )[0]
         );
+
         await tx.remove("identities", identity.id);
       });
+
       const unlinkedText = "Fictional text retained after unlinking";
       await invoke(submit(editing.data.custom_id, unlinkedText));
       assert.ok(
@@ -494,10 +559,12 @@ test(
           .slice(beforeUnlink)
           .some((message) => String(message.content).includes(unlinkedText))
       );
+
       assert.equal(
         (await tracker.dailySummary(owner))[0].report.body,
         "Changed on web"
       );
+
       assert.deepEqual(
         guildCommands.map((c) => c.name),
         ["dashboard", "report", "seasons", "join", "help"]

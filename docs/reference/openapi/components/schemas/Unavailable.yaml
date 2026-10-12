@@ -1,0 +1,7 @@
+type: object
+properties:
+  error:
+    const: Service unavailable
+required:
+  - error
+additionalProperties: false

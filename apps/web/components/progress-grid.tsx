@@ -1,4 +1,7 @@
 "use client";
+import progressStyles from "./../styles/progress.module.css";
+import uiStyles from "./../styles/ui.module.css";
+
 import { useEffect, useRef, useState } from "react";
 /** Reporting-index grid with a separate completion capstone and accessible summary. */
 export function ProgressGrid({
@@ -18,18 +21,33 @@ export function ProgressGrid({
     const timer = setTimeout(() => setChanged(false), 250);
     return () => clearTimeout(timer);
   }, [count]);
+
   const filled = Math.max(0, Math.min(101, count));
   return (
     <fieldset
-      className="progress-pattern"
+      className={progressStyles["progress-pattern"]}
       aria-label={`${filled} of 101 reporting days`}
     >
-      <div className="progress-grid">
+      <div className={progressStyles["progress-grid"]}>
         {Array.from({ length: 100 }, (_, i) => (
           <span
             // biome-ignore lint/suspicious/noArrayIndexKey: Fixed cells represent permanent reporting indexes.
             key={i}
-            className={`progress-cell ${changed && i === filled - 1 ? "cell-saved" : ""} ${i < filled ? "reported" : i === filled && !todayReported ? "today-cell" : ""}`}
+            className={
+              "" +
+              progressStyles["progress-cell"] +
+              " " +
+              (changed && i === filled - 1
+                ? progressStyles["cell-saved"]
+                : "") +
+              " " +
+              (i < filled
+                ? progressStyles.reported
+                : i === filled && !todayReported
+                  ? progressStyles["today-cell"]
+                  : "") +
+              " "
+            }
             aria-hidden="true"
           >
             {milestoneIndexes.includes(i + 1) ? "·" : ""}
@@ -37,12 +55,21 @@ export function ProgressGrid({
         ))}
       </div>
       <span
-        className={`progress-cell capstone ${filled === 101 ? "reported" : ""}`}
+        className={
+          "" +
+          progressStyles["progress-cell"] +
+          " " +
+          " " +
+          progressStyles.capstone +
+          " " +
+          (filled === 101 ? progressStyles.reported : "") +
+          " "
+        }
         aria-hidden="true"
       >
         101
       </span>
-      <span className="sr-only">
+      <span className={uiStyles["sr-only"]}>
         {milestoneIndexes.length
           ? `Milestones on reporting days ${milestoneIndexes.join(", ")}.`
           : ""}

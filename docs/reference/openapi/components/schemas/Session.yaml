@@ -1,0 +1,26 @@
+type: object
+properties:
+  account:
+    anyOf:
+      - $ref: ./accountSchema.yaml
+      - type: "null"
+  csrf:
+    anyOf:
+      - type: string
+      - type: "null"
+  providers:
+    type: object
+    properties:
+      google:
+        type: boolean
+      discord:
+        type: boolean
+    required:
+      - google
+      - discord
+    additionalProperties: false
+required:
+  - account
+  - csrf
+  - providers
+additionalProperties: false

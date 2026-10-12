@@ -1,0 +1,21 @@
+get:
+  operationId: getAdminStats
+  summary: getAdminStats
+  description: >-
+    Administrator access required; private participant report bodies and goal
+    values are excluded.
+  security:
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AdminStats.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml

@@ -14,6 +14,7 @@ interface MailTransport {
   /** Release transport resources. */
   close(): void;
 }
+
 /** Private SMTP delivery; local defaults point at Mailpit; diagnostics exclude message content and recipients. */
 export function createMailer(
   config: ReturnType<typeof parseServerConfig>,
@@ -39,6 +40,7 @@ export function createMailer(
       disableFileAccess: true,
       disableUrlAccess: true,
     });
+
   return {
     /** Deliver one private verification/recovery link; caller handles failure safely. */
     async send(mail: AuthMail) {
@@ -50,10 +52,12 @@ export function createMailer(
             : "/verify",
         config.APP_ORIGIN
       );
+
       url.searchParams.set(
         mail.kind === "recovery_email" ? "recoveryEmail" : "token",
         mail.token
       );
+
       const started = performance.now();
       try {
         await transport.sendMail({
@@ -68,6 +72,7 @@ export function createMailer(
               ? `Account deletion has been requested. You have seven days from the request to recover it. Sign in at ${config.APP_ORIGIN}/login to see the exact deadline and restore your account.`
               : `${mail.kind === "recover" ? "Choose a new password" : "Verify your email"}: ${url}\nThis link is private and expires. If you did not request it, you can ignore this message.`,
         });
+
         logBackend("web", "mail_accepted", {
           durationMs: performance.now() - started,
         });
@@ -81,6 +86,7 @@ export function createMailer(
           },
           error
         );
+
         throw error;
       }
     },

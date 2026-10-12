@@ -1,151 +1,35 @@
-import sharp from "sharp";
+import { trackerErrorCodeSchema } from "@challenge/contracts";
+import { DomainError, createThrottle } from "@challenge/core";
 import { isIP } from "node:net";
-import { randomBytes } from "node:crypto";
-import {
-  authCommandSchema,
-  pageRequestSchema,
-  trackerErrorCodeSchema,
-  type parseServerConfig,
-} from "@challenge/contracts";
-import {
-  DomainError,
-  createThrottle,
-  type createAuth,
-  type createTracker,
-} from "@challenge/core";
-import type { createProviders } from "./providers";
+import { createAuthenticationRoutes } from "./api/authentication";
+import { createCommandsRoutes } from "./api/commands";
+import { createOauthRoutes } from "./api/oauth";
+import { createReadsRoutes } from "./api/reads";
+import type { ApiDependencies } from "./api/transport";
+import { cookie, cookieNames, json, setCookie } from "./api/transport";
 import { observeRequest } from "./logging";
+export { cookieNames, type ApiDependencies } from "./api/transport";
 
-/** Shared cookie names; only the session/browser binding are HttpOnly. */
-export const cookieNames = {
-  session: "challenge_session",
-  csrf: "challenge_csrf",
-  oauth: "challenge_oauth",
-} as const;
-/** API dependencies expose only server-owned service handles and settings. */
-export interface ApiDependencies {
-  /** Injectable limiter clock. */
-  now?: () => number;
-  /** Validated settings, never serialized wholesale. */
-  config: ReturnType<typeof parseServerConfig>;
-  /** Session/proof service. */
-  auth: ReturnType<typeof createAuth>;
-  /** Authorized tracker service. */
-  tracker: ReturnType<typeof createTracker>;
-  /** Enabled provider transports. */
-  providers: ReturnType<typeof createProviders>;
-}
-/** Read a hex-only cookie without accepting arbitrary encoded header data. */
-function cookie(request: Request, name: string) {
-  return request.headers
-    .get("cookie")
-    ?.split(";")
-    .map((s) => s.trim())
-    .find((s) => s.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
-}
-/** Return private uncached JSON with no supplied errors or secret configuration. */
-function json(value: unknown, status = 200) {
-  return Response.json(value, {
-    status,
-    headers: {
-      "cache-control": "private, no-store",
-      "x-content-type-options": "nosniff",
-      "referrer-policy": "no-referrer",
-    },
-  });
-}
-/** Read bounded JSON without trusting Content-Length. */
-async function payload(request: Request): Promise<unknown> {
-  const reader = request.body?.getReader();
-  if (!reader) throw new DomainError("VALIDATION");
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > 2 * 1024 * 1024) {
-      await reader.cancel();
-      throw new DomainError("VALIDATION");
-    }
-    chunks.push(value);
-  }
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    throw new DomainError("VALIDATION");
-  }
-}
-/** Encode opaque session/CSRF cookies, using TLS for any nonlocal application origin. */
-function setCookie(
-  response: Response,
-  name: string,
-  value: string,
-  secure: boolean,
-  httpOnly: boolean,
-  maxAge = 30 * 86400
-) {
-  response.headers.append(
-    "set-cookie",
-    `${name}=${value}; Path=/; SameSite=Lax; Max-Age=${maxAge}${secure ? "; Secure" : ""}${httpOnly ? "; HttpOnly" : ""}`
-  );
-}
-/** Stable opaque resource cursor, scoped to the requested collection. */
-function page<T extends { id: string }>(rows: T[], url: URL, kind: string) {
-  const parsed = pageRequestSchema.safeParse(
-    Object.fromEntries(url.searchParams)
-  );
-  if (!parsed.success) throw new DomainError("VALIDATION");
-  let last = "";
-  if (parsed.data.cursor) {
-    try {
-      const cursor = JSON.parse(
-        Buffer.from(parsed.data.cursor, "base64url").toString("utf8")
-      );
-      if (
-        cursor.kind !== kind ||
-        typeof cursor.id !== "string" ||
-        !/^[a-f0-9-]{36}$/.test(cursor.id)
-      )
-        throw new Error();
-      last = cursor.id;
-    } catch {
-      throw new DomainError("VALIDATION");
-    }
-  }
-  const sorted = rows
-    .filter((r) => r.id > last)
-    .sort((a, b) => (a.id < b.id ? -1 : 1));
-  const items = sorted.slice(0, parsed.data.limit);
-  const final = items.at(-1);
-  return {
-    items,
-    nextCursor:
-      sorted.length > items.length && final
-        ? Buffer.from(JSON.stringify({ kind, id: final.id })).toString(
-            "base64url"
-          )
-        : null,
-  };
-}
 /** Browser API with actor-derived identity, origin/CSRF checks and safe projections. */
 export function createWebApi(deps: ApiDependencies) {
-  const { config, auth, tracker, providers } = deps;
+  const { config } = deps;
   const secure = config.APP_ORIGIN.startsWith("https:");
   const rates = createThrottle(deps.now);
   /** Accept only a validated address from the explicitly configured ingress chain. */
   function address(request: Request) {
     if (!config.TRUSTED_PROXY_HOPS || !config.TRUSTED_PROXY_HEADER)
       return "local";
+
     const chain =
       request.headers
         .get(config.TRUSTED_PROXY_HEADER)
         ?.split(",")
         .map((value) => value.trim()) ?? [];
+
     const value = chain.at(-config.TRUSTED_PROXY_HOPS);
     return value && isIP(value) ? value : "unknown";
   }
+
   /** Persist fresh opaque cookies while returning no bearer token in JSON. */
   function loginCookies(
     response: Response,
@@ -154,6 +38,15 @@ export function createWebApi(deps: ApiDependencies) {
     setCookie(response, cookieNames.session, session.token, secure, true);
     setCookie(response, cookieNames.csrf, session.csrf, secure, false);
   }
+
+  const context = { ...deps, rates, address, loginCookies };
+  const routes = [
+    createReadsRoutes(context),
+    createAuthenticationRoutes(context),
+    createCommandsRoutes(context),
+    createOauthRoutes(context),
+  ];
+
   return {
     /** Dispatch native HTTP requests; adapters cannot override actor, date, mode or seeds. */
     async handle(request: Request): Promise<Response> {
@@ -161,272 +54,31 @@ export function createWebApi(deps: ApiDependencies) {
         try {
           const url = new URL(request.url),
             path = url.pathname;
+
           const token = cookie(request, cookieNames.session),
             csrf = request.headers.get("x-csrf-token") ?? undefined;
+
           if (
             request.method === "POST" &&
             request.headers.get("origin") !== config.APP_ORIGIN
           )
             throw new DomainError("FORBIDDEN");
-          if (request.method === "GET" && path === "/api/v1/session") {
-            const flags = {
-              google: config.googleEnabled,
-              discord: config.discordEnabled,
-            };
-            if (!token)
-              return json({ account: null, csrf: null, providers: flags });
-            const proof = cookie(request, cookieNames.csrf);
-            try {
-              return json({
-                account: await auth.account(token),
-                csrf: proof,
-                providers: flags,
-              });
-            } catch (error) {
-              if ((error as { code?: unknown })?.code !== "UNAUTHENTICATED")
-                throw error;
-              // Expired or revoked cookies are an anonymous browser context.
-              const response = json({
-                account: null,
-                csrf: null,
-                providers: flags,
-              });
-              setCookie(response, cookieNames.session, "", secure, true, 0);
-              setCookie(response, cookieNames.csrf, "", secure, false, 0);
-              return response;
-            }
+
+          const context = { request, url, path, token, csrf, recordError };
+          for (const route of routes) {
+            const response = await route(context);
+            if (response) return response;
           }
-          if (request.method === "GET" && path === "/api/v1/seasons")
-            return json(page(await tracker.seasons(), url, "seasons"));
-          if (
-            request.method === "GET" &&
-            /^\/api\/v1\/seasons\/[a-f0-9-]{36}$/.test(path)
-          ) {
-            const season = (await tracker.seasons()).find(
-              (s) => s.id === path.split("/").at(-1)
-            );
-            if (!season) throw new DomainError("NOT_FOUND");
-            return json(season);
-          }
-          if (request.method === "GET" && path === "/api/v1/sessions") {
-            await auth.authenticate(token);
-            return json(await auth.sessions(token));
-          }
-          if (request.method === "GET" && path === "/api/v1/notifications") {
-            await auth.authenticate(token);
-            return json(await auth.notifications(token));
-          }
-          if (request.method === "GET" && path === "/api/v1/history") {
-            const actor = await auth.authenticate(token);
-            return json(
-              page(await tracker.history(actor.userId), url, "history")
-            );
-          }
-          if (request.method === "GET" && path === "/api/v1/export") {
-            const actor = await auth.authenticate(token);
-            const response = json({
-              schemaVersion: 1,
-              account: await auth.account(token),
-              history: await tracker.history(actor.userId),
-            });
-            response.headers.set(
-              "content-disposition",
-              'attachment; filename="challenge-history.json"'
-            );
-            return response;
-          }
-          if (request.method === "GET" && path === "/api/v1/admin/stats") {
-            const actor = await auth.authenticate(token);
-            return json(await tracker.adminStats(actor.userId));
-          }
-          if (request.method === "GET" && path === "/api/v1/admin/seasons") {
-            const actor = await auth.authenticate(token);
-            return json(
-              page(
-                await tracker.seasons(actor.userId, true),
-                url,
-                "admin-seasons"
-              )
-            );
-          }
-          if (request.method === "POST" && path === "/api/v1/auth") {
-            rates.take("auth-input", address(request), 100, 60000);
-            const input = await payload(request);
-            const c = authCommandSchema.safeParse(input);
-            if (!c.success) throw new DomainError("VALIDATION");
-            const action = c.data.action;
-            const bucket = `auth-${action}`;
-            rates.take(
-              bucket,
-              address(request),
-              action === "login" ? 20 : 60,
-              60000
-            );
-            if ("email" in c.data)
-              rates.take(
-                `${bucket}-email`,
-                c.data.email.trim().toLowerCase(),
-                10,
-                15 * 60000
-              );
-            if (
-              ![
-                "login",
-                "signup",
-                "recover",
-                "verify",
-                "reset",
-                "verify_recovery_email",
-              ].includes(action)
-            ) {
-              const account = await auth.account(token);
-              rates.take("account-user", account.id, 120, 60000);
-            }
-            if (c.data.action === "set_avatar" && c.data.avatar) {
-              const match =
-                /^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
-                  c.data.avatar
-                );
-              if (!match) throw new DomainError("VALIDATION");
-              try {
-                const clean = await sharp(
-                  Buffer.from(match[1] ?? "", "base64"),
-                  {
-                    limitInputPixels: 16000000,
-                    animated: false,
-                  }
-                )
-                  .rotate()
-                  .resize(256, 256, { fit: "cover", withoutEnlargement: true })
-                  .webp({ quality: 80 })
-                  .toBuffer();
-                c.data.avatar = `data:image/webp;base64,${clean.toString("base64")}`;
-              } catch {
-                throw new DomainError("VALIDATION");
-              }
-            }
-            const ua = request.headers.get("user-agent") ?? "";
-            const device = `${/Firefox/i.test(ua) ? "Firefox" : /Edg/i.test(ua) ? "Edge" : /Chrome/i.test(ua) ? "Chrome" : /Safari/i.test(ua) ? "Safari" : "Browser"} on ${/Android/i.test(ua) ? "Android" : /iPhone|iPad/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac/i.test(ua) ? "macOS" : "desktop"}`;
-            const result = await auth.execute(c.data, token, csrf, device);
-            const response = json({
-              accepted: result.accepted,
-              ...("requestId" in result ? { requestId: result.requestId } : {}),
-            });
-            if (
-              "token" in result &&
-              "csrf" in result &&
-              result.token &&
-              result.csrf
-            )
-              loginCookies(response, {
-                token: result.token,
-                csrf: result.csrf,
-              });
-            if (
-              ["logout", "unlink", "reset", "request_erasure"].includes(
-                c.data.action
-              )
-            ) {
-              setCookie(response, cookieNames.session, "", secure, true, 0);
-              setCookie(response, cookieNames.csrf, "", secure, false, 0);
-            }
-            return response;
-          }
-          if (request.method === "POST" && path === "/api/v1/command") {
-            if (!csrf) throw new DomainError("FORBIDDEN");
-            const input = await payload(request);
-            if (!input || typeof input !== "object")
-              throw new DomainError("VALIDATION");
-            const cmd = input as { command?: unknown };
-            const recent =
-              cmd.command === "IssueCorrectionGrant" ||
-              cmd.command === "RevokeCorrectionGrant";
-            const actor = await auth.authenticate(token, csrf, recent);
-            rates.take("mutation", actor.userId, 120, 60000);
-            const key = request.headers.get("idempotency-key");
-            if (!key || !/^[-\w:]{1,200}$/.test(key))
-              throw new DomainError("VALIDATION");
-            return json(await tracker.execute(actor.userId, input, key));
-          }
-          if (request.method === "POST" && path === "/api/v1/oauth") {
-            rates.take("oauth", address(request), 20, 60000);
-            const value = await payload(request);
-            if (!value || typeof value !== "object")
-              throw new DomainError("VALIDATION");
-            const input = value as { provider?: unknown; link?: unknown };
-            if (
-              (input.provider !== "google" && input.provider !== "discord") ||
-              typeof input.link !== "boolean"
-            )
-              throw new DomainError("VALIDATION");
-            const browser = randomBytes(32).toString("hex");
-            const state = await auth.beginOAuth(
-              input.provider,
-              browser,
-              token,
-              csrf,
-              input.link
-            );
-            const response = json({
-              url: providers.authorization(input.provider, state),
-            });
-            setCookie(response, cookieNames.oauth, browser, secure, true, 600);
-            return response;
-          }
-          if (
-            request.method === "GET" &&
-            /^\/api\/auth\/(google|discord)\/callback$/.test(path)
-          ) {
-            const provider = path.includes("/google/") ? "google" : "discord";
-            const state = url.searchParams.get("state"),
-              code = url.searchParams.get("code"),
-              browser = cookie(request, cookieNames.oauth);
-            let destination = "/login";
-            let response: Response;
-            try {
-              if (!state || !browser || state.length > 256)
-                throw new DomainError("UNAUTHENTICATED");
-              const saved = await auth.oauthState(provider, state, browser);
-              if (saved.userId) destination = "/account";
-              if (url.searchParams.has("error") || !code || code.length > 4096)
-                throw new DomainError("UNAUTHENTICATED");
-              const proof = await providers.exchange(saved, code);
-              const session = await auth.completeOAuth(
-                saved.id,
-                browser,
-                proof,
-                token
-              );
-              response = new Response(null, {
-                status: 303,
-                headers: {
-                  location: `${config.APP_ORIGIN}/account`,
-                  "cache-control": "no-store",
-                  "referrer-policy": "no-referrer",
-                },
-              });
-              loginCookies(response, session);
-            } catch (error) {
-              recordError(error);
-              response = new Response(null, {
-                status: 303,
-                headers: {
-                  location: `${config.APP_ORIGIN}${destination}?error=oauth`,
-                  "cache-control": "no-store",
-                  "referrer-policy": "no-referrer",
-                },
-              });
-            }
-            setCookie(response, cookieNames.oauth, "", secure, true, 0);
-            return response;
-          }
+
           return json({ code: "NOT_FOUND" }, 404);
         } catch (error) {
           recordError(error);
           const code = trackerErrorCodeSchema.safeParse(
             (error as { code?: unknown })?.code
           );
+
           if (!code.success) return json({ error: "Service unavailable" }, 503);
+
           const statuses: Record<string, number> = {
             UNAUTHENTICATED: 401,
             FORBIDDEN: 403,
@@ -434,15 +86,18 @@ export function createWebApi(deps: ApiDependencies) {
             VALIDATION: 400,
             RATE_LIMITED: 429,
           };
+
           const response = json(
             { code: code.data },
             statuses[code.data] ?? 409
           );
+
           if (code.data === "RATE_LIMITED")
             response.headers.set(
               "retry-after",
               String((error as { retryAfter?: number }).retryAfter ?? 5)
             );
+
           return response;
         }
       });

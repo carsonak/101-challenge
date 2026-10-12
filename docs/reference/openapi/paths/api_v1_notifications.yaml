@@ -1,0 +1,21 @@
+get:
+  operationId: listNotifications
+  summary: listNotifications
+  description: Owner-only projection.
+  security:
+    - sessionCookie: []
+  responses:
+    "200":
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: ../components/schemas/Notification.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml

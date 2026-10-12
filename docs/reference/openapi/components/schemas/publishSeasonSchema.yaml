@@ -1,0 +1,18 @@
+type: object
+properties:
+  command:
+    type: string
+    const: PublishSeason
+  seasonId:
+    type: string
+    format: uuid
+    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+  expectedSeasonVersion:
+    type: integer
+    minimum: 0
+    maximum: 9007199254740991
+required:
+  - command
+  - seasonId
+  - expectedSeasonVersion
+additionalProperties: false

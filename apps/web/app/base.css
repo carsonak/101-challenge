@@ -1,0 +1,133 @@
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body), sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.55;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 550;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-size: clamp(2.3rem, 5.5vw, 4rem);
+    letter-spacing: -0.035em;
+  }
+  h2 {
+    font-size: clamp(1.65rem, 3vw, 2.4rem);
+  }
+  h3 {
+    font-size: 1.45rem;
+  }
+  p {
+    margin: 0 0 1rem;
+    max-width: 72ch;
+  }
+  a {
+    text-decoration: underline;
+    color: var(--lake);
+    text-underline-offset: 0.2em;
+  }
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+  small {
+    color: var(--muted);
+    font-size: 1rem;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+  input,
+  textarea,
+  select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--control-line);
+    border-radius: 0.4rem;
+    color: var(--text);
+    background: var(--surface);
+  }
+  textarea {
+    min-height: 9rem;
+    resize: vertical;
+  }
+  input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    min-height: 0;
+    accent-color: var(--lake);
+    flex-shrink: 0;
+  }
+  :focus-visible {
+    outline: 3px solid var(--lake);
+    outline-offset: 3px;
+  }
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  summary {
+    cursor: pointer;
+    min-height: 2.75rem;
+    padding: 0.4rem 0;
+  }
+  ul,
+  ol {
+    padding-left: 1.5rem;
+  }
+  code {
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+}
+@layer components {
+  main > section {
+    margin-block: 1.5rem;
+  }
+}
+@layer components {
+  main {
+    width: min(100% - 3rem, 68rem);
+    margin: 3rem auto 5rem;
+  }
+}
+@media (max-width: 40rem) {
+  main {
+    width: calc(100% - 2rem);
+    margin-top: 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: Reduced motion overrides all component motion. */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Reduced motion overrides all component motion. */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Reduced motion overrides all component motion. */
+    scroll-behavior: auto !important;
+  }
+}

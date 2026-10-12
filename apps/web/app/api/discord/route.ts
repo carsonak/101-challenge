@@ -23,6 +23,7 @@ export async function POST(request: Request) {
               signal: AbortSignal.timeout(5000),
             }
           );
+
           if (!response.ok) throw new Error("Private response unavailable");
         },
       }).handle(request);

@@ -26,6 +26,7 @@ async function main() {
   const database = config.DATABASE_URL
     ? createJobStore(config.DATABASE_URL)
     : undefined;
+
   const boss = config.DATABASE_URL
     ? new PgBoss({
         connectionString: config.DATABASE_URL,
@@ -33,6 +34,7 @@ async function main() {
         createSchema: false,
       })
     : undefined;
+
   boss?.on("error", (error) => logBackend("worker", "queue_failed", {}, error));
   let stopJobs: (() => Promise<void>) | undefined;
   const server = createServer(async (request, response) => {
@@ -43,25 +45,31 @@ async function main() {
       response.writeHead(404).end();
       return;
     }
+
     const result =
       request.url === "/health"
         ? { status: "ok", service: "worker" }
         : await readiness("worker", async () => {
             if (!database || !boss) throw new Error("Database not configured");
+
             await database.ready();
             if (!(await boss.getQueue("tracker_projection")))
               throw new Error("Worker queue unavailable");
           });
+
     response.writeHead(result.status === "ok" ? 200 : 503, {
       "content-type": "application/json",
     });
+
     response.end(JSON.stringify(result));
   });
+
   let stopping = false;
   let startup: Promise<void> | undefined;
   /** Close the listener and service connections once; exit unsuccessfully if cleanup exceeds its deadline. */
   async function shutdown() {
     if (stopping) return;
+
     stopping = true;
     logBackend("worker", "shutdown_started");
     const deadline = setTimeout(() => process.exit(1), 10000).unref();
@@ -74,26 +82,32 @@ async function main() {
     clearTimeout(deadline);
     logBackend("worker", "shutdown_complete");
   }
+
   process.once("SIGTERM", () => {
     void shutdown();
   });
+
   process.once("SIGINT", () => {
     void shutdown();
   });
+
   server.once("error", (error) => {
     logBackend("worker", "listener_failed", {}, error);
     void shutdown().then(() => {
       process.exitCode = 1;
     });
   });
+
   // Signal/listener cleanup exists before any handlers are registered.
   startup = (async () => {
     startupStage = "database_readiness";
     await database?.ready();
     if (stopping) return;
+
     startupStage = "queue_start";
     await boss?.start();
     if (stopping) return;
+
     startupStage = "job_registration";
     if (database && boss)
       stopJobs = await startJobs(boss, database, {
@@ -101,6 +115,7 @@ async function main() {
         idleMaxMs: config.OUTBOX_IDLE_MAX_MS,
       });
   })();
+
   try {
     await startup;
   } catch (error) {
@@ -109,6 +124,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+
   if (!stopping) {
     server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
       logBackend("worker", "listening", { port: config.WORKER_PORT })

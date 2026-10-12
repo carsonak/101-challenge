@@ -10,13 +10,16 @@ const { reportCliFailure } = await import("./cli-diagnostics.mjs" as string);
 function setting(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`Missing ${name}`);
+
   return value;
 }
+
 // Roles precede migration; grants follow it.
 try {
   const phase = process.argv[2];
   if (phase !== "roles" && phase !== "grants")
     throw new Error("Usage: pnpm database:provision roles|grants");
+
   const logins = Object.fromEntries(
     ["migrator", "web", "worker", "maintenance"].map((kind) => [
       kind,
@@ -26,6 +29,7 @@ try {
       },
     ])
   ) as unknown as DatabaseLogins;
+
   await provisionDatabase(
     setting("OPERATOR_DATABASE_URL"),
     logins,
@@ -38,5 +42,6 @@ try {
     error,
     "Check OPERATOR_DATABASE_URL and role settings in .env.operator; provision roles, migrate, then provision grants."
   );
+
   process.exitCode = 1;
 }

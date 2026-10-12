@@ -1,0 +1,191 @@
+/* Establish the cascade even when route modules load before global styles. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .card {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 0.8rem;
+    margin-block: 1.5rem;
+  }
+  .card .card {
+    background: var(--bg);
+    padding: 1.25rem;
+  }
+  :where(.button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+    margin: 0.25rem 0.35rem 0.25rem 0;
+  }
+  .secondary {
+    background: var(--surface);
+    border-color: var(--control-line);
+    color: var(--lake);
+  }
+  .danger {
+    background: var(--danger);
+    color: var(--bg);
+  }
+  .danger-zone {
+    background: var(--danger-bg);
+    border-color: var(--danger);
+    margin-top: 3rem;
+  }
+  .field {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  .field label {
+    font-weight: 600;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: 1rem;
+  }
+  .check {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-block: 1rem;
+  }
+  .password-control {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .password-control input {
+    min-width: 0;
+  }
+  .password-control button {
+    flex-shrink: 0;
+  }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.5rem;
+  }
+  .metrics strong {
+    display: block;
+    font-size: 2rem;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+  .metrics span {
+    color: var(--muted);
+  }
+  .eyebrow {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .notice {
+    border-left: 3px solid var(--lake);
+    background: var(--surface-2);
+    padding: 1rem;
+    margin-block: 1rem;
+  }
+  .error {
+    color: var(--danger);
+  }
+  .private-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .key {
+    overflow-wrap: anywhere;
+    user-select: all;
+  }
+  .report {
+    padding-block: 1rem;
+    border-top: 1px solid var(--line);
+  }
+  .help {
+    margin-block: 0.75rem;
+    color: var(--muted);
+  }
+  .help > div {
+    padding: 1rem;
+    background: var(--surface-2);
+    border-radius: 0.4rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 2rem;
+    font-size: 0.95rem;
+    background: var(--surface-2);
+  }
+  .toast {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 60;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    width: min(30rem, calc(100% - 3rem));
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--control-line);
+    border-radius: 0.65rem;
+    box-shadow: 0 8px 30px #0002;
+  }
+  .toast button {
+    margin: 0;
+  }
+  :where(.dialog) {
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    padding: 2rem;
+    width: min(36rem, calc(100% - 2rem));
+  }
+  :where(.dialog)::backdrop {
+    background: #0008;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 40rem) {
+  .metrics {
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .columns {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: 2rem;
+  }
+}

@@ -9,8 +9,10 @@ export function createCapacity(concurrency = 2, maxWaiting = 8) {
     async run<T>(work: () => Promise<T>): Promise<T> {
       if (active >= concurrency) {
         if (waiting.length >= maxWaiting) throw new DomainError("RATE_LIMITED");
+
         await new Promise<void>((resolve) => waiting.push(resolve));
       } else active++;
+
       try {
         return await work();
       } finally {

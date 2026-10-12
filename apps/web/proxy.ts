@@ -17,6 +17,7 @@ export function proxy(request: NextRequest) {
     "form-action 'self'",
     "frame-ancestors 'none'",
   ].join("; ");
+
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("content-security-policy", csp);
@@ -26,12 +27,15 @@ export function proxy(request: NextRequest) {
     "permissions-policy",
     "camera=(), microphone=(), geolocation=(), payment=()"
   );
+
   response.headers.set("referrer-policy", "no-referrer");
   response.headers.set("x-content-type-options", "nosniff");
   if (process.env.APP_ORIGIN?.startsWith("https:"))
     response.headers.set("strict-transport-security", "max-age=31536000");
+
   return response;
 }
+
 /** Skip API and static assets; pages and client navigation receive fresh nonce headers. */
 export const config = {
   matcher: "/((?!api|_next/static|_next/image|favicon.ico|fonts).*)",

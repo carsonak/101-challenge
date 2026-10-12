@@ -1,0 +1,5 @@
+description: Domain or optimistic version conflict; see error code.
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/Error.yaml

@@ -1,0 +1,5 @@
+description: Unexpected service failure; private details omitted.
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/Unavailable.yaml

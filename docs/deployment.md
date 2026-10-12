@@ -25,3 +25,11 @@ Restore into an empty, exclusive database with workers and traffic stopped. Loca
 ## Optional Neon compatibility
 
 Use a direct, non-pooler connection for migrations, pg-boss and restore, with TLS verification. Confirm the operator can manage the required role memberships and schemas without superuser assumptions. Exercise session advisory locks, transactions, pg-boss schema creation/migrations and worker job retries on a disposable database. Set connection/pool limits below provider caps and measure latency against Discord's internal deadline. Treat a pooled HTTP/serverless driver as a different compatibility target; it cannot replace these long-lived PostgreSQL sessions. Neon is optional and is not the live-test default.
+
+Provisioning explicitly grants inherited erasure-role usage to the migrator and
+maintenance login. PostgreSQL grants non-inheriting membership to a non-superuser
+role creator by default; the migrator-owned SECURITY DEFINER erasure function must
+inherit usage for its immutable-completion deletion guard. Reapply the normal
+`pnpm database:provision grants` step with operator credentials to repair an
+existing configured stack. No schema migration or completion-guard relaxation is
+required. See [PostgreSQL role attributes](https://www.postgresql.org/docs/17/role-attributes.html).

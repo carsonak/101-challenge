@@ -12,6 +12,7 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
     signature: unknown;
     authorization: unknown;
   }[] = [];
+
   const upstream = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     try {
@@ -19,14 +20,17 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
     } catch {
       return;
     }
+
     seen.push({
       body: Buffer.concat(chunks),
       path: req.url ?? "",
       signature: req.headers["x-signature-ed25519"],
       authorization: req.headers.authorization,
     });
+
     res.writeHead(200).end('{"type":1}');
   });
+
   upstream.listen(0, "127.0.0.1");
   await once(upstream, "listening");
   const upstreamAddress = upstream.address();
@@ -45,6 +49,7 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
     },
     stdio: ["ignore", "ignore", "pipe"],
   });
+
   const origin = `http://127.0.0.1:${address.port}`;
   try {
     for (let n = 0; n < 30; n++) {
@@ -55,6 +60,7 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
     }
+
     const bytes = Buffer.from(' { "type": 1, "text": "日🙂" }\n');
     const response = await fetch(`${origin}/api/discord`, {
       method: "POST",
@@ -65,6 +71,7 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
         authorization: "must-not-forward",
       },
     });
+
     assert.equal(response.status, 200);
     assert.deepEqual(seen[0].body, bytes);
     assert.equal(seen[0].signature, "fictional-signature");
@@ -83,6 +90,7 @@ test("Discord proxy forwards exact POST bytes and signatures, rejecting other me
         404
       );
     }
+
     assert.equal((await fetch(`${origin}/api/discord`)).status, 404);
     assert.equal(seen.length, 1);
     assert.equal(

@@ -1,3 +1,4 @@
+import uiStyles from "./../styles/ui.module.css";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { runtime } from "../server/runtime";
@@ -18,11 +19,15 @@ export default async function Home() {
       signedIn = Boolean(await runtime().auth.account(token));
     } catch {}
   }
+
   if (signedIn) redirect("/home");
+
   const { APP_DISPLAY_NAME } = parseServerConfig(process.env);
   return (
     <main>
-      <p className="eyebrow">101 reporting days · Your goals · Your pace</p>
+      <p className={uiStyles.eyebrow}>
+        101 reporting days · Your goals · Your pace
+      </p>
       <h1>{APP_DISPLAY_NAME}</h1>
       <p>
         A place to build a steady practice, record your progress, and learn with
@@ -35,10 +40,13 @@ export default async function Home() {
           days. Your reports and retained history stay private.
         </p>
         <p>
-          <a className="button" href="/seasons">
+          <a className={uiStyles.button} href="/seasons">
             Explore seasons
           </a>{" "}
-          <a className="button secondary" href="/signup">
+          <a
+            className={`${uiStyles.button} ${uiStyles.secondary}`}
+            href="/signup"
+          >
             Create account
           </a>{" "}
           <a href="/login">Sign in</a>

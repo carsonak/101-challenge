@@ -65,3 +65,79 @@ The production build and restricted-login production smoke passed. The full brow
 The final configuration audit found no configured secrets or owner email values in tracked or eligible files. Live provider consent/linking, additional Discord daily-loop acceptance, separate verification-email delivery and VPS launch remain outstanding external gates.
 
 The final full pnpm check passed 62 named tests with zero failures and zero skips against disposable PostgreSQL. Typechecking, lint, package boundaries, formatting and documentation checks passed; the production build, restricted-login smoke and browser evidence above are separate checks. Font license files received whitespace-only normalization during the staged diff review.
+
+## Maintainability audit and refactor — 2026-10-12
+
+The refactored implementation passed the full `pnpm check` with 66 named tests,
+zero failures and zero skips against disposable PostgreSQL 17.11. Typechecking,
+lint/package boundaries, Prettier, AST-aware statement spacing, production
+300-line limits, documentation/seed checks and Redocly validation passed. The
+production build and web/worker smoke passed with actual restricted logins and
+without database configuration. Licensed font assets remain unchanged.
+
+Restricted-login verification exposed non-inheriting membership granted to a
+non-superuser migrator when it creates the erasure role. Provisioning now applies
+`WITH INHERIT TRUE` explicitly. The extended topology regression accepts 101
+reports, preserves the completion guard and erases the completed account using
+the maintenance login. The normal grants step repairs existing configured stacks;
+no schema migration is required.
+
+The YAML conversion's dereferenced comparison preserved all original components
+and operation contracts except reviewed documentation corrections: stale-session
+bootstrap returns anonymous HTTP 200 and clears cookies, and unreachable blanket
+GET error responses were removed. Redocly's external YAML bundle command passed;
+permanent coverage checks references and both runtime command registries, including
+nested grant alternatives.
+
+All eight production-browser tests passed without retries. The route matrix covered
+120 combinations of 20 routes, two themes and 320/768/1440-pixel widths, alongside
+keyboard, enlarged-text, accessibility, reduced motion, CSP and hydration checks.
+Synthetic screenshots were inspected in both themes at narrow and desktop widths.
+An initial CSS layer-order regression was fixed before the accepted run by declaring
+layer order in every module and preserving override specificity.
+
+Public authentication and tracker factory types were checked for assignability
+in both directions against the original source contracts. Compiled local package
+imports were checked for runtime cycles; none were found. Operational TypeScript
+scripts are now included in aggregate typechecking.
+
+A fresh encrypted backup/restore rehearsal used checksum-verified age tooling and
+PostgreSQL 17 dump/restore tools against exclusive disposable databases. Restoring
+101 reports preserved completion and seed facts; the newer deletion ledger erased
+one account absent from the older snapshot's ledger. A populated restore target
+was deliberately refused. An initial test-tool wrapper omitted the database name;
+that failed rehearsal was retained and the wrapper corrected before the accepted
+run. Hosted storage durability and server restore remain unverified.
+
+The ignored local OAuth callback settings were aligned with the configured loopback
+origin without changing credentials. Safe configuration validation passed. Live
+provider-console callbacks, consent/linking/profile checks, verification-message
+delivery and the linked Discord daily loop remain owner-assisted gates. The local
+default database port was occupied by a system PostgreSQL service that rejected
+the configured operator credentials. The owner selected an alternate port;
+the private project Compose database is healthy there. Ignored runtime/operator
+targets and restricted logins were aligned, then role provisioning, migrations
+and grants passed. Private web/worker readiness and the login page returned 200.
+The foreground exact-route tunnel returned 401 for unsigned Discord POSTs and
+404 for root, GET and query variants. Guild registration dry-run passed; no
+registration write or owner interaction is claimed. No unrelated database,
+provider console, sender or hosted deployment was modified.
+
+The owner's subsequent worker launch used Node 22.15.0 and failed before startup
+because that runtime lacks the built-in Argon2 export. Local launchers now check
+the manifest's Node engine range before application imports and explain how to
+select Node 24. The actual Node 22 launcher was verified to fail with that message;
+mise selected installed Node 24.20.0. All five focused setup tests passed,
+including engine boundaries, with no skips; lint, source limits and documentation
+checks passed. The temporary acceptance worker was stopped for the owner's
+development-worker handoff. The owner confirmed configuring provider URIs;
+interactive consent, linking and delivery evidence remain pending.
+
+Before the owner-requested workspace backup, fresh localhost probes returned 200
+for login, liveness, readiness and anonymous session bootstrap. Google and Discord
+OAuth start POSTs returned 200 and authorization URLs with the configured localhost
+callbacks. A POST using the alternative loopback hostname returned 403, confirming
+the exact-origin boundary; these checks do not prove provider consent or linking.
+Final lint, formatting and source checks passed. The owner then authorized a backup
+commit and push of the current maintainability changes; private configuration and
+external artifacts are excluded from that backup.

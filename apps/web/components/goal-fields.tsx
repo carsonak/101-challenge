@@ -1,4 +1,6 @@
 "use client";
+import uiStyles from "./../styles/ui.module.css";
+
 import type { GoalInput, MilestoneInput } from "@challenge/core";
 import { Field } from "./ui";
 
@@ -13,7 +15,7 @@ export function GoalFields({
   onChange: (goal: GoalInput) => void;
 }) {
   return (
-    <div className="form-grid">
+    <div className={uiStyles["form-grid"]}>
       <Field label="Goal title">
         <input
           required
@@ -73,6 +75,7 @@ export function GoalFields({
     </div>
   );
 }
+
 /** Initial milestone fields shared by custom setup and optional season recommendations. */
 export function InitialMilestoneFields({
   value,
@@ -84,7 +87,7 @@ export function InitialMilestoneFields({
   onChange: (value: MilestoneInput) => void;
 }) {
   return (
-    <div className="form-grid">
+    <div className={uiStyles["form-grid"]}>
       <Field label="Milestone title">
         <input
           required

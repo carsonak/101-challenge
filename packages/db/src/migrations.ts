@@ -20,6 +20,7 @@ export async function requireMigrations(
     "SELECT version FROM tracker_migrations WHERE version = ANY($1::integer[])",
     [versions]
   );
+
   if (result.rowCount !== versions.length)
     throw Object.assign(new Error("Tracker migrations required"), {
       code: "MIGRATIONS_REQUIRED",
