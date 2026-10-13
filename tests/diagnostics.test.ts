@@ -207,3 +207,43 @@ test("Operator diagnostics preserve messages, custom codes, causes and stacks", 
   assert.equal(record.error.cause.message, cause.message);
   assert.equal(record.error.cause.code, "CUSTOM_QUEUE_CODE");
 });
+
+test("Worker startup summaries retain only boolean readiness and omit connection configuration", () => {
+  for (const ready of [false, true]) {
+    const lines: string[] = [];
+    logBackend(
+      "worker",
+      "runtime_ready",
+      {
+        databaseReady: ready,
+        jobsReady: ready,
+        ...{ connection: "fictional-private-url", schema: "private-schema" },
+      },
+      undefined,
+      (line) => lines.push(line)
+    );
+
+    const record = JSON.parse(required(lines[0]));
+    assert.equal(record.databaseReady, ready);
+    assert.equal(record.jobsReady, ready);
+    assert.equal(record.level, "info");
+    assert.equal(record.connection, undefined);
+    assert.equal(record.schema, undefined);
+  }
+
+  const lines: string[] = [];
+  logBackend(
+    "worker",
+    "runtime_ready",
+    {
+      databaseReady: "private" as never,
+      jobsReady: 1 as never,
+    },
+    undefined,
+    (line) => lines.push(line)
+  );
+
+  const record = JSON.parse(required(lines[0]));
+  assert.equal(record.databaseReady, undefined);
+  assert.equal(record.jobsReady, undefined);
+});

@@ -25,10 +25,32 @@ against the original contracts; compiled local package imports have no cycles.
 
 Live provider acceptance remains distinct. The installed foreground cloudflared
 uses the exact-route proxy; no system service or full-site tunnel is required.
-Owner confirmation of provider-console callbacks, verification-email delivery,
-and linked Discord daily flows is still pending. The private project database is
+Provider-console callbacks have now been corrected; the owner confirmed Discord
+login, Google linking and recovery-address delivery/verification. Remaining
+provider cases, password-signup verification delivery and linked Discord daily
+flows await the owner's hosted review. The private project database is
 healthy on the selected alternate port, with aligned runtime/operator targets and
 separate restricted logins. Local web/worker readiness passed; public unsigned
 Discord POSTs return 401 and root/GET/query variants return 404. Registration
 dry-run passed. No unrelated database has been altered. VPS and hosted-backup
 gates remain pending.
+
+## MVP readiness follow-up
+
+The local sign-in failures were caused by a browser-origin mismatch followed by
+stale provider-console callback ports. The follow-up adds canonical-URL startup
+guidance, explicit worker startup readiness, browser OAuth initiation regressions,
+an immutable migration baseline and a populated MVP upgrade regression. Fresh
+acceptance is recorded in [verification](../../docs/verification.md).
+
+The [compatibility policy](../../docs/compatibility.md) governs later changes; the
+[hosted pilot checklist](../../docs/pilot-readiness.md) maps core workflows to
+evidence and the owner's server review. Hosting, additional users and Bitdevs
+Kisumu installation follow that review. UI refinement and artwork remain later
+v1.0 work.
+
+The follow-up's local acceptance is complete: aggregate checks, the populated
+upgrade regression, production build, restricted/database-free smoke and all
+browser scenarios passed. The dated evidence records the interrupted browser
+run and the two completed acceptance groups. Server and remaining owner-assisted
+gates stay open.

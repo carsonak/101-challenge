@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-challenge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_development_only}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

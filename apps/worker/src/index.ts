@@ -126,6 +126,11 @@ async function main() {
   }
 
   if (!stopping) {
+    logBackend("worker", "runtime_ready", {
+      databaseReady: Boolean(database),
+      jobsReady: Boolean(stopJobs),
+    });
+
     server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
       logBackend("worker", "listening", { port: config.WORKER_PORT })
     );

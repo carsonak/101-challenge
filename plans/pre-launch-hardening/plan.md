@@ -36,7 +36,7 @@ Owner-approved implementation on main. Checked items describe implemented behavi
 - [x] Live portal interaction validation records a successful signed request through the exact-route tunnel.
 - [x] Live guild registration and readback after owner installation.
 - [x] Owner confirms live help/dashboard replies after continuation-token fix.
-- [ ] Owner exercises linked join/report/pause/resume flows; Windows localhost access is verified on an unreserved port; interactive OAuth awaits matching provider-console callbacks.
+- [ ] Owner exercises linked join/report/edit/pause/resume flows during the hosted review; local browser access and corrected provider callbacks are confirmed.
 
 ## Stage 4 — Web security and redesign
 
@@ -55,7 +55,8 @@ Owner-approved implementation on main. Checked items describe implemented behavi
 - [x] Temporary quick tunnel targets the proxy; APP_ORIGIN, OAuth callbacks and Discord website links remain localhost and owner-machine only.
 - [x] Validate ignored Google/Discord/Brevo configuration without disclosure; Brevo TLS/authentication and two owner-authorized verification/recovery SMTP submissions pass.
 - [x] Owner confirms corrected recovery-email delivery to the inbox, outside spam.
-- [ ] Verification-message delivery and real Google/Discord login, linking, cancellation and profile behavior; live guild command acceptance.
+- [x] Owner confirms Discord login, Google linking and recovery-address delivery/verification after correcting provider-console callback ports.
+- [ ] Password-signup verification delivery, remaining provider first/repeat login, cancellation/conflict/profile cases and linked guild daily flows; complete during owner-assisted/hosted acceptance.
 - [x] Optional Neon compatibility checklist; supplied recipe is not executed.
 - [x] Prepare reviewable production Compose/Caddy, isolated maintenance scheduling, resource/log limits and pg_dump/age/configurable S3 backup tooling; no VPS action performed.
 - [x] Isolated encrypted local restore with latest post-snapshot deletion-ledger replay preserves retained completion/seed facts and removes erased identities.
@@ -65,3 +66,15 @@ Owner-approved implementation on main. Checked items describe implemented behavi
 ## Acceptance boundary
 
 All local gates must pass on the final implementation. Database-backed tests must report no unexpected skips and exercise real restricted logins. Provider, encrypted-storage and VPS evidence are distinct from fixture acceptance and prepared assets. No commit, push, merge, provision or deployment is implied by this checklist.
+
+## Local readiness and compatibility follow-up
+
+- [x] Canonical browser URL guidance and worker startup readiness diagnostics.
+- [x] OAuth initiation regression coverage with fictional providers; immutable MVP migration baseline and populated upgrade regression.
+- [x] Durable [compatibility policy](../../docs/compatibility.md) and [pilot evidence map](../../docs/pilot-readiness.md).
+- [x] Fresh local aggregate checks, production build/smoke and browser/theme/accessibility acceptance; see [dated evidence](../../docs/verification.md).
+
+The owner sets up hosting next and performs a thorough web/Discord path review
+before inviting users or installing on Bitdevs Kisumu. UI refinement and artwork
+are deferred toward v1.0; future additions must preserve core workflow contracts
+and existing participant data.

@@ -86,6 +86,7 @@ test(
       const app = createRepository(required(url), true);
       try {
         const appAuth = createAuth(app.repository, {
+          now: f.now,
           sendMail: async () => {},
         });
 
@@ -158,6 +159,14 @@ test(
 
       assert.ok("requestId" in request);
       const requestId = required(request.requestId);
+      // Maintenance uses PostgreSQL's wall clock, independently of the auth fixture clock.
+      await f.db.repository.transaction(async (tx) => {
+        const row = await tx.get("erasure_requests", requestId, true);
+        assert.ok(row);
+        row.deleteAfter = new Date(Date.now() + 86400000).toISOString();
+        await tx.save("erasure_requests", row);
+      });
+
       await assert.rejects(f.db.eraseAccount(actor.userId, randomUUID()), {
         code: "42501",
       });

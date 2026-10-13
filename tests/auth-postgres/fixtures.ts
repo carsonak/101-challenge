@@ -37,6 +37,8 @@ export async function fixture() {
     db,
     auth,
     mail,
+    /** Share the fixture clock with additional authentication adapters. */
+    now: () => instant,
     advance(minutes: number) {
       instant = new Date(instant.getTime() + minutes * 60000);
     },

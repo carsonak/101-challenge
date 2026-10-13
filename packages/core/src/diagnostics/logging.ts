@@ -32,6 +32,9 @@ export function logBackend(
       event,
     };
 
+    for (const key of ["databaseReady", "jobsReady"] as const)
+      if (typeof details[key] === "boolean") record[key] = details[key];
+
     if (
       details.stage &&
       [

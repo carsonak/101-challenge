@@ -12,3 +12,27 @@ The [maintainability audit](../maintainability/OVERVIEW.md) records fresh local
 acceptance and a repaired migrator erasure-role inheritance defect. Its dated
 evidence supersedes earlier local checks for the refactored implementation; the
 unchecked provider and deployment gates above remain separate.
+
+## Current local readiness follow-up
+
+The owner resolved the remaining local origin and provider-console port mismatch
+and confirmed Discord login, linking Google, and recovery-address email delivery
+and verification. Read-only inspection confirmed the linked identities and
+verified recovery address; no password credential was inferred from that proof.
+These confirmations supersede the earlier pending callback/linking statements.
+Remaining provider cases and the linked Discord daily loop will be reviewed on
+the owner's deployment server before additional users and Bitdevs Kisumu
+installation.
+
+Startup diagnostics now clarify the canonical website URL and worker database/job
+readiness. OAuth initiation and populated-upgrade regressions protect the local
+workflow; an immutable migration baseline and the [compatibility policy](../../docs/compatibility.md)
+protect future changes. See the [pilot evidence map](../../docs/pilot-readiness.md)
+and [dated verification](../../docs/verification.md) for local results and open
+server gates. UI refinement and artwork remain later v1.0 work.
+
+The follow-up's local acceptance is complete: aggregate checks, the populated
+upgrade regression, production build, restricted/database-free smoke and all
+browser scenarios passed. The dated evidence records the interrupted browser
+run and the two completed acceptance groups. Server and remaining owner-assisted
+gates stay open.

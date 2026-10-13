@@ -124,3 +124,6 @@ blocks) and validate OpenAPI with a 3.1-compatible validator. Run
 `pnpm format:check`, `pnpm lint` and
 `pnpm docs:check` from the owning checkout. Application tests are unnecessary for
 changes confined to these references and documentation links.
+
+The [MVP compatibility policy](../compatibility.md) governs changes to these
+references and their runtime contracts after the hosted pilot.

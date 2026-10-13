@@ -141,3 +141,64 @@ the exact-origin boundary; these checks do not prove provider consent or linking
 Final lint, formatting and source checks passed. The owner then authorized a backup
 commit and push of the current maintainability changes; private configuration and
 external artifacts are excluded from that backup.
+
+## Local MVP readiness and compatibility — 2026-10-13
+
+The owner confirmed Discord login, Google linking and recovery-address delivery
+and verification after correcting provider-console callback ports. Read-only
+inspection confirmed one finalized profile with both provider identities and a
+verified recovery address; no verified password credential was present. No owner
+identity or private account content is included in this record. These checks do
+not establish Google first-login, cancellation/conflict/profile cases,
+password-signup verification delivery or linked Discord daily-loop acceptance.
+
+The web launcher now prints the canonical browser origin. The worker emits a
+startup runtime_ready record with allowlisted databaseReady/jobsReady booleans,
+while empty outbox scans remain quiet. API regressions reject alternate hostnames,
+ports, foreign and absent origins before creating OAuth state. An append-only
+migration baseline fixes the existing seven SQL files by version, order and hash.
+A populated baseline upgrade regression preserves verified login, both linked
+providers, 101 reports, retained history, completion and seed facts through the
+current migrator and its reapplication. The current migration range is unchanged;
+future appended migrations must continue to pass this populated fixture.
+
+Fresh pnpm check passed 71 named tests with zero failures and zero skips against
+an exclusive disposable PostgreSQL cluster. Typechecking, lint/boundaries,
+formatting/statement spacing, production file limits, documentation/seed checks
+and OpenAPI validation passed. The first run found a pre-existing erasure
+fixture whose fixed seven-day deadline had reached the real database clock; the
+test now sets an explicitly future maintenance deadline before its rejection
+check and retains a separate past-deadline success case. Its restricted auth
+adapter also shares the fixture clock. The new upgrade fixture's account snapshot
+was corrected to capture provider links before comparison. Failed runs remain
+separate from the accepted evidence.
+
+The production build passed. The production smoke runner passed with restricted
+web/worker logins and without database configuration, asserting exactly one
+worker startup summary and the expected readiness flags. A deliberate missing
+database produced a database_readiness startup failure, no runtime_ready claim,
+a nonzero exit and clean shutdown without exposing the connection password.
+
+All nine browser scenarios passed with retries disabled against a production
+build, fictional enabled Google/Discord clients and isolated Mailpit/PostgreSQL.
+The OAuth scenario clicks both provider buttons on login and signup, intercepts
+external navigation and checks callback URLs, scopes, state, binding cookies and
+Google nonce/PKCE. The route matrix passed 120 combinations of 20 routes, both
+themes and 320/768/1440-pixel widths, plus accessibility, keyboard, enlarged text,
+reduced motion, CSP and hydration checks. All twelve anonymous authentication
+screenshots and representative Home/account views were inspected; no clipping or
+overlap was observed. An installed Chromium was selected through the documented
+executable override.
+
+The first browser setup rejected an invalid fictional SMTP sender; it was
+corrected and the harness now validates configuration before launch. A subsequent
+nine-test run was interrupted by SIGTERM after eight passing scenarios during
+the route matrix. Accepted completion came from two separate zero-exit runs on
+the same implementation: the full route matrix, then the eight browser flows.
+The interrupted run is preserved and does not count as a completed suite.
+Synthetic logs and screenshots remain outside the repository; private account
+storage was not used by these tests.
+
+The local follow-up gates are complete. Hosted backup durability, server restore,
+remote CI and the owner's hosted path review remain separate gates. See the
+[pilot checklist](pilot-readiness.md) and [compatibility policy](compatibility.md).

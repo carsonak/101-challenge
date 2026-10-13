@@ -118,6 +118,7 @@ try {
     {
       WORKER_PORT: String(ports[1]),
       WORKER_HOST: "127.0.0.1",
+      LOG_FORMAT: "json",
       QUEUE_SCHEMA: process.env.QUEUE_SCHEMA ?? "pgboss_smoke",
       DATABASE_URL:
         process.env.SMOKE_WORKER_DATABASE_URL ?? process.env.DATABASE_URL,
@@ -149,6 +150,19 @@ try {
       process.env.DATABASE_URL ? "ok" : "unavailable"
     );
   }
+  const records = output.split("\n").flatMap((line) => {
+    try {
+      return [JSON.parse(line)];
+    } catch {
+      return [];
+    }
+  });
+  const startup = records.filter(
+    (record) => record.service === "worker" && record.event === "runtime_ready"
+  );
+  assert.equal(startup.length, 1);
+  assert.equal(startup[0].databaseReady, Boolean(process.env.DATABASE_URL));
+  assert.equal(startup[0].jobsReady, Boolean(process.env.DATABASE_URL));
   console.info(
     `Web/worker smoke passed (${process.env.DATABASE_URL ? "database connected" : "unconfigured database correctly unavailable"})`
   );

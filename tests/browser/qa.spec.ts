@@ -229,13 +229,15 @@ test("account menu, provider placeholders, devices, typed deletion and recovery"
 
     await page.getByLabel("Open profile menu").click();
     await page.getByRole("menuitem", { name: "Account settings" }).click();
-    await expect(
-      page.getByRole("button", { name: "Link google" })
-    ).toBeDisabled();
+    const availability = await (
+      await page.request.get("/api/v1/session")
+    ).json();
 
-    await expect(
-      page.getByRole("button", { name: "Link discord" })
-    ).toBeDisabled();
+    for (const provider of ["google", "discord"] as const) {
+      const button = page.getByRole("button", { name: `Link ${provider}` });
+      if (availability.providers[provider]) await expect(button).toBeEnabled();
+      else await expect(button).toBeDisabled();
+    }
 
     await expect(
       page.getByRole("heading", { name: "Recent sign-ins and devices" })

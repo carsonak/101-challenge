@@ -20,6 +20,10 @@ const require = createRequire(
 );
 /** Production uses the self-contained output; development uses Next's CLI. */
 const production = process.argv[2] === "start";
+// The listener hostname is not necessarily the browser/OAuth origin.
+console.info(
+  `Open website: ${process.env.APP_ORIGIN ?? "http://localhost:3000"}\nUse this exact origin for sign-in; Next's listener address may differ.`
+);
 /** Web process whose output, termination signals and exit status are forwarded. */
 const child = spawn(
   process.execPath,

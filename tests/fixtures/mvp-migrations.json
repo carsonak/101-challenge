@@ -1,0 +1,37 @@
+[
+  {
+    "version": 1,
+    "file": "0001_tracker.sql",
+    "sha256": "4084a9e9b7cd943503c118e37cc60be442dd132f7c09f5684b871c301180634c"
+  },
+  {
+    "version": 2,
+    "file": "0002_identity.sql",
+    "sha256": "6fdcb02b6ca1a86bd017b466bd4a44bb8e53bcd48f7197b2c716df7f0609921b"
+  },
+  {
+    "version": 3,
+    "file": "0003_adapters.sql",
+    "sha256": "e40505514dc750f9f1a54f922d7939095f497bbb9739b721af6bf8bfb20f0f86"
+  },
+  {
+    "version": 4,
+    "file": "0004_jobs.sql",
+    "sha256": "6cf79558f04b59329ef41f5ca6ee29543d13b30d2b6a2ace80997a1a565cbacd"
+  },
+  {
+    "version": 5,
+    "file": "0005_qa.sql",
+    "sha256": "9f18f055807ce3086f6a59f58da714cd456768d667fba150963f9f1823247b1a"
+  },
+  {
+    "version": 6,
+    "file": "0006_streak_boundaries.sql",
+    "sha256": "52b0dc9c3bde11dfa9267dfadae19edbd5c5a77a14aafb05cec872dbcf347ce6"
+  },
+  {
+    "version": 7,
+    "file": "0007_discord_daily_loop.sql",
+    "sha256": "693d55aca7c50d4d9f49c3460419162db9370a7ba035200ee9535d4f138c12bb"
+  }
+]

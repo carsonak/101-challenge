@@ -22,6 +22,10 @@ export type BackendEvent =
 
 /** Safe diagnostic metadata; raw requests, errors and configuration are excluded. */
 export interface BackendDetails {
+  /** Database migration/connectivity checks completed at startup. */
+  databaseReady?: boolean;
+  /** Queue startup and job registration completed at startup. */
+  jobsReady?: boolean;
   /** Sensitive values to remove from exception text; never emitted as metadata. */
   redact?: readonly string[];
   /** Server-generated correlation UUID, never a client-supplied identifier. */

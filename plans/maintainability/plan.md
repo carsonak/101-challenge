@@ -33,3 +33,17 @@ The initial CSS migration exposed layer-order resets; each module now declares
 the shared layer order, and low-specificity base button/dialog styles preserve
 component overrides. Final browser verification and synthetic screenshot review
 passed after that correction. See [the overview](OVERVIEW.md) for current live gates.
+
+## MVP readiness follow-up
+
+- [x] Explain the canonical browser origin at startup; preserve exact-origin POST rejection.
+- [x] Add a worker database/job readiness summary while keeping idle polls quiet.
+- [x] Add OAuth initiation and immutable-migration regressions plus populated MVP upgrade coverage.
+- [x] Establish durable compatibility/upgrade guidance and the hosted pilot evidence map.
+- [x] Record owner-confirmed Discord login, Google linking and recovery-email verification separately from synthetic acceptance.
+- [x] Complete fresh aggregate, production smoke and browser acceptance for this follow-up; see [dated evidence](../../docs/verification.md).
+
+The owner will set up the deployment server and review all web/Discord paths
+before additional users or Bitdevs Kisumu installation. Follow the
+[hosted checklist](../../docs/pilot-readiness.md); these owner/server gates remain
+open after local implementation completes.

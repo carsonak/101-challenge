@@ -47,6 +47,12 @@ jobs:
           APP_ORIGIN: http://127.0.0.1:3101
           PORT: 3101
           SMTP_PORT: 1026
+          GOOGLE_CLIENT_ID: fictional-google
+          GOOGLE_CLIENT_SECRET: fictional-secret
+          GOOGLE_REDIRECT_URI: http://127.0.0.1:3101/api/auth/google/callback
+          DISCORD_CLIENT_ID: fictional-discord
+          DISCORD_CLIENT_SECRET: fictional-secret
+          DISCORD_REDIRECT_URI: http://127.0.0.1:3101/api/auth/discord/callback
           QA_BASE_URL: http://127.0.0.1:3101
           QA_MAILPIT_URL: http://127.0.0.1:8026
           QA_VISUAL_OUTPUT: ${{ runner.temp }}/qa-screens

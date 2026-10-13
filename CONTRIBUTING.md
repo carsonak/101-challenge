@@ -76,7 +76,7 @@ pnpm database:provision grants
 pnpm dev:web
 ```
 
-After [restricted role setup](docs/deployment.md), set DATABASE_URL and WORKER_DATABASE_URL in .env to their separate restricted logins and use the matching queue schema. See the [two-file configuration guide](docs/configuration.md). In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 5432. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
+After [restricted role setup](docs/deployment.md), set DATABASE_URL and WORKER_DATABASE_URL in .env to their separate restricted logins and use the matching queue schema. See the [two-file configuration guide](docs/configuration.md). In a second terminal run `pnpm dev:worker`. Open http://localhost:3000 and Mailpit at http://localhost:8025. PostgreSQL binds to loopback port 55432 by default, leaving port 5432 available for a host PostgreSQL service. Mailpit is a local mailbox; no email is sent to external recipients. `pnpm services:up` uses detached startup and waits up to 120 seconds for both container health checks, supporting Docker Compose and Podman Compose without requiring `up --wait`. If startup fails, inspect `docker compose ps` and `docker compose logs`. `pnpm services:down` stops services without deleting the database volume.
 
 The web landing page and liveness endpoints also run without `.env` or services. Readiness returns 503 until a database is configured. If DATABASE_URL is set, the worker initializes pg-boss infrastructure at startup and fails clearly if unavailable. Apply the tracked migrations with `pnpm database:migrate`, which selects MIGRATOR_DATABASE_URL from ignored .env.operator, before supplying the restricted web connection. Operator commands receive only their required settings; web and worker never read this file. The worker queue schema is pre-created by provisioning. Auth provider settings may remain blank; no fake login or development authentication bypass is installed. See [authentication and privacy](docs/authentication.md) for runtime/operator role separation.
 
@@ -140,3 +140,20 @@ rather than depend on generated class names.
 
 Maintain the modular YAML OpenAPI source with `pnpm openapi:lint`; see the
 [reference guide](docs/reference/README.md) for external bundle output.
+
+## Compatibility and release acceptance
+
+Follow [MVP compatibility](docs/compatibility.md) when changing contracts, domain
+behavior or storage. Applied migrations are immutable; append corrective
+migrations and test upgrades on populated disposable data. Preserve existing
+clients and participant history; explicitly review versioned breaking interfaces
+and any required data transition. Keep database/OpenAPI references aligned with
+runtime behavior. Close the [hosted pilot checklist](docs/pilot-readiness.md) before
+additional users; local fixtures do not establish hosted provider or restore
+acceptance.
+
+The browser suite requires fictional enabled Google and Discord configuration
+with callback URLs on QA_BASE_URL, as supplied by the browser CI step. The OAuth
+scenario intercepts external navigation and never uses real provider accounts.
+Use a disposable database and SMTP catcher for this configuration; retain the
+separate provider-disabled startup and bootstrap regressions.
