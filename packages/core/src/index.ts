@@ -30,3 +30,8 @@ export * from "./diagnostics.js";
 
 export * from "./capacity.js";
 export * from "./throttle.js";
+
+export * from "./work-loop.js";
+export * from "./wake.js";
+
+export * from "./notification-retention.js";

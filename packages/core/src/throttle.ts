@@ -1,3 +1,20 @@
+/** Abuse-control port: production reservations are shared; fixture implementations may be synchronous. */
+export interface Throttle {
+  /** Consume a bounded bucket or throw RATE_LIMITED with retryAfter. */
+  take(
+    action: string,
+    identity: string,
+    limit: number,
+    windowMs: number
+  ): void | Promise<void>;
+  /** Reserve enumeration-safe mail cooldowns; storage failures must reject. */
+  allow(
+    action: string,
+    identity: string,
+    windowMs: number
+  ): boolean | Promise<boolean>;
+}
+
 import { createHmac, randomBytes } from "node:crypto";
 import { DomainError } from "./tracker.js";
 

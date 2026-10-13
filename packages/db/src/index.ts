@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { createPool } from "./pool.js";
 import { requireMigrations } from "./migrations.js";
 
 /**
@@ -12,16 +12,7 @@ import { requireMigrations } from "./migrations.js";
  * @returns A query client with connectivity and cleanup methods.
  */
 export function createDatabase(connectionString: string) {
-  const pool = new pg.Pool({
-    connectionString,
-    max: 5,
-    connectionTimeoutMillis: 2000,
-    idleTimeoutMillis: 10000,
-    statement_timeout: 2000,
-  });
-
-  // An idle connection error must not crash a process or print credentials.
-  pool.on("error", () => console.error("Database connection unavailable"));
+  const pool = createPool(connectionString);
   const db = drizzle(pool);
   return {
     /** Query client for repository reads and writes; release its resources through `close()`. */

@@ -38,3 +38,5 @@ Create an account, verify your email, choose a season, and customize its recomme
 Code and documentation use [Apache-2.0](LICENSE). BitDevs Kisumu identity is reserved separately in [BRANDING.md](BRANDING.md). Participant text and artwork are not automatically licensed under the code license. Set APP_DISPLAY_NAME to rebrand the displayed name.
 
 Local setup uses [.env.example](.env.example) and [.env.operator.example](.env.operator.example); see the [configuration guide](docs/configuration.md) for scoped commands and developer diagnostics.
+
+Low-traffic execution, private wake delivery and autoscaling deployment requirements: [elastic hosting](docs/elastic-hosting.md).

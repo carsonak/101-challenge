@@ -168,8 +168,29 @@ test(
 
       assert.equal(identities.length, 2);
       const linkedAccount = await auth.account(login.token);
+      const legacy = await sql.query(
+        'UPDATE outbox SET "publishedAt"=now() RETURNING id'
+      );
+
+      assert.ok(legacy.rowCount > 0);
       await db.migrate();
       await db.migrate();
+      assert.equal(
+        (
+          await sql.query(
+            'SELECT count(*)::int AS count FROM outbox WHERE "publishedAt" IS NOT NULL'
+          )
+        ).rows[0].count,
+        0
+      );
+
+      assert.equal(
+        (await sql.query("SELECT count(*)::int AS count FROM outbox")).rows[0]
+          .count,
+        legacy.rowCount
+      );
+
+      assert.equal(await db.rates.allow("upgrade", "fictional", 60000), true);
       assert.deepEqual(
         await tracker.source(account.id, attempt.resourceId),
         source

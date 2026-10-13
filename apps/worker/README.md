@@ -1,5 +1,15 @@
 # Tracker worker
 
-The worker requires the applied tracker migrations before registering pg-boss handlers. It publishes leased content-free outbox events, checks source projections with receipt deduplication and performs hourly proof/replay housekeeping. Queue failures do not undo reports or synchronous completion.
+The worker requires applied tracker migrations. It directly processes leased
+content-free outbox events with receipt deduplication, and performs bounded
+proof/replay/inbox housekeeping. Completion remains synchronous.
 
-Use the root `pnpm dev:worker`/`pnpm start:worker` commands with an exclusive database and `QUEUE_SCHEMA`. No artwork or reminder handlers are installed. Shutdown stops publishing and handlers before releasing connections. See [operations and recovery](../../docs/operations.md) for retention, terminal failure inspection and restore requirements.
+Use `pnpm dev:worker` or `pnpm start:worker`. Resident mode sleeps between persisted
+deadlines and coarse recovery sweeps. Request mode runs a bounded sweep on signed
+private POST /wake and requires external durable scheduling. `pnpm start:worker
+--once` runs a sweep and exits. No pg-boss polling, reminder or artwork handlers
+start. Shutdown awaits active work before releasing connections.
+
+See [elastic hosting](../../docs/elastic-hosting.md),
+[configuration](../../docs/configuration.md) and
+[operations](../../docs/operations.md) for wake keys, recovery and deployment gates.

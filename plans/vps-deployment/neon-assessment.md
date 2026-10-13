@@ -2,6 +2,10 @@
 
 Status: researched proposal on 2026-10-13; the owner's account, database contents and effective quotas were not inspected.
 
+The cost comparison below describes the previous continuously polling runtime.
+[ADR 0003](../../docs/adr/0003-idle-workers.md) replaces that polling with sleeping
+execution; remeasure Neon usage using the [elastic-hosting acceptance checks](../../docs/elastic-hosting.md) before choosing a provider.
+
 ## Recommendation
 
 Retain VPS PostgreSQL as the initial deployment proposal if avoiding additional recurring database spend matters. Evaluate paid Neon if managed database operation and isolation from VPS failure justify its cost. Use Neon Free for a disposable compatibility experiment rather than the continuously running pilot in its current design. The owner must select the production provider before provisioning.

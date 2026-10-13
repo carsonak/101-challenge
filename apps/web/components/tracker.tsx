@@ -1,6 +1,7 @@
 "use client";
 import uiStyles from "./../styles/ui.module.css";
 
+import { WaitingMessage } from "./waiting-message";
 import Loading from "../app/loading";
 import { AccountView } from "./tracker/account-view";
 import { AdminCorrectionsView } from "./tracker/admin-corrections-view";
@@ -25,6 +26,7 @@ export default function TrackerScreen(
   return (
     <main className={"tracker"}>
       <Toast message={message} error={error} dismiss={dismiss} />
+      <WaitingMessage pending={busy} />
       <fieldset className={"screen"} disabled={busy}>
         <legend className={uiStyles["sr-only"]}>Challenge controls</legend>
         <SeasonsView {...context} />

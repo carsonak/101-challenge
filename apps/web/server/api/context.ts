@@ -1,10 +1,9 @@
-import type { createThrottle } from "@challenge/core";
+import type { Throttle } from "@challenge/core";
 import type { ApiDependencies } from "./transport";
 /** Per-service HTTP dependencies and transport helpers. */
 export interface ApiContext extends ApiDependencies {
-  /** Separate bounded rate buckets. */ rates: ReturnType<
-    typeof createThrottle
-  >;
+  /** Separate bounded shared rate buckets. */ rates: Throttle;
+  /** Cheap per-process rejection before anonymous payload validation and database work. */ ingressRates: import("@challenge/core").Throttle;
   /** Select a trusted address without accepting forwarding spoofing. */ address: (
     request: Request
   ) => string;

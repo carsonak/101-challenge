@@ -68,7 +68,7 @@ export function createDiscordAdapter(deps: DiscordDependencies) {
           input.type === 4
             ? { type: 8, data: { choices: [] } }
             : reply(
-                "This form is taking too long. Try again or use the website.",
+                "The service may be waking up. Please try again in a few seconds, or use the website.",
                 [row(link("Open website", `${deps.origin}/home`))]
               );
 

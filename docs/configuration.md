@@ -46,7 +46,7 @@ The example lists every supported local runtime key. Its defaults are for a fres
 | REPORTING_TIMEZONE                                                     | Server-owned timezone for new challenge attempts.                                                                                                                                                                                     |
 | LOG_FORMAT                                                             | auto, pretty or json. Developer/operator logs include redacted exception details; browser messages stay friendly.                                                                                                                     |
 | TRUSTED_PROXY_HEADER, TRUSTED_PROXY_HOPS                               | Leave blank/zero unless a protected ingress overwrites the selected header.                                                                                                                                                           |
-| OUTBOX_POLL_MS, OUTBOX_IDLE_MAX_MS                                     | Worker active polling and maximum idle backoff, in milliseconds.                                                                                                                                                                      |
+| OUTBOX_POLL_MS, OUTBOX_IDLE_MAX_MS                                     | Worker active batching and maximum failure backoff, in milliseconds.                                                                                                                                                                  |
 | CONTACT_EMAIL                                                          | Optional published legal/contact address.                                                                                                                                                                                             |
 | LIVE_TEST_EMAIL                                                        | Optional owner-controlled recipient for explicitly requested delivery checks. Never used by normal startup.                                                                                                                           |
 
@@ -89,3 +89,21 @@ address instead of Next's listener address for browser sign-in. A loopback
 hostname or port change also requires updating the exact redirect URI registered
 for each OAuth client in its provider console; changing local configuration alone
 does not update those registrations.
+
+## Sleeping workers and PaaS
+
+See [elastic hosting](elastic-hosting.md) before enabling request mode.
+
+| Settings                                      | Purpose                                                                                             |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| WORK_MODE                                     | resident owns timers; request requires durable external scheduling.                                 |
+| WORKER_WAKE_URL, WORKER_WAKE_SECRET           | Optional private projection-worker wake destination and independent 64-character hex signing key.   |
+| MAINTENANCE_WAKE_URL, MAINTENANCE_WAKE_SECRET | Optional private account-maintenance wake destination and distinct signing key.                     |
+| MAINTENANCE_HOST, MAINTENANCE_PORT            | Private maintenance listener; loopback:3002 by default.                                             |
+| WORK_RECOVERY_MIN_MS, WORK_RECOVERY_MAX_MS    | Empty/future-work recovery backoff; defaults fifteen minutes to one hour.                           |
+| HOUSEKEEPING_MIN_MS, HOUSEKEEPING_MAX_MS      | Adaptive housekeeping bounds; defaults one to twenty-four hours, overridden by retention deadlines. |
+| DB_POOL_MAX, DB_CONNECT_TIMEOUT_MS            | Per-pool maximum connections (5) and cold connection timeout (15000 ms).                            |
+
+Signing keys confer only permission to request a scan. Only the maintenance process
+receives erasure credentials. Each worker receives only its own wake key. Routine
+health checks must use liveness endpoints to allow PostgreSQL suspension.

@@ -5,7 +5,7 @@ import type { ApiContext, RequestContext } from "./context";
 import { cookieNames, json, payload, setCookie } from "./transport";
 /** Dispatch authentication routes, returning undefined when unmatched. */
 export function createAuthenticationRoutes(context: ApiContext) {
-  const { config, auth, rates, address, loginCookies } = context;
+  const { config, auth, rates, ingressRates, address, loginCookies } = context;
 
   const secure = config.APP_ORIGIN.startsWith("https:");
   return async function handle({
@@ -15,16 +15,23 @@ export function createAuthenticationRoutes(context: ApiContext) {
     csrf,
   }: RequestContext): Promise<Response | undefined> {
     if (request.method === "POST" && path === "/api/v1/auth") {
-      rates.take("auth-input", address(request), 100, 60000);
+      await ingressRates.take("auth-input", address(request), 100, 60000);
       const input = await payload(request);
       const c = authCommandSchema.safeParse(input);
       if (!c.success) throw new DomainError("VALIDATION");
 
+      await rates.take("auth-input", address(request), 100, 60000);
       const action = c.data.action;
       const bucket = `auth-${action}`;
-      rates.take(bucket, address(request), action === "login" ? 20 : 60, 60000);
+      await rates.take(
+        bucket,
+        address(request),
+        action === "login" ? 20 : 60,
+        60000
+      );
+
       if ("email" in c.data)
-        rates.take(
+        await rates.take(
           `${bucket}-email`,
           c.data.email.trim().toLowerCase(),
           10,
@@ -42,7 +49,7 @@ export function createAuthenticationRoutes(context: ApiContext) {
         ].includes(action)
       ) {
         const account = await auth.account(token);
-        rates.take("account-user", account.id, 120, 60000);
+        await rates.take("account-user", account.id, 120, 60000);
       }
 
       if (c.data.action === "set_avatar" && c.data.avatar) {

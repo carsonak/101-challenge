@@ -4,7 +4,10 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type pg from "pg";
 import { decode, encode, encoding } from "./encoding.js";
 /** Create a Drizzle-backed transaction port for one PostgreSQL connection. */
-export function transactionPort(client: pg.PoolClient): Transaction {
+export function transactionPort(
+  client: pg.PoolClient,
+  changed?: (table: keyof Tables) => void
+): Transaction {
   const db = drizzle(client);
   /** Keep structured report values under relational cross-attempt constraints. */
   async function reportValues(row: Report) {
@@ -65,6 +68,7 @@ export function transactionPort(client: pg.PoolClient): Transaction {
       return result.rows.map((row) => decode(table, row));
     },
     async insert<K extends keyof Tables>(table: K, row: Tables[K]) {
+      changed?.(table);
       const entries = Object.entries(row);
       for (const [key] of entries) encoding(table, key);
 
@@ -81,6 +85,7 @@ export function transactionPort(client: pg.PoolClient): Transaction {
       if (table === "reports") await reportValues(row as Report);
     },
     async save<K extends keyof Tables>(table: K, row: Tables[K]) {
+      changed?.(table);
       if (
         table === "entitlements" ||
         table === "goal_revisions" ||
@@ -109,6 +114,7 @@ export function transactionPort(client: pg.PoolClient): Transaction {
       );
     },
     async remove(table, id) {
+      changed?.(table);
       await db.execute(
         sql`DELETE FROM ${sql.identifier(table)} WHERE id=${id}`
       );

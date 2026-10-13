@@ -9,6 +9,7 @@ export const trackerMigrations = [
   [5, "0005_qa.sql"],
   [6, "0006_streak_boundaries.sql"],
   [7, "0007_discord_daily_loop.sql"],
+  [8, "0008_idle_workers.sql"],
 ] as const;
 
 /** Reject readiness until every registered migration is applied; performs read-only I/O. */

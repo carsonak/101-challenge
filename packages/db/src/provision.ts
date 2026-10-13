@@ -129,14 +129,15 @@ export async function provisionDatabase(
         "replays",
         "adapter_confirmations",
         "grants",
+        "throttle_buckets",
       ]) {
         await client.query(
-          `GRANT SELECT("expiresAt"),DELETE ON ${table} TO ${worker}`
+          `GRANT SELECT(${table === "throttle_buckets" ? "key" : "id"},"expiresAt"),DELETE ON ${table} TO ${worker}`
         );
       }
 
       await client.query(
-        `GRANT SELECT("createdAt","readAt","dismissedAt"),DELETE ON notifications TO ${worker}`
+        `GRANT SELECT(id,"createdAt","readAt","dismissedAt"),DELETE ON notifications TO ${worker}`
       );
 
       await client.query(

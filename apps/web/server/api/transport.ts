@@ -17,6 +17,8 @@ export const cookieNames = {
 
 /** API dependencies expose only server-owned service handles and settings. */
 export interface ApiDependencies {
+  /** Shared reservations across replicas; production always supplies this port. */
+  rates?: import("@challenge/core").Throttle;
   /** Injectable limiter clock. */
   now?: () => number;
   /** Validated settings, never serialized wholesale. */

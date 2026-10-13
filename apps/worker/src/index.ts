@@ -1,143 +1,100 @@
 /**
- * @file Runs the worker queue connection and HTTP health service.
- * Use `pnpm dev:worker` during development or `pnpm start:worker` after building.
- * Local commands select WORKER_DATABASE_URL from .env as this process's DATABASE_URL; production supplies a scoped environment. When DATABASE_URL is configured, startup can
- * create queue tables and requires applied tracker migrations and database access. Without it, liveness
- * remains available but readiness returns 503. The listener uses WORKER_HOST and
- * WORKER_PORT; startup failures are reported with a nonzero exit status.
- * Opens long-lived connections and a listener, logs status/errors, and closes
- * resources on SIGINT or SIGTERM, with a ten-second shutdown deadline.
- * Runs immediately when executed or imported.
+ * @file Run a sleeping worker HTTP service or one bounded sweep (--once).
+ * Resident mode owns timers; request mode requires external durable scheduling.
+ * Opens lazy restricted connections, never pg-boss polling or migration DDL.
  */
-
-import { createServer } from "node:http";
 import { parseServerConfig } from "@challenge/contracts";
-import { readiness, logBackend, type BackendDetails } from "@challenge/core";
+import { logBackend, createWorkLoop } from "@challenge/core";
 import { createJobStore } from "@challenge/db";
 import { startJobs } from "./jobs.js";
-import { PgBoss } from "pg-boss";
+import { serveWorker } from "./service.js";
 
-/** Current startup operation, retained for failures before cleanup. */
-let startupStage: BackendDetails["stage"] = "configuration";
-
-/** Start the configured queue connection and HTTP health listener. */
+/** Start the service with scoped credentials and release resources on termination. */
 async function main() {
   const config = parseServerConfig(process.env);
   const database = config.DATABASE_URL
     ? createJobStore(config.DATABASE_URL)
     : undefined;
 
-  const boss = config.DATABASE_URL
-    ? new PgBoss({
-        connectionString: config.DATABASE_URL,
-        schema: config.QUEUE_SCHEMA,
-        createSchema: false,
-      })
-    : undefined;
+  const once = process.argv.includes("--once");
+  if (!once && config.WORK_MODE === "request" && !config.WORKER_WAKE_SECRET)
+    throw new Error(
+      "Request execution requires a private worker wake key and durable scheduler"
+    );
 
-  boss?.on("error", (error) => logBackend("worker", "queue_failed", {}, error));
-  let stopJobs: (() => Promise<void>) | undefined;
-  const server = createServer(async (request, response) => {
-    if (
-      request.method !== "GET" ||
-      !["/health", "/ready"].includes(request.url ?? "")
-    ) {
-      response.writeHead(404).end();
-      return;
+  const loop = database
+    ? startJobs(database, {
+        ...config,
+        WORK_MODE: once ? "request" : config.WORK_MODE,
+      })
+    : createWorkLoop({
+        minMs: 2000,
+        maxMs: 30000,
+        recoveryMinMs: 900000,
+        recoveryMaxMs: 3600000,
+        resident: false,
+        run: async () => {
+          throw new Error("Database not configured");
+        },
+        onError: () => {},
+      });
+
+  const ready = async () => {
+    if (!database) throw new Error("Database not configured");
+
+    await database.ready();
+  };
+
+  if (once) {
+    try {
+      await ready();
+      console.info(
+        JSON.stringify({ nextRunAt: new Date(await loop.run()).toISOString() })
+      );
+    } finally {
+      await loop.stop();
+      await database?.close();
     }
 
-    const result =
-      request.url === "/health"
-        ? { status: "ok", service: "worker" }
-        : await readiness("worker", async () => {
-            if (!database || !boss) throw new Error("Database not configured");
-
-            await database.ready();
-            if (!(await boss.getQueue("tracker_projection")))
-              throw new Error("Worker queue unavailable");
-          });
-
-    response.writeHead(result.status === "ok" ? 200 : 503, {
-      "content-type": "application/json",
-    });
-
-    response.end(JSON.stringify(result));
-  });
-
-  let stopping = false;
-  let startup: Promise<void> | undefined;
-  /** Close the listener and service connections once; exit unsuccessfully if cleanup exceeds its deadline. */
-  async function shutdown() {
-    if (stopping) return;
-
-    stopping = true;
-    logBackend("worker", "shutdown_started");
-    const deadline = setTimeout(() => process.exit(1), 10000).unref();
-    await startup?.catch(() => {});
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await stopJobs?.();
-    await boss?.stop();
-    await database?.close();
-    clearTimeout(deadline);
-    logBackend("worker", "shutdown_complete");
-  }
-
-  process.once("SIGTERM", () => {
-    void shutdown();
-  });
-
-  process.once("SIGINT", () => {
-    void shutdown();
-  });
-
-  server.once("error", (error) => {
-    logBackend("worker", "listener_failed", {}, error);
-    void shutdown().then(() => {
-      process.exitCode = 1;
-    });
-  });
-
-  // Signal/listener cleanup exists before any handlers are registered.
-  startup = (async () => {
-    startupStage = "database_readiness";
-    await database?.ready();
-    if (stopping) return;
-
-    startupStage = "queue_start";
-    await boss?.start();
-    if (stopping) return;
-
-    startupStage = "job_registration";
-    if (database && boss)
-      stopJobs = await startJobs(boss, database, {
-        activeMs: config.OUTBOX_POLL_MS,
-        idleMaxMs: config.OUTBOX_IDLE_MAX_MS,
-      });
-  })();
-
-  try {
-    await startup;
-  } catch (error) {
-    logBackend("worker", "startup_failed", { stage: startupStage }, error);
-    await shutdown();
-    process.exitCode = 1;
     return;
   }
 
-  if (!stopping) {
-    logBackend("worker", "runtime_ready", {
-      databaseReady: Boolean(database),
-      jobsReady: Boolean(stopJobs),
+  const service = serveWorker({
+    service: "worker",
+    host: config.WORKER_HOST,
+    port: config.WORKER_PORT,
+    secret: config.WORKER_WAKE_SECRET,
+    resident: Boolean(database) && config.WORK_MODE === "resident",
+    loop,
+    ready,
+    close: async () => {
+      await database?.close();
+    },
+  });
+
+  for (const signal of ["SIGINT", "SIGTERM"])
+    process.once(signal, () => {
+      const timeout = setTimeout(() => process.exit(1), 30000).unref();
+      void service.close().finally(() => clearTimeout(timeout));
     });
 
-    server.listen(config.WORKER_PORT, config.WORKER_HOST, () =>
-      logBackend("worker", "listening", { port: config.WORKER_PORT })
-    );
+  try {
+    if (database && config.WORK_MODE === "resident") await ready();
+
+    await service.start();
+    logBackend("worker", "runtime_ready", {
+      databaseReady: Boolean(database) && config.WORK_MODE === "resident",
+      jobsReady: Boolean(database),
+    });
+
+    logBackend("worker", "listening", { port: config.WORKER_PORT });
+  } catch (error) {
+    await service.close();
+    throw error;
   }
 }
 
 main().catch((error) => {
-  logBackend("worker", "startup_failed", { stage: startupStage }, error);
+  logBackend("worker", "startup_failed", {}, error);
   process.exitCode = 1;
 });

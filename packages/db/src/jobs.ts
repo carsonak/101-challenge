@@ -1,12 +1,9 @@
-import pg from "pg";
+import { createPool } from "./pool.js";
 import { requireMigrations } from "./migrations.js";
 import { trackerEventSchema } from "@challenge/contracts";
 
-/** Retention policy for acknowledged and unread owner notifications. */
-export const notificationRetention = {
-  acknowledgedDays: 30,
-  unreadDays: 90,
-} as const;
+export { notificationRetention } from "@challenge/core";
+import { createHousekeeping } from "./housekeeping.js";
 
 /** Metadata-only durable event envelope. */
 type Event = ReturnType<typeof trackerEventSchema.parse>;
@@ -15,14 +12,7 @@ export function createJobStore(
   connectionString: string,
   now: () => Date = () => new Date()
 ) {
-  const pool = new pg.Pool({
-    connectionString,
-    max: 5,
-    connectionTimeoutMillis: 3000,
-    statement_timeout: 10000,
-  });
-
-  pool.on("error", () => console.error("Worker database unavailable"));
+  const pool = createPool(connectionString);
   return {
     /** Require every tracker migration before handlers or readiness are enabled. */
     async ready() {
@@ -32,34 +22,34 @@ export function createJobStore(
     async publish(publish: (event: Event) => Promise<void>) {
       const rows = (
         await pool.query(`WITH pending AS (SELECT id FROM outbox WHERE "publishedAt" IS NULL AND deliveries<8 AND ("leasedUntil" IS NULL OR "leasedUntil"<=now()) ORDER BY "occurredAt",id FOR UPDATE SKIP LOCKED LIMIT 20)
-        UPDATE outbox o SET "leasedUntil"=now()+interval '1 minute',deliveries=o.deliveries+1 FROM pending p WHERE o.id=p.id RETURNING o.*`)
+        UPDATE outbox o SET "leasedUntil"=now()+interval '1 minute' FROM pending p WHERE o.id=p.id RETURNING o.*,o."leasedUntil"::text AS lease`)
       ).rows;
 
       let delivered = 0,
         failed = 0;
 
       for (const row of rows) {
-        const event = trackerEventSchema.parse({
-          eventId: row.id,
-          type: row.type,
-          schemaVersion: 1,
-          aggregateId: row.aggregateId,
-          sourceVersion: row.sourceVersion,
-          occurredAt: row.occurredAt.toISOString(),
-        });
-
         try {
+          const event = trackerEventSchema.parse({
+            eventId: row.id,
+            type: row.type,
+            schemaVersion: 1,
+            aggregateId: row.aggregateId,
+            sourceVersion: row.sourceVersion,
+            occurredAt: row.occurredAt.toISOString(),
+          });
+
           await publish(event);
           await pool.query(
-            'UPDATE outbox SET "publishedAt"=now(),"leasedUntil"=NULL WHERE id=$1 AND "publishedAt" IS NULL',
-            [row.id]
+            'UPDATE outbox SET "publishedAt"=now(),"leasedUntil"=NULL WHERE id=$1 AND "publishedAt" IS NULL AND "leasedUntil"=$2::timestamptz',
+            [row.id, row.lease]
           );
 
           delivered++;
         } catch {
           await pool.query(
-            `UPDATE outbox SET "lastFailureAt"=now(),"leasedUntil"=now()+make_interval(secs=>least(3600,5*power(2,deliveries)::int)) WHERE id=$1`,
-            [row.id]
+            `UPDATE outbox SET deliveries=deliveries+1,"lastFailureAt"=now(),"leasedUntil"=now()+make_interval(secs=>least(3600,5*power(2,deliveries+1)::int)) WHERE id=$1 AND "publishedAt" IS NULL AND "leasedUntil"=$2::timestamptz`,
+            [row.id, row.lease]
           );
 
           failed++;
@@ -140,50 +130,14 @@ export function createJobStore(
         client.release();
       }
     },
-    /** Delete expired authentication/replay/form proofs; expired grants remain marked unusable in retained audit metadata. */
-    async housekeeping() {
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
-        for (const table of [
-          "sessions",
-          "auth_tokens",
-          "oauth_states",
-          "replays",
-          "adapter_confirmations",
-        ])
-          await client.query(`DELETE FROM ${table} WHERE "expiresAt"<=$1`, [
-            now(),
-          ]);
+    housekeeping: createHousekeeping(pool, now),
+    /** Earliest lease/retry deadline; null means no nonterminal pending work. */
+    async nextDue() {
+      const result = await pool.query(
+        'SELECT min(coalesce("leasedUntil",now())) AS due FROM outbox WHERE "publishedAt" IS NULL AND deliveries<8'
+      );
 
-        await client.query(
-          `DELETE FROM grants WHERE "expiresAt"<$1::timestamptz-interval '30 days'`,
-          [now()]
-        );
-
-        await client.query(
-          `DELETE FROM outbox WHERE "publishedAt"<$1::timestamptz-interval '30 days'`,
-          [now()]
-        );
-
-        await client.query(
-          `DELETE FROM notifications WHERE
-          (("readAt" IS NOT NULL OR "dismissedAt" IS NOT NULL) AND LEAST("readAt","dismissedAt")<$1::timestamptz-make_interval(days=>$2))
-          OR ("readAt" IS NULL AND "dismissedAt" IS NULL AND "createdAt"<$1::timestamptz-make_interval(days=>$3))`,
-          [
-            now(),
-            notificationRetention.acknowledgedDays,
-            notificationRetention.unreadDays,
-          ]
-        );
-
-        await client.query("COMMIT");
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      } finally {
-        client.release();
-      }
+      return result.rows[0].due ? new Date(result.rows[0].due).getTime() : null;
     },
     /** Inspect one content-free projection for maintenance verification. */
     async projection(attemptId: string) {

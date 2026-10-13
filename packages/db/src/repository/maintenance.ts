@@ -41,6 +41,20 @@ export function createMaintenance(context: {
         )
       ).rows as { userId: string; erasedAt: Date }[];
     },
+    /** Earliest durable mail retry or erasure deadline; never expose account identities. */
+    async nextAccountWork() {
+      if (applicationRole)
+        throw Object.assign(new Error("Maintenance credentials required"), {
+          code: "42501",
+        });
+
+      const result = await pool.query(`SELECT min(due) AS due FROM (
+        SELECT min("nextAttemptAt") AS due FROM account_mail WHERE "sentAt" IS NULL
+        UNION ALL SELECT min("deleteAfter") FROM erasure_requests WHERE "cancelledAt" IS NULL AND "processedAt" IS NULL
+      ) pending`);
+
+      return result.rows[0].due ? new Date(result.rows[0].due).getTime() : null;
+    },
     /** Deliver scheduled deletion notices with retries and erase due accounts; use a dedicated privileged process. */
     async maintainAccounts(
       send: (recipient: string) => Promise<void>,
@@ -52,14 +66,36 @@ export function createMaintenance(context: {
           code: "42501",
         });
 
+      const due = (
+        await pool.query(
+          'SELECT id,"userId" FROM erasure_requests WHERE "cancelledAt" IS NULL AND "processedAt" IS NULL AND "deleteAfter"<=now() AND ($1::uuid IS NULL OR id=$1) ORDER BY "deleteAfter" LIMIT 20',
+          [requestId ?? null]
+        )
+      ).rows;
+
+      for (const request of due) {
+        try {
+          await pool.query("SELECT erase_tracker_account($1,$2,$3)", [
+            request.userId,
+            request.id,
+            queueSchema ?? null,
+          ]);
+        } catch (error) {
+          if ((error as { code?: string }).code !== "42501") throw error;
+        }
+      }
+
+      const started = Date.now();
       const notices = (
         await pool.query(
-          'SELECT id,"userId" FROM account_mail WHERE "sentAt" IS NULL AND "nextAttemptAt"<=now() AND ($1::uuid IS NULL OR "requestId"=$1) LIMIT 50',
+          'SELECT id,"userId" FROM account_mail WHERE "sentAt" IS NULL AND "nextAttemptAt"<=now() AND ($1::uuid IS NULL OR "requestId"=$1) ORDER BY "nextAttemptAt" LIMIT 10',
           [requestId ?? null]
         )
       ).rows;
 
       for (const notice of notices) {
+        if (Date.now() - started >= 10000) break;
+
         const client = await pool.connect();
         try {
           await client.query("BEGIN");
@@ -100,24 +136,7 @@ export function createMaintenance(context: {
         }
       }
 
-      const due = (
-        await pool.query(
-          'SELECT id,"userId" FROM erasure_requests WHERE "cancelledAt" IS NULL AND "processedAt" IS NULL AND "deleteAfter"<=now() AND ($1::uuid IS NULL OR id=$1)',
-          [requestId ?? null]
-        )
-      ).rows;
-
-      for (const request of due) {
-        try {
-          await pool.query("SELECT erase_tracker_account($1,$2,$3)", [
-            request.userId,
-            request.id,
-            queueSchema ?? null,
-          ]);
-        } catch (error) {
-          if ((error as { code?: string }).code !== "42501") throw error;
-        }
-      }
+      return this.nextAccountWork();
     },
   };
 }

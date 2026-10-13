@@ -1,5 +1,6 @@
 /** Fixed backend events; arbitrary application content is never an event name. */
 export type BackendEvent =
+  | "wake_failed"
   | "http_request"
   | "mail_accepted"
   | "mail_failed"
