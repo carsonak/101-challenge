@@ -28,3 +28,5 @@ Working artifacts are not plans and must remain untracked outside repositories/w
 - [Pre-launch hardening](pre-launch-hardening/README.md): verification, security, usability and live-test gates.
 
 - [Maintainability](maintainability/README.md): modular production code, CSS Modules, formatting and YAML API reference.
+
+- [VPS deployment](vps-deployment/README.md): owner-led host setup, restricted agent operations, database selection and recoverable hosted release.
