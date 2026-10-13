@@ -43,8 +43,7 @@ do not change behavior.
 ## Upgrade procedure
 
 1. Review compatibility, migration lock/runtime cost and whether old and new
-   application versions can coexist. This project uses one web process; avoid
-   traffic during incompatible transitions.
+   application versions can coexist. Web replicas share rate limits; avoid traffic during incompatible transitions.
 2. Produce an encrypted backup and preserve a current deletion ledger separately.
    Restore into an isolated database and replay erasures before serving traffic,
    following [operations](operations.md).

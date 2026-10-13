@@ -531,3 +531,15 @@ Table tracker_migrations {
   Note: 'Created by the migration runner before numbered migrations.'
   "version" integer [pk, not null]
 }
+
+
+Table throttle_secret {
+  id boolean [pk, note: 'Singleton private salt; runtime roles cannot read this table']
+  secret text [not null]
+}
+
+Table throttle_buckets {
+  key text [pk, note: 'Salted opaque key; no plaintext identity']
+  count integer [not null]
+  expiresAt timestamptz [not null]
+}

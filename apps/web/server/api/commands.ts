@@ -24,7 +24,7 @@ export function createCommandsRoutes(context: ApiContext) {
         cmd.command === "RevokeCorrectionGrant";
 
       const actor = await auth.authenticate(token, csrf, recent);
-      rates.take("mutation", actor.userId, 120, 60000);
+      await rates.take("mutation", actor.userId, 120, 60000);
       const key = request.headers.get("idempotency-key");
       if (!key || !/^[-\w:]{1,200}$/.test(key))
         throw new DomainError("VALIDATION");

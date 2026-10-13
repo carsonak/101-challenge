@@ -92,6 +92,8 @@ export interface ProviderProof {
 
 /** Authentication dependencies are injected for local mail and OAuth doubles. */
 export interface AuthOptions {
+  /** Shared mail cooldowns for production replicas; omission is for isolated fixtures. */
+  cooldown?: import("../throttle.js").Throttle;
   /** Deliver private one-use keys after database commit; never log messages. */
   sendMail: (mail: AuthMail) => Promise<void>;
   /** Clock for expiry and recent authentication. */

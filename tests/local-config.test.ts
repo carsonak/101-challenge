@@ -51,6 +51,9 @@ test("local examples cover the complete inventory and use consistent fictional r
 
 test("two-file launch scopes reject credential crossover including inherited operator secrets", () => {
   const runtime = {
+    WORKER_WAKE_SECRET: "a".repeat(64),
+    MAINTENANCE_WAKE_SECRET: "b".repeat(64),
+    WAKE_DELIVERY_TIMEOUT_MS: "45000",
     DATABASE_URL: "web-fixture",
     WORKER_DATABASE_URL: "worker-fixture",
     APP_ORIGIN: "http://localhost:4173",
@@ -71,6 +74,7 @@ test("two-file launch scopes reject credential crossover including inherited ope
 
   const web = localEnvironment("web", runtime, operator, inherited);
   assert.equal(web.DATABASE_URL, "web-fixture");
+  assert.equal(web.WAKE_DELIVERY_TIMEOUT_MS, "45000");
   assert.equal(web.WORKER_DATABASE_URL, undefined);
   assert.equal(web.APP_ORIGIN, inherited.APP_ORIGIN);
   assert.equal(web.HOME, inherited.HOME);
@@ -79,7 +83,17 @@ test("two-file launch scopes reject credential crossover including inherited ope
   const worker = localEnvironment("worker", runtime, operator, inherited);
   assert.equal(worker.DATABASE_URL, "worker-fixture");
   assert.equal(worker.GOOGLE_CLIENT_SECRET, undefined);
+  assert.equal(worker.WAKE_DELIVERY_TIMEOUT_MS, undefined);
   assert.equal(worker.SMTP_PASSWORD, undefined);
+  assert.equal(worker.WORKER_WAKE_SECRET, runtime.WORKER_WAKE_SECRET);
+  assert.equal(worker.MAINTENANCE_WAKE_SECRET, undefined);
+  const service = localEnvironment("maintenance", runtime, operator, inherited);
+  assert.equal(
+    service.MAINTENANCE_WAKE_SECRET,
+    runtime.MAINTENANCE_WAKE_SECRET
+  );
+
+  assert.equal(service.WORKER_WAKE_SECRET, undefined);
   for (const key of operatorKeys) assert.equal(worker[key], undefined, key);
 
   assert.equal(

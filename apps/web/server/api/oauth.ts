@@ -4,7 +4,15 @@ import type { ApiContext, RequestContext } from "./context";
 import { cookie, cookieNames, json, payload, setCookie } from "./transport";
 /** Dispatch oauth routes, returning undefined when unmatched. */
 export function createOauthRoutes(context: ApiContext) {
-  const { config, auth, providers, rates, address, loginCookies } = context;
+  const {
+    config,
+    auth,
+    providers,
+    rates,
+    ingressRates,
+    address,
+    loginCookies,
+  } = context;
 
   const secure = config.APP_ORIGIN.startsWith("https:");
   return async function handle({
@@ -16,7 +24,7 @@ export function createOauthRoutes(context: ApiContext) {
     recordError,
   }: RequestContext): Promise<Response | undefined> {
     if (request.method === "POST" && path === "/api/v1/oauth") {
-      rates.take("oauth", address(request), 20, 60000);
+      await ingressRates.take("oauth", address(request), 20, 60000);
       const value = await payload(request);
       if (!value || typeof value !== "object")
         throw new DomainError("VALIDATION");
@@ -28,6 +36,7 @@ export function createOauthRoutes(context: ApiContext) {
       )
         throw new DomainError("VALIDATION");
 
+      await rates.take("oauth", address(request), 20, 60000);
       const browser = randomBytes(32).toString("hex");
       const state = await auth.beginOAuth(
         input.provider,

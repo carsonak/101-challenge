@@ -4,6 +4,21 @@ import { parseEnv } from "node:util";
 
 /** Complete local runtime inventory; .env.example is checked against this list. */
 export const runtimeKeys = [
+  "WORK_MODE",
+  "WAKE_DELIVERY_TIMEOUT_MS",
+  "WORKER_WAKE_URL",
+  "WORKER_WAKE_SECRET",
+  "MAINTENANCE_WAKE_URL",
+  "MAINTENANCE_WAKE_SECRET",
+  "MAINTENANCE_HOST",
+  "MAINTENANCE_PORT",
+  "WORK_RECOVERY_MIN_MS",
+  "WORK_RECOVERY_MAX_MS",
+  "HOUSEKEEPING_MIN_MS",
+  "HOUSEKEEPING_MAX_MS",
+  "DB_POOL_MAX",
+  "DB_CONNECT_TIMEOUT_MS",
+
   "APP_DISPLAY_NAME",
   "APP_ORIGIN",
   "PORT",
@@ -62,6 +77,8 @@ export const operatorKeys = [
 ];
 /** Shared nonprivileged service settings. */
 const common = [
+  "DB_POOL_MAX",
+  "DB_CONNECT_TIMEOUT_MS",
   "APP_DISPLAY_NAME",
   "APP_ORIGIN",
   "REPORTING_TIMEZONE",
@@ -120,6 +137,11 @@ export function localEnvironment(
     web: [
       ...common,
       ...smtp,
+      "WAKE_DELIVERY_TIMEOUT_MS",
+      "WORKER_WAKE_URL",
+      "WORKER_WAKE_SECRET",
+      "MAINTENANCE_WAKE_URL",
+      "MAINTENANCE_WAKE_SECRET",
       "DATABASE_URL",
       "PORT",
       "WEB_HOST",
@@ -132,6 +154,12 @@ export function localEnvironment(
     ],
     worker: [
       ...common,
+      "WORK_MODE",
+      "WORKER_WAKE_SECRET",
+      "WORK_RECOVERY_MIN_MS",
+      "WORK_RECOVERY_MAX_MS",
+      "HOUSEKEEPING_MIN_MS",
+      "HOUSEKEEPING_MAX_MS",
       "WORKER_PORT",
       "WORKER_HOST",
       "OUTBOX_POLL_MS",
@@ -145,7 +173,19 @@ export function localEnvironment(
       ...operatorKeys.filter((key) => /_DB_(USER|PASSWORD)$/.test(key)),
     ],
     maintain: [...common, ...smtp, "ERASURE_DATABASE_URL"],
-    maintenance: [...common, ...smtp, "ERASURE_DATABASE_URL"],
+    maintenance: [
+      ...common,
+      ...smtp,
+      "ERASURE_DATABASE_URL",
+      "WORK_MODE",
+      "MAINTENANCE_WAKE_SECRET",
+      "MAINTENANCE_HOST",
+      "MAINTENANCE_PORT",
+      "WORK_RECOVERY_MIN_MS",
+      "WORK_RECOVERY_MAX_MS",
+      "OUTBOX_POLL_MS",
+      "OUTBOX_IDLE_MAX_MS",
+    ],
     register: [
       "DISCORD_CLIENT_ID",
       "DISCORD_BOT_TOKEN",

@@ -1,4 +1,4 @@
-import type { createThrottle } from "../throttle.js";
+import type { Throttle } from "../throttle.js";
 import type { ActionContext } from "./action-context.js";
 import { authCommandSchema, type AuthCommand } from "@challenge/contracts";
 import { createAuthActions } from "../auth/actions.js";
@@ -15,7 +15,7 @@ export function createAuthExecute(
   context: ActionContext & {
     repository: Repository;
     options: AuthOptions;
-    cooldown: ReturnType<typeof createThrottle>;
+    cooldown: Throttle;
   }
 ) {
   const {
@@ -65,7 +65,7 @@ export function createAuthExecute(
       const mayMail =
         "email" in c &&
         ["signup", "recover", "add_email", "recovery_email"].includes(c.action)
-          ? cooldown.allow(
+          ? await cooldown.allow(
               c.action === "recover" ? "recovery-mail" : "verification-mail",
               c.email.trim().toLowerCase(),
               15 * 60000

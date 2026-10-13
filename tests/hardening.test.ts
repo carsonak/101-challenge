@@ -233,7 +233,11 @@ test("Discord payload limits reject oversized fields and deadline timeouts never
   );
 
   assert.ok(performance.now() - before < 2150);
-  assert.match((await response.json()).data.content, /taking too long/);
+  assert.match(
+    (await response.json()).data.content,
+    /service may be waking up/
+  );
+
   await new Promise((resolve) => setTimeout(resolve, 300));
   assert.equal(mutations, 0);
   assert.equal(scheduled, 0);

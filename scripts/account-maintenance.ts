@@ -1,6 +1,6 @@
 /**
  * @file Run one account-mail retry and due-erasure sweep with a separately supplied privileged connection.
- * Invoke `pnpm accounts:maintain` once, or `pnpm accounts:schedule` for minute sweeps. Local commands scope .env/.env.operator to maintenance.
+ * Invoke `pnpm accounts:maintain` once, or `pnpm accounts:schedule` for sleeping deadline-driven execution. Local commands scope .env/.env.operator to maintenance.
  * Sends private recovery notices, removes due accounts, and closes resources; never prints recipients or secrets.
  */
 import { parseServerConfig } from "../packages/contracts/src/index.js";
@@ -21,9 +21,16 @@ try {
   const database = createRepository(connection);
   const mail = createMailer(config);
   try {
-    await database.maintainAccounts(
+    const nextRunAt = await database.maintainAccounts(
       (recipient) => mail.send({ recipient, kind: "deletion", token: "" }),
       process.env.QUEUE_SCHEMA
+    );
+
+    console.info(
+      JSON.stringify({
+        nextRunAt:
+          nextRunAt === null ? null : new Date(nextRunAt).toISOString(),
+      })
     );
   } finally {
     mail.close();

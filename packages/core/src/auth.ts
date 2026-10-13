@@ -29,7 +29,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
   const clock = options.now ?? (() => new Date());
   const opaque = () => randomBytes(32).toString("hex");
   const dummyState: { current?: Promise<string> } = {};
-  const cooldown = createThrottle(() => clock().getTime());
+  const cooldown = options.cooldown ?? createThrottle(() => clock().getTime());
   const session = createAuthSession({ clock });
   const issueSession = createAuthIssueSession({ clock, opaque });
   const mailToken = createAuthMailToken({ opaque, clock });
@@ -52,7 +52,7 @@ export function createAuth(repository: Repository, options: AuthOptions) {
       dummyState,
     }),
     ...createAuthSessions({ repository, session }),
-    ...createAuthNotifications({ repository, session }),
+    ...createAuthNotifications({ repository, session, clock }),
     ...createAuthBeginOAuth({ opaque, repository, session, clock }),
     ...createAuthOauthState({ repository, clock }),
     ...createAuthCompleteOAuth({

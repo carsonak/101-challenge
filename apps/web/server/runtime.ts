@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { createWakeClient } from "./wake";
 import { parseServerConfig } from "@challenge/contracts";
 import { createAuth, createTracker, logBackend } from "@challenge/core";
 import { createRepository } from "@challenge/db";
@@ -13,9 +15,18 @@ function build() {
   const config = parseServerConfig(process.env);
   if (!config.DATABASE_URL) throw new Error("Database not configured");
 
-  const database = createRepository(config.DATABASE_URL, true);
+  const database = createRepository(
+    config.DATABASE_URL,
+    true,
+    createWakeClient(config, after)
+  );
+
   const mail = createMailer(config);
-  const auth = createAuth(database.repository, { sendMail: mail.send });
+  const auth = createAuth(database.repository, {
+    sendMail: mail.send,
+    cooldown: database.rates,
+  });
+
   const tracker = createTracker(database.repository, {
     timezone: config.REPORTING_TIMEZONE,
   });
@@ -27,7 +38,13 @@ function build() {
     database,
     auth,
     tracker,
-    api: createWebApi({ config, auth, tracker, providers }),
+    api: createWebApi({
+      config,
+      auth,
+      tracker,
+      providers,
+      rates: database.rates,
+    }),
   };
 }
 

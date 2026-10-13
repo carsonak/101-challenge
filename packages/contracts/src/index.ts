@@ -1,3 +1,4 @@
+import { workConfig, databaseConfigSchema } from "./work-config.js";
 import { z } from "./validation.js";
 
 /**
@@ -32,6 +33,8 @@ const databaseUrl = z.preprocess(
 
 /** Server settings and defaults accepted during service configuration. */
 const envSchema = z.object({
+  ...workConfig,
+  ...databaseConfigSchema.shape,
   /** Header overwritten by an isolated trusted ingress; unset ignores all forwarding headers. */
   TRUSTED_PROXY_HEADER: optionalString,
   /** Explicit ingress chain length; zero disables forwarded client identities. */
@@ -145,6 +148,24 @@ export function parseServerConfig(input: Record<string, string | undefined>) {
   )
     throw new Error("Invalid trusted proxy configuration");
 
+  for (const [lower, upper] of [
+    [env.WORK_RECOVERY_MIN_MS, env.WORK_RECOVERY_MAX_MS],
+    [env.HOUSEKEEPING_MIN_MS, env.HOUSEKEEPING_MAX_MS],
+  ] as const)
+    if (lower > upper) throw new Error("Invalid work scheduling bounds");
+
+  if (
+    (env.WORKER_WAKE_URL && !env.WORKER_WAKE_SECRET) ||
+    (env.MAINTENANCE_WAKE_URL && !env.MAINTENANCE_WAKE_SECRET)
+  )
+    throw new Error("Wake destinations require signing keys");
+
+  if (
+    env.WORKER_WAKE_SECRET &&
+    env.WORKER_WAKE_SECRET === env.MAINTENANCE_WAKE_SECRET
+  )
+    throw new Error("Worker and maintenance wake keys must differ");
+
   const origin = new URL(env.APP_ORIGIN);
   if (
     origin.origin !== env.APP_ORIGIN ||
@@ -224,3 +245,5 @@ export * from "./tracker.js";
 export * from "./auth.js";
 
 export * from "./messages.js";
+
+export { databaseConfigSchema } from "./work-config.js";

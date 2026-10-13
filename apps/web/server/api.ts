@@ -14,7 +14,8 @@ export { cookieNames, type ApiDependencies } from "./api/transport";
 export function createWebApi(deps: ApiDependencies) {
   const { config } = deps;
   const secure = config.APP_ORIGIN.startsWith("https:");
-  const rates = createThrottle(deps.now);
+  const rates = deps.rates ?? createThrottle(deps.now);
+  const ingressRates = createThrottle(deps.now);
   /** Accept only a validated address from the explicitly configured ingress chain. */
   function address(request: Request) {
     if (!config.TRUSTED_PROXY_HOPS || !config.TRUSTED_PROXY_HEADER)
@@ -39,7 +40,7 @@ export function createWebApi(deps: ApiDependencies) {
     setCookie(response, cookieNames.csrf, session.csrf, secure, false);
   }
 
-  const context = { ...deps, rates, address, loginCookies };
+  const context = { ...deps, rates, ingressRates, address, loginCookies };
   const routes = [
     createReadsRoutes(context),
     createAuthenticationRoutes(context),

@@ -4,6 +4,7 @@ import uiStyles from "./../styles/ui.module.css";
 
 import { useEffect, useState, useCallback } from "react";
 import { errorMessage } from "@challenge/contracts";
+import { WaitingMessage } from "./waiting-message";
 import { Field, PasswordInput, Toast } from "./ui";
 
 /** Dedicated authentication routes; verification/reset proofs never appear in other forms. */
@@ -134,6 +135,7 @@ export default function AuthScreen({
     <main className={screensStyles["auth-page"]}>
       <p className={uiStyles.eyebrow}>Small steps. Lasting progress.</p>
       <h1>{titles[view]}</h1>
+      <WaitingMessage pending={busy} />
       <Toast message={message} error={error} dismiss={dismiss} />
       {view === "verify" && !token ? (
         <section className={uiStyles.card}>

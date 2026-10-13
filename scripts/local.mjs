@@ -20,7 +20,10 @@ const commands = {
     ["--import", "tsx", "scripts/provision-database.ts"],
   ],
   maintain: ["maintain", ["--import", "tsx", "scripts/account-maintenance.ts"]],
-  maintenance: ["maintenance", ["scripts/maintenance-scheduler.mjs"]],
+  maintenance: [
+    "maintenance",
+    ["--import", "tsx", "scripts/maintenance-scheduler.mjs"],
+  ],
   register: ["register", ["--import", "tsx", "scripts/discord-register.ts"]],
   proxy: ["proxy", ["scripts/discord-proxy.mjs"]],
 };
