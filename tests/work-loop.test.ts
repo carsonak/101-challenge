@@ -128,6 +128,8 @@ test("Scheduling bounds and wake destinations fail closed", () => {
       MAINTENANCE_WAKE_SECRET: "a".repeat(64),
     },
     { DB_POOL_MAX: "500" },
+    { WAKE_DELIVERY_TIMEOUT_MS: "999" },
+    { WAKE_DELIVERY_TIMEOUT_MS: "120001" },
   ])
     assert.throws(() => parseServerConfig(config));
 });

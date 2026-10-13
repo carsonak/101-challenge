@@ -40,6 +40,13 @@ export const workConfig = {
   MAINTENANCE_WAKE_URL: wakeUrl,
   /** Independent maintenance scan key; does not authorize account operations. */
   MAINTENANCE_WAKE_SECRET: secret,
+  /** Per-attempt web wake acknowledgement budget, including gateway cold starts. */
+  WAKE_DELIVERY_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(120000)
+    .default(30000),
   /** Private maintenance bind address, loopback by default. */
   MAINTENANCE_HOST: z.string().min(1).default("127.0.0.1"),
   /** Private maintenance HTTP port. */

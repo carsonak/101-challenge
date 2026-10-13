@@ -5,6 +5,7 @@ import { parseEnv } from "node:util";
 /** Complete local runtime inventory; .env.example is checked against this list. */
 export const runtimeKeys = [
   "WORK_MODE",
+  "WAKE_DELIVERY_TIMEOUT_MS",
   "WORKER_WAKE_URL",
   "WORKER_WAKE_SECRET",
   "MAINTENANCE_WAKE_URL",
@@ -136,6 +137,7 @@ export function localEnvironment(
     web: [
       ...common,
       ...smtp,
+      "WAKE_DELIVERY_TIMEOUT_MS",
       "WORKER_WAKE_URL",
       "WORKER_WAKE_SECRET",
       "MAINTENANCE_WAKE_URL",

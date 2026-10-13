@@ -94,15 +94,16 @@ does not update those registrations.
 
 See [elastic hosting](elastic-hosting.md) before enabling request mode.
 
-| Settings                                      | Purpose                                                                                             |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| WORK_MODE                                     | resident owns timers; request requires durable external scheduling.                                 |
-| WORKER_WAKE_URL, WORKER_WAKE_SECRET           | Optional private projection-worker wake destination and independent 64-character hex signing key.   |
-| MAINTENANCE_WAKE_URL, MAINTENANCE_WAKE_SECRET | Optional private account-maintenance wake destination and distinct signing key.                     |
-| MAINTENANCE_HOST, MAINTENANCE_PORT            | Private maintenance listener; loopback:3002 by default.                                             |
-| WORK_RECOVERY_MIN_MS, WORK_RECOVERY_MAX_MS    | Empty/future-work recovery backoff; defaults fifteen minutes to one hour.                           |
-| HOUSEKEEPING_MIN_MS, HOUSEKEEPING_MAX_MS      | Adaptive housekeeping bounds; defaults one to twenty-four hours, overridden by retention deadlines. |
-| DB_POOL_MAX, DB_CONNECT_TIMEOUT_MS            | Per-pool maximum connections (5) and cold connection timeout (15000 ms).                            |
+| Settings                                      | Purpose                                                                                                       |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| WAKE_DELIVERY_TIMEOUT_MS                      | Web wake acknowledgement timeout per attempt (30000 ms); see gateway and lifetime budgets in elastic hosting. |
+| WORK_MODE                                     | resident owns timers; request requires durable external scheduling.                                           |
+| WORKER_WAKE_URL, WORKER_WAKE_SECRET           | Optional private projection-worker wake destination and independent 64-character hex signing key.             |
+| MAINTENANCE_WAKE_URL, MAINTENANCE_WAKE_SECRET | Optional private account-maintenance wake destination and distinct signing key.                               |
+| MAINTENANCE_HOST, MAINTENANCE_PORT            | Private maintenance listener; loopback:3002 by default.                                                       |
+| WORK_RECOVERY_MIN_MS, WORK_RECOVERY_MAX_MS    | Empty/future-work recovery backoff; defaults fifteen minutes to one hour.                                     |
+| HOUSEKEEPING_MIN_MS, HOUSEKEEPING_MAX_MS      | Adaptive housekeeping bounds; defaults one to twenty-four hours, overridden by retention deadlines.           |
+| DB_POOL_MAX, DB_CONNECT_TIMEOUT_MS            | Per-pool maximum connections (5) and cold connection timeout (15000 ms).                                      |
 
 Signing keys confer only permission to request a scan. Only the maintenance process
 receives erasure credentials. Each worker receives only its own wake key. Routine

@@ -3,8 +3,9 @@ import type { parseServerConfig } from "@challenge/contracts";
 
 /**
  * Create a best-effort post-commit notifier. Framework lifetime hooks retain the
- * bounded delivery after the response. Queues remain durable if a poke is lost;
- * destinations and signing keys are server-owned and redirects are forbidden.
+ * bounded delivery after the response (at most three configured timeout budgets).
+ * Queues remain durable if a poke is lost; destinations and signing keys are
+ * server-owned and redirects are forbidden.
  */
 export function createWakeClient(
   config: ReturnType<typeof parseServerConfig>,
@@ -45,7 +46,7 @@ export function createWakeClient(
               const response = await transport(url, {
                 method: "POST",
                 redirect: "error",
-                signal: AbortSignal.timeout(10000),
+                signal: AbortSignal.timeout(config.WAKE_DELIVERY_TIMEOUT_MS),
                 headers: {
                   "x-work-timestamp": timestamp,
                   "x-work-signature": signWake(secret, service, timestamp),

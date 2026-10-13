@@ -132,3 +132,104 @@ test("Notifier coalesces commits, retries a failed hint and never follows redire
   await scheduled[0]();
   assert.equal(calls, 2);
 });
+
+test("A cold gateway can retain its deadline after 20 seconds without a duplicate hint", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 1800000000000 });
+  const budgets: number[] = [];
+  t.mock.method(AbortSignal, "timeout", (budget: number) => {
+    budgets.push(budget);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error("timeout")), budget);
+    return controller.signal;
+  });
+
+  const scheduled: (() => Promise<void>)[] = [];
+  let calls = 0;
+  let retainedDeadline: number | undefined;
+  const config = parseServerConfig({
+    WORKER_WAKE_URL: "https://gateway.example.invalid/wake",
+    WORKER_WAKE_SECRET: secret,
+  });
+
+  assert.equal(config.WAKE_DELIVERY_TIMEOUT_MS, 30000);
+  const client = createWakeClient(
+    config,
+    (task) => scheduled.push(task),
+    async (_url, options) => {
+      calls++;
+      return new Promise<Response>((resolve, reject) => {
+        options?.signal?.addEventListener(
+          "abort",
+          () => reject(new Error("timeout")),
+          { once: true }
+        );
+
+        setTimeout(() => {
+          retainedDeadline = Date.now() + 1000;
+          resolve(new Response(null, { status: 200 }));
+        }, 20000);
+      });
+    }
+  );
+
+  client("worker");
+  client("worker");
+  const task = scheduled[0];
+  assert.ok(task);
+  const delivery = task();
+  t.mock.timers.tick(19999);
+  assert.equal(retainedDeadline, undefined);
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1);
+  await delivery;
+  assert.equal(retainedDeadline, Date.now() + 1000);
+  assert.equal(calls, 1);
+  assert.deepEqual(budgets, [30000]);
+});
+
+test("Unavailable gateways use the configured timeout and stop after three attempts", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 1800000000000 });
+  const budgets: number[] = [];
+  t.mock.method(AbortSignal, "timeout", (budget: number) => {
+    budgets.push(budget);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error("timeout")), budget);
+    return controller.signal;
+  });
+
+  const scheduled: (() => Promise<void>)[] = [];
+  let calls = 0;
+  const client = createWakeClient(
+    parseServerConfig({
+      WORKER_WAKE_URL: "https://gateway.example.invalid/wake",
+      WORKER_WAKE_SECRET: secret,
+      WAKE_DELIVERY_TIMEOUT_MS: "1000",
+    }),
+    (task) => scheduled.push(task),
+    async (_url, options) => {
+      calls++;
+      return new Promise<Response>((_resolve, reject) => {
+        options?.signal?.addEventListener(
+          "abort",
+          () => reject(new Error("timeout")),
+          { once: true }
+        );
+      });
+    }
+  );
+
+  client("worker");
+  const task = scheduled[0];
+  assert.ok(task);
+  const delivery = task();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    assert.equal(calls, attempt);
+    t.mock.timers.tick(1000);
+    // Flush the rejected transport and notifier continuation before the next tick.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+
+  await delivery;
+  assert.equal(calls, 3);
+  assert.deepEqual(budgets, [1000, 1000, 1000]);
+});

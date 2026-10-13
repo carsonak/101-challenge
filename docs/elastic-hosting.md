@@ -41,6 +41,24 @@ for timely future jobs:** the web notifier does not implement a provider schedul
 It only delivers bounded hints. Alternatively, an external scheduler can own all
 invocation and scan on its own cadence, but that trades latency and idle cost.
 
+WAKE_DELIVERY_TIMEOUT_MS bounds each web hint's acknowledgement wait (default
+thirty seconds, configurable from one to 120 seconds). In request mode, size it
+above the gateway's complete acknowledgement budget: service cold start,
+DB_CONNECT_TIMEOUT_MS (default fifteen seconds), the bounded sweep, and durable
+nextRunAt storage, with network margin. Thirty seconds is a starting value, not a
+hosted latency guarantee. The gateway and worker request limits must also permit
+that sequence. A shorter notifier budget can produce repeated hints and
+wake_failed while legitimate gateway work is still progressing; durable recovery
+still protects queued work.
+
+The notifier makes at most three attempts per service. Allow the web platform's
+Next after lifetime to cover the foreground request plus up to three delivery
+budgets (ninety seconds per service at defaults) and overhead. Both services may
+be notified concurrently. Measure worst-case sweep and acknowledgement latency
+before selecting these budgets; raising the timeout increases retained invocation
+time when a destination is unavailable. Timeouts remain bounded and destinations
+remain private operator settings.
+
 One-shot commands are available for scheduled container jobs:
 
 - `pnpm start:worker --once`: bounded projection/housekeeping sweep and a JSON

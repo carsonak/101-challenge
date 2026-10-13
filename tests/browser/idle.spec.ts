@@ -21,6 +21,11 @@ test("Slow page reads show accessible waiting feedback in both themes and preser
         release = resolve;
       });
 
+      // Keep the loading regression independent of accumulated database fixtures.
+      await page.route("**/api/v1/seasons", (route) =>
+        route.fulfill({ json: { items: [], nextCursor: null } })
+      );
+
       await page.route("**/api/v1/session", async (route) => {
         await gate;
         await route.fulfill({
@@ -48,14 +53,16 @@ test("Slow page reads show accessible waiting feedback in both themes and preser
             path: join(output, `idle-${theme}-${width}.png`),
             fullPage: true,
           });
+
+        release();
+        // Retain interception until refresh completes, including late session reads.
+        await expect(
+          page.getByText("service may be waking up", { exact: false })
+        ).toHaveCount(0);
       } finally {
         release();
         await page.unrouteAll({ behavior: "wait" });
       }
-
-      await expect(
-        page.getByText("service may be waking up", { exact: false })
-      ).toHaveCount(0);
     }
   }
 });
