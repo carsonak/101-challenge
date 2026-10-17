@@ -14,19 +14,28 @@ const token = z.string().regex(/^[a-f0-9]{64}$/);
 /** Unique case-insensitive account handle. */
 export const usernameSchema = z
   .string()
-  .trim()
   .min(3)
-  .max(32)
+  .max(40)
   .regex(/^[a-zA-Z0-9_-]+$/)
   .transform((v) => v.toLowerCase());
 
-/** Email signup, login, verification and recovery payloads. */
+/** Username/password signup, identifier login, verification and recovery payloads. */
 export const authCommandSchema = z.union([
   z.strictObject({
     action: z.literal("signup"),
-    email,
+    email: email.optional(),
     password,
     username: usernameSchema,
+  }),
+  z.strictObject({
+    action: z.literal("login"),
+    identifier: z.union([usernameSchema, email]),
+    password,
+  }),
+  z.strictObject({
+    action: z.literal("login"),
+    username: usernameSchema,
+    password,
   }),
   z.strictObject({ action: z.literal("login"), email, password }),
   z.strictObject({ action: z.literal("recover"), email }),
@@ -79,6 +88,8 @@ export const accountSchema = z.strictObject({
     .nullable(),
   email: z.string().nullable(),
   emailVerified: z.boolean(),
+  /** Password sign-in availability, independent of optional email verification. */
+  hasPassword: z.boolean(),
   providers: z.array(z.enum(["google", "discord"])),
   admin: z.boolean(),
 });

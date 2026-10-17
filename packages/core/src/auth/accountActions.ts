@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Transaction } from "../model.js";
 import { digest } from "../rules.js";
 import type { ActionContext, Delivery } from "./action-context.js";
+import { reserveEmail } from "./emailOwnership.js";
 import { credentialAction } from "./credentialActions.js";
 import { ensure, verifyPassword } from "./shared.js";
 /** Execute accountActions actions inside the caller's transaction. */
@@ -106,6 +107,8 @@ export function createAuthAccountActions(context: ActionContext) {
       if (c.action === "recovery_email") {
         if (!mayMail) return { accepted: true };
 
+        await reserveEmail(tx, c.email, user.id);
+
         for (const t of await tx.list("auth_tokens", {
           userId: user.id,
           kind: "recovery_email",
@@ -163,7 +166,7 @@ export function createAuthAccountActions(context: ActionContext) {
     if (c.action === "reauthenticate") {
       const credential = await tx.get("credentials", user.id);
       ensure(
-        credential?.verified &&
+        credential &&
           (await verifyPassword(c.password, credential.passwordHash))
       );
 

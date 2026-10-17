@@ -145,36 +145,27 @@ async function main() {
       Array.from({ length: users }, async (_, index) => {
         await setTimeout(Math.floor((index * duration) / users));
         const username = `trial-${randomUUID().slice(0, 20)}`,
-          email = `${username}@example.invalid`,
           password = `fictional-trial-${randomUUID()}`;
 
         if (
           !(await request("/api/v1/auth", {
             action: "signup",
             username,
-            email,
             password,
           }))
         )
           return null;
 
-        // Verification latency is a separate provider gate. Confirm only this trial's newly created disposable credential.
         const id = await db.repository.transaction(async (tx) => {
-          const found = (await tx.list("credentials", { email }))[0];
-          if (!found) throw new Error("Synthetic credential missing");
+          const profile = (await tx.list("profiles", { username }))[0];
+          if (!profile) throw new Error("Synthetic account missing");
 
-          await tx.get("users", found.userId, true);
-          const credential = await tx.get("credentials", found.id, true);
-          if (!credential) throw new Error("Synthetic credential missing");
-
-          credential.verified = true;
-          await tx.save("credentials", credential);
-          return credential.userId;
+          return profile.id;
         });
 
         const login = await request("/api/v1/auth", {
           action: "login",
-          email,
+          username,
           password,
         });
 

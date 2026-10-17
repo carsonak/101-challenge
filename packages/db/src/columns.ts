@@ -197,7 +197,7 @@ export const columns = {
   credentials: {
     id: "uuid",
     userId: "uuid",
-    email: "text",
+    email: "text?",
     passwordHash: "text",
     verified: "boolean",
   },

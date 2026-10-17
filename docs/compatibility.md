@@ -67,3 +67,15 @@ Migration 0009 adds an operator-only suspension flag with no changes to retained
 participant records. Deploy all web instances with suspension enforcement before
 using the flag. Do not roll back to a version that ignores active suspensions;
 keep access closed or roll forward during an incident. Erasure cascades the flag.
+
+## Username/password transition
+
+Migration 0010 makes credential email nullable and expands the username constraint
+to 40 characters. Existing hashes, addresses, profile values, provider subjects,
+sessions and participant history are retained. Legacy email/password login and
+add_email command shapes remain available; new clients use username or identifier
+login and optional-email signup. Account projections add hasPassword. Verification
+gates email aliases only; username/password works before optional email is verified.
+Conflicting legacy recovery addresses fail closed without deleting data. Test the
+populated MVP upgrade as well as fresh accounts before release. Older application
+versions cannot handle null credential emails; roll forward after this migration.

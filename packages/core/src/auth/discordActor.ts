@@ -16,6 +16,9 @@ export function createAuthDiscordActor(context: {
         if (!identity || (await tx.get("account_suspensions", identity.userId)))
           return undefined;
 
+        if ((await tx.get("profiles", identity.userId))?.provisional)
+          return undefined;
+
         return identity.userId;
       });
     },

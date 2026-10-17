@@ -30,13 +30,24 @@ export function createAuthenticationRoutes(context: ApiContext) {
         60000
       );
 
-      if ("email" in c.data)
+      if ("email" in c.data && c.data.email !== undefined)
         await rates.take(
           `${bucket}-email`,
           c.data.email.trim().toLowerCase(),
           10,
           15 * 60000
         );
+
+      if (c.data.action === "login") {
+        const identifier =
+          "identifier" in c.data
+            ? c.data.identifier
+            : "username" in c.data
+              ? c.data.username
+              : c.data.email;
+
+        await rates.take("auth-login-identifier", identifier, 10, 15 * 60000);
+      }
 
       if (
         ![

@@ -12,7 +12,7 @@ export function createAuthMailToken(context: {
   /** Persist a one-use proof hash and return plaintext only to the delivery port. */
   async function mailToken(
     tx: Transaction,
-    credential: Credential,
+    credential: Pick<Credential, "userId"> & { email: string },
     kind: "verify" | "recover"
   ): Promise<AuthMail> {
     const token = opaque();

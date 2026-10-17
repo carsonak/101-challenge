@@ -11,6 +11,7 @@ export const trackerMigrations = [
   [7, "0007_discord_daily_loop.sql"],
   [8, "0008_idle_workers.sql"],
   [9, "0009_account_suspensions.sql"],
+  [10, "0010_username_password.sql"],
 ] as const;
 
 /** Reject readiness until every registered migration is applied; performs read-only I/O. */

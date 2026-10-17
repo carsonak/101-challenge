@@ -25,7 +25,7 @@ export function createTrackerAdminStats(context: {
       return repository.transaction(async (tx) => {
         requireRule((await actor(tx, userId)).admin, "FORBIDDEN");
         requireRule(
-          prefix.length <= 32 &&
+          prefix.length <= 40 &&
             (!after ||
               /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
                 after

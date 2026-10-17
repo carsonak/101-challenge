@@ -41,6 +41,7 @@ export function createAuthAccount(context: {
           id: user.id,
           email: credential?.email ?? null,
           emailVerified: credential?.verified ?? false,
+          hasPassword: Boolean(credential),
           providers: identities.map((i) => i.provider),
           admin: user.admin,
         });

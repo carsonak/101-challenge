@@ -7,7 +7,7 @@ get:
   parameters:
     - name: prefix
       in: query
-      schema: { type: string, maxLength: 32 }
+      schema: { type: string, maxLength: 40 }
     - name: cursor
       in: query
       schema: { type: string, format: uuid }

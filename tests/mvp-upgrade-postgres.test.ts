@@ -238,6 +238,24 @@ test(
       const after = await auth.execute({ action: "login", email, password });
       assert.ok("token" in after && after.token);
       assert.deepEqual(await auth.account(after.token), linkedAccount);
+      const usernameOnly = `upgrade-${randomUUID()}`.slice(0, 40);
+      await auth.execute({
+        action: "signup",
+        username: usernameOnly,
+        password,
+      });
+
+      const fresh = await auth.execute({
+        action: "login",
+        username: usernameOnly,
+        password,
+      });
+
+      assert.ok(fresh.token);
+      const freshAccount = await auth.account(fresh.token);
+      assert.equal(freshAccount.username.length, 40);
+      assert.equal(freshAccount.recoveryEmail, null);
+      assert.equal(freshAccount.hasPassword, true);
     } finally {
       await db.close();
       await sql.end();

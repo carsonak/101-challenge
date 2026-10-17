@@ -65,6 +65,7 @@ export function createAuthExecute(
 
       const mayMail =
         "email" in c &&
+        c.email !== undefined &&
         [
           "signup",
           "recover",

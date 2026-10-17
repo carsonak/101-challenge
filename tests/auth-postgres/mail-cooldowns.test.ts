@@ -25,6 +25,8 @@ test(
       );
 
       assert.equal(f.mail.length, 1);
+      assert.ok(f.mail[0]);
+      await f.auth.execute({ action: "verify", token: f.mail[0].token });
       assert.deepEqual(
         await f.auth.execute({ action: "recover", email: address }),
         { accepted: true }

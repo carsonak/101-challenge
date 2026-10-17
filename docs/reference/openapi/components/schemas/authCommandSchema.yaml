@@ -16,11 +16,10 @@ anyOf:
       username:
         type: string
         minLength: 3
-        maxLength: 32
+        maxLength: 40
         pattern: ^[a-zA-Z0-9_-]+$
     required:
       - action
-      - email
       - password
       - username
     additionalProperties: false
@@ -102,7 +101,7 @@ anyOf:
       username:
         type: string
         minLength: 3
-        maxLength: 32
+        maxLength: 40
         pattern: ^[a-zA-Z0-9_-]+$
     required:
       - action
@@ -243,7 +242,7 @@ anyOf:
       username:
         type: string
         minLength: 3
-        maxLength: 32
+        maxLength: 40
         pattern: ^[a-zA-Z0-9_-]+$
     required:
       - action
@@ -259,7 +258,9 @@ anyOf:
         type: string
         format: email
         maxLength: 254
-    required: [action, email]
+    required:
+      - action
+      - email
     additionalProperties: false
   - type: object
     properties:
@@ -270,11 +271,58 @@ anyOf:
         type: string
         minLength: 12
         maxLength: 128
-    required: [action, password]
+    required:
+      - action
+      - password
     additionalProperties: false
-description: >-
-  Anonymous actions: signup, login, recover, resend_verification, verify, reset,
-  verify_recovery_email. All other actions require the session cookie and
-  x-csrf-token. add_email, unlink, request_erasure recovery_email and change_password also
-  require authentication within the last ten minutes. Usernames are trimmed and
-  lowercased; email addresses are lowercased.
+  - type: object
+    properties:
+      action:
+        type: string
+        const: login
+      identifier:
+        anyOf:
+          - type: string
+            minLength: 3
+            maxLength: 40
+            pattern: ^[a-zA-Z0-9_-]+$
+          - type: string
+            format: email
+            maxLength: 254
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - identifier
+      - password
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: login
+      username:
+        type: string
+        minLength: 3
+        maxLength: 40
+        pattern: ^[a-zA-Z0-9_-]+$
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required:
+      - action
+      - username
+      - password
+    additionalProperties: false
+description:
+  "Signup requires username/password; email is optional and must be verified before\
+  \ email-alias login or recovery. Login accepts identifier (username or verified recovery email),\
+  \ username, or legacy email with password. Usernames are 3\u201340 URL-safe ASCII letters/digits/underscores/hyphens\
+  \ without spaces and normalized to lowercase. Anonymous actions: signup, login, recover, resend_verification,\
+  \ verify, reset, verify_recovery_email. Other actions require session and x-csrf-token; add_email,\
+  \ unlink, request_erasure, recovery_email and change_password also require authentication\
+  \ within ten minutes. change_password can add a first password to a provider account and revokes\
+  \ all sessions. Matching email never merges accounts."

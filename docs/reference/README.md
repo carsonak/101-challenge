@@ -81,7 +81,8 @@ The UUID above is fictional; use a published season's actual ID. Include the
 session cookie, Origin, CSRF proof, idempotency key and `Content-Type:
 application/json` headers when submitting it.
 
-Authentication actions include email signup/login, one-use verification/recovery,
+Authentication actions include username/password signup with optional recovery email,
+username or verified-email login, one-use verification/recovery,
 profile changes, session revocation, notifications and account deletion recovery.
 The request schema lists every supported action. Login and account restoration
 can set cookies; session secrets are never returned in JSON. Sensitive account

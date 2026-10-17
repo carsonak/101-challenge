@@ -4,6 +4,7 @@ import { digest } from "../rules.js";
 import type { createAuthIssueSession } from "./issueSession.js";
 import type { createAuthNewUser } from "./newUser.js";
 import type { createAuthSession } from "./session.js";
+import { reserveEmail } from "./emailOwnership.js";
 import { ensure, type ProviderProof } from "./shared.js";
 
 /** Build completeOAuth behavior using the owning service dependencies. */
@@ -22,7 +23,7 @@ export function createAuthCompleteOAuth(context: {
 }) {
   const { repository, session, newUser, clock, issueSession } = context;
   return {
-    /** Commit verified provider ownership; email claims are deliberately ignored. */
+    /** Commit stable provider identity; a verified Google email may initialize recovery without merging accounts. */
     async completeOAuth(
       stateId: string,
       browserSecret: string,
@@ -51,6 +52,7 @@ export function createAuthCompleteOAuth(context: {
           })
         )[0];
 
+        const creating = !user && !knownIdentity;
         if (!user)
           user = knownIdentity
             ? await tx.get("users", knownIdentity.userId, true)
@@ -102,11 +104,15 @@ export function createAuthCompleteOAuth(context: {
 
         ensure(user);
         const profile = await tx.get("profiles", user.id, true);
-        if (profile?.provisional && proof.username) {
+        if (
+          profile?.provisional &&
+          proof.provider === "discord" &&
+          proof.username
+        ) {
           const candidate = proof.username
             .toLowerCase()
             .replace(/[^a-z0-9_-]/g, "")
-            .slice(0, 32);
+            .slice(0, 40);
 
           if (candidate.length >= 3) {
             await tx.serializeKey(`username:${candidate}`);
@@ -116,8 +122,30 @@ export function createAuthCompleteOAuth(context: {
               )
             ) {
               profile.username = candidate;
+              profile.provisional = false;
               await tx.save("profiles", profile);
             }
+          }
+        }
+
+        if (
+          creating &&
+          profile &&
+          proof.provider === "google" &&
+          proof.recoveryEmail
+        ) {
+          // A conflicting address never links identities or overwrites another owner's recovery.
+          try {
+            await reserveEmail(tx, proof.recoveryEmail, user.id);
+            profile.recoveryEmail = proof.recoveryEmail;
+            await tx.save("profiles", profile);
+          } catch (error) {
+            if (
+              !(error instanceof Error) ||
+              !("code" in error) ||
+              error.code !== "VALIDATION"
+            )
+              throw error;
           }
         }
 

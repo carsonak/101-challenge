@@ -24,6 +24,7 @@ export const progressSchema = z.strictObject({
   reportingDays: z.number().int().min(0).max(101),
   currentStreak: z.number().int().min(0).max(101),
   longestStreak: z.number().int().min(0).max(101),
+  // TODO(artwork): Document the selected tier benefits when the artwork release contract is accepted.
   /** Streak tier is separate from the credit balance; concrete benefits ship with artwork. */
   perkTier: z.number().int().nonnegative().default(0),
   rerollCredits: z.number().int().nonnegative(),

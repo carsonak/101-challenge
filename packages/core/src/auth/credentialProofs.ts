@@ -7,10 +7,7 @@ export async function invalidateCredentialProofs(
   now: string
 ) {
   for (const proof of await tx.list("auth_tokens", { userId })) {
-    if (
-      !proof.usedAt &&
-      (proof.kind === "verify" || proof.kind === "recover")
-    ) {
+    if (!proof.usedAt) {
       proof.usedAt = now;
       await tx.save("auth_tokens", proof);
     }

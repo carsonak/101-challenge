@@ -36,6 +36,12 @@ test(
       otherSubject = `${Date.now()}2`;
 
     await db.repository.transaction(async (tx) => {
+      for (const id of [owner, other, admin]) {
+        const profile = required(await tx.get("profiles", id));
+        profile.provisional = false;
+        await tx.save("profiles", profile);
+      }
+
       await tx.insert("identities", {
         id: randomUUID(),
         userId: owner,
@@ -493,14 +499,17 @@ test(
       const oversizedUser = await tracker.createUser(),
         oversizedSubject = `${Date.now()}3`;
 
-      await db.repository.transaction((tx) =>
-        tx.insert("identities", {
+      await db.repository.transaction(async (tx) => {
+        const profile = required(await tx.get("profiles", oversizedUser));
+        profile.provisional = false;
+        await tx.save("profiles", profile);
+        await tx.insert("identities", {
           id: randomUUID(),
           userId: oversizedUser,
           provider: "discord",
           subject: oversizedSubject,
-        })
-      );
+        });
+      });
 
       const oversizedEnrollment = await tracker.execute(
         oversizedUser,
