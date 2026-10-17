@@ -59,3 +59,8 @@ and buttons; no independent visual system or speculative reward feature was adde
 
 The review handoff is [PR #2](https://github.com/carsonak/101-challenge/pull/2), open
 against main. Review approval remains pending; no merge or deployment is performed.
+
+## Account review follow-up
+
+[Account model follow-up](account-follow-up.md) records the owner's revised account
+requirements and remaining implementation/verification work.

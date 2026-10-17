@@ -15,3 +15,8 @@ procedures belong in `docs/` and `deploy/`, rather than only in this initiative.
 Scope: prepare a reviewable change set before manual QA and subsequent VPS
 installation. Conventional commits and a PR are authorized. Deployment, provider
 console changes, production account changes and invitations are separate actions.
+
+## Account review follow-up
+
+[Account model follow-up](account-follow-up.md) records the owner's revised account
+requirements and remaining implementation/verification work.

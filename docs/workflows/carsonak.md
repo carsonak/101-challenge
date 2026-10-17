@@ -64,6 +64,19 @@ Follow [plan-directory conventions](../../plans/README.md). Keep related plans g
 
 Keep scratch scripts, raw logs, profiling output, session notes, verification manifests, and temporary renders in the configured external `artifacts/<task-or-experiment>/` directory. Separate tasks and variants. Keep secrets and private participant data out of artifacts. Do not copy or stage artifacts into a repository; an external directory needs no tracked ignore rule. Preserve durable findings in tracked documentation without workstation paths or private session details.
 
+## Pending-work comments
+
+Place a searchable `TODO(feature-name):` comment immediately beside coming-soon
+copy, documentation, or code that must change when a deferred feature lands. State
+what must be updated and the condition for removing the marker; link the relevant
+plan or durable contract when available. Use ordinary code comments, JSX comments,
+or Markdown HTML comments so these maintenance notes do not enter product copy.
+For example: `TODO(artwork): Replace this unavailable-state copy when artwork is released.`
+Scan with `rg 'TODO\(' apps packages docs plans scripts` when integrating features
+and during periodic documentation cleanup. Review adjacent behavior and wording,
+then update or remove resolved markers. Do not mark permanent product decisions as
+pending work, and do not treat markers as authorization to implement a feature.
+
 ## Artwork experiments
 
 Use dedicated experiment worktrees, synthetic versioned inputs, and isolated outputs. Group experiment plans by initiative and variant. Record generator/configuration/input versions, provenance, reproducibility checks, and visual comparisons. Track a selected asset only when explicitly approved as a deliverable.
