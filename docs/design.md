@@ -11,6 +11,9 @@ Three words to design against: **steady, warm, honest.**
 ## Principles
 
 1. **Today first.** The most important thing on any screen is what the participant can do today, then how they are doing, then everything else.
+
+<!-- TODO(artwork): Update this grid description when the artwork integration replaces the placeholder. -->
+
 2. **Progress is visible.** The 101-day grid is the signature element. It must feel good to fill in, and it anticipates the future artwork (one region revealed per reporting day) without pretending artwork exists.
 3. **No guilt.** Never shame missed days. Streak loss is stated factually and followed by a clear way to continue.
 4. **Private by default, visibly.** Report text is shown only to its owner. Anything that could look public is labelled.
@@ -71,6 +74,9 @@ The signature component, used on Home, the challenge page and mirrored as text i
 - Order follows reporting index, not calendar date, because completion counts distinct reporting days across any span.
 - Accessible: the grid is a labelled group with a text summary ("42 of 101 reporting days"); individual cells are not focus stops unless they open detail, in which case they are buttons with full labels.
 - Responsive: cells scale to fit; never scroll horizontally.
+
+<!-- TODO(artwork): Revisit grid replacement and accessible progress behavior during artwork integration. -->
+
 - When artwork ships, this grid is the placeholder it replaces or sits beside; keep its API simple (counts, milestone indexes, today state).
 
 ## Components

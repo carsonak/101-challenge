@@ -61,6 +61,7 @@ export function Today(context: ScreenContext) {
           </div>
         </div>
       )}
+      {/* TODO(artwork): Update credit copy when artwork spending ships; see plans/artwork-generator. */}
       {current && (
         <Help>
           Streak perk: every seven consecutive reporting days earns a credit.
@@ -68,6 +69,7 @@ export function Today(context: ScreenContext) {
           Credits are banked for future artwork; spending is not available yet.
         </Help>
       )}
+      {/* TODO(artwork): Update completion copy when artwork ships; see plans/artwork-generator. */}
       {current?.attemptState === "completed" && (
         <p className={uiStyles.notice}>
           You showed up for 101 reporting days. Well done.{" "}

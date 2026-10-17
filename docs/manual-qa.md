@@ -17,9 +17,9 @@ These adjustments keep the supplied guide aligned with the current application.
 | W-SIGN-06           | `/verify` has an explicit resend form, also linked from login. Unknown/verified/unverified addresses have identical success copy; signup and resend share a fifteen-minute cooldown. No duplicate account or password work on resend.                           |
 | W-AUTH-09           | Use different addresses on different networks to isolate the address throttle. PostgreSQL shares email/action limits across replicas. Spoofed client headers must not bypass Caddy.                                                                             |
 | W-OAUTH-08          | Login/signup explain linking before provider choice. Discord already gives new-account versus existing-account instructions. Independent identities remain intentional.                                                                                         |
-| W-ACC-12            | Password change exists in Account settings, asks for current proof and signs out every device. Old password, sessions and reset links reject afterwards. Email replacement uses linked-method/unlink/add/verify; recovery email changes separately.             |
+| W-ACC-12            | Password change exists in Account settings, asks for current proof and signs out every device. Old password, sessions and reset links reject afterwards. Recovery email replacement keeps the old alias until the new address is verified.                      |
 | W-SET-08, X-TIME    | Setup names the actual configured or frozen IANA zone and midnight boundary. Test a server setting other than Nairobi locally as well as travel/device zones.                                                                                                   |
-| W-STR-02, W-HOME-01 | Credits are explicitly banked for a later artwork release; spending is unavailable. Do not expect artwork or redeemable rewards in the pilot.                                                                                                                   |
+| W-STR-02, W-HOME-01 | <!-- TODO(artwork): Update this expectation when artwork and spending ship. --> Credits are explicitly banked for a later artwork release; spending is unavailable. Do not expect artwork or redeemable rewards in the pilot.                                   |
 | W-COM-05            | Home has a Completed seasons acknowledgement with a challenge link. Completion remains visible during progress-only retries and another active season.                                                                                                          |
 | A-BKD-02            | Invalid registration date, existing enrollment, absent template and unavailable publication timestamp have actionable distinct errors.                                                                                                                          |
 | A-COR-07            | Search by username prefix; choose participant, then attempt/report. Only that participant's metadata page loads. Confirm their name before issuance; switching recipient/scope clears confirmation. Keys identify the intended recipient and remain shown once. |
@@ -32,10 +32,9 @@ These adjustments keep the supplied guide aligned with the current application.
 - Get two unused verification links for one credential. Verify one, link/test a
   provider, unlink email, add another email. Neither old verification nor old reset
   links may verify/reset the replacement credential.
-- On a provider-owned account, add an email without verifying it, then unlink
-  that email. Confirmation uses the working provider proof; it must not require
-  a password for the unverified credential. Verified email still uses password
-  confirmation.
+- On a provider-owned account, set a password without an email. Confirmation uses
+  recent provider proof. Once set, sensitive changes require current password
+  confirmation, independently of optional email verification.
 - Open a reset link, then change/reset the password through another session. The
   stale reset link rejects; sessions revoked before the operation stay revoked.
 - Start an admin participant lookup, change the selection before its response
@@ -77,3 +76,29 @@ passing on the final domain, admin flows reviewed by a second person, support an
 restore drills complete and legal/contact acceptance recorded. Re-test affected
 paths after every fix. The owner explicitly accepts any deferred S2/S3 item and
 pilot boundaries before invitations; successful local tests do not close these gates.
+
+## Account model follow-up
+
+These owner-approved requirements supersede email-required signup and 32-character
+username expectations in the archived guide.
+
+- Create an account with username/password and no email; reach settings, then use
+  the tracker without an inbox. Confirm recovery email and alternate sign-in
+  recommendations appear on every settings visit.
+- Repeat with optional email. Username login works before verification; email
+  login/recovery fails safely until verified. Verify the email, then log in with
+  either identifier and the same password. Resend retains its cooldown.
+- Change username to 40 URL-safe characters. Old username no longer logs in; new
+  username and verified email work. Reject 41 characters, spaces, dots, slashes,
+  Unicode and duplicate case variants.
+- Google signup captures a verified recovery address, sets no password, and asks
+  for a username before tracker use. Discord supplies an available sanitized
+  username without a password. Collision requires choosing a different username.
+- Set a password on each provider account using recent provider proof. Re-login
+  with username/password. Change password and verify all prior sessions/reset and
+  verification proofs are invalid.
+- Change recovery email: old address remains until verification; afterwards only
+  new email/username work. Old recovery links cannot replace the password. Reject
+  another account's email without linking or merging.
+- No participant correction-request/ticket UI exists. Redeem only an admin-issued
+  key through the existing owner correction flow.

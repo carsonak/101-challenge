@@ -114,6 +114,7 @@ export default function HomeScreen({
                     <span>Banked credits</span>
                   </div>
                 </div>
+                {/* TODO(artwork): Update this unavailable-state copy when artwork and credit spending ship; see plans/artwork-generator. */}
                 <p>
                   Credits are recorded for future artwork. Spending is not
                   available yet.
@@ -158,6 +159,7 @@ export default function HomeScreen({
       {history.some((e) => e.completion) && (
         <section className={uiStyles.card}>
           <h2>Completed seasons</h2>
+          {/* TODO(artwork): Update this unavailable-state copy when artwork and credit spending ship; see plans/artwork-generator. */}
           <p>
             You showed up for 101 reporting days. Your seasonal completion is
             saved, even when you start again. Artwork comes in a later release.

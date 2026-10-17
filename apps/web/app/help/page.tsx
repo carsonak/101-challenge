@@ -25,6 +25,7 @@ export default function Help() {
           releases it immediately. Both expire unspent credits; cancellation
           requires confirmation.
         </p>
+        {/* TODO(artwork): Update this unavailable-state copy when artwork and credit spending ship; see plans/artwork-generator. */}
         <p>
           Artwork comes in a later release. Credits are recorded, but cannot yet
           be spent. There are no paid, transferable or redeemable rewards.
@@ -42,18 +43,19 @@ export default function Help() {
           merge accounts.
         </p>
         <p>
-          You can change your password in Account settings. To replace a sign-in
-          email, first link and test another sign-in method, then unlink the old
-          email and add and verify the new one. Change the recovery email
-          separately. If you cannot use any sign-in method, contact support; a
-          username alone cannot prove ownership.
+          Sign up with a username and password; recovery email is optional but
+          recommended. A verified recovery email also works with your password
+          to log in. Change your username, password or recovery email in Account
+          settings. Verify a new email before using it. Google signup asks you
+          to choose a username; Discord uses an available username from your
+          profile. Provider-only accounts can set a password in settings.
         </p>
         <h2>Your history and corrections</h2>
         <p>
           Your report text is private, including from application
-          administrators. You can edit today's report. For older mistakes, ask
-          an administrator for a correction key, then correct the report
-          yourself. Completion remains recorded.
+          administrators. You can edit today's report. If an administrator has
+          given you a correction key for an older report, use it to correct the
+          report yourself. Completion remains recorded.
         </p>
         <p>
           Export your history from Account settings. Cancellation with erasure

@@ -23,11 +23,12 @@ export default function Privacy() {
         <p>
           Provider sign-in stores the provider name and stable account
           identifier. Discord may suggest a username and avatar; Google may
-          supply an avatar. Loading a provider-hosted avatar connects your
-          browser to that provider. We do not request Google email or use
-          provider email claims to merge accounts. Discord reports are private
-          ephemeral interactions, but their text passes through Discord; private
-          error recovery copies may contain your submitted report.
+          supply an avatar and a verified email to initialize recovery on a new
+          account. Loading a provider-hosted avatar connects your browser to
+          that provider. Provider email claims never merge accounts. Discord
+          reports are private ephemeral interactions, but their text passes
+          through Discord; private error recovery copies may contain your
+          submitted report.
         </p>
         <h2>Your choices</h2>
         <p>

@@ -106,7 +106,7 @@ export function AdminCorrectionsView({
             }}
           >
             <Field label="Find participant by username prefix">
-              <input name="prefix" maxLength={32} />
+              <input name="prefix" maxLength={40} />
             </Field>
             <button type="submit" className={uiStyles.button}>
               Search participants

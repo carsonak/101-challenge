@@ -87,7 +87,7 @@ test("Slow authentication retains the form and does not automatically resubmit",
 
   await page.goto("/login");
   await page
-    .getByLabel("Email address", { exact: true })
+    .getByLabel("Username or recovery email", { exact: true })
     .fill("fictional-idle@example.invalid");
 
   await page
@@ -110,7 +110,7 @@ test("Slow authentication retains the form and does not automatically resubmit",
 
   await expect(page.getByRole("alert")).toBeVisible();
   expect(submissions).toBe(1);
-  await expect(page.getByLabel("Email address", { exact: true })).toHaveValue(
-    "fictional-idle@example.invalid"
-  );
+  await expect(
+    page.getByLabel("Username or recovery email", { exact: true })
+  ).toHaveValue("fictional-idle@example.invalid");
 });

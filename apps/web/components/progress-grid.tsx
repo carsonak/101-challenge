@@ -3,6 +3,7 @@ import progressStyles from "./../styles/progress.module.css";
 import uiStyles from "./../styles/ui.module.css";
 
 import { useEffect, useRef, useState } from "react";
+// TODO(artwork): Integrate the approved artwork view while retaining accessible reporting counts; see plans/artwork-generator.
 /** Reporting-index grid with a separate completion capstone and accessible summary. */
 export function ProgressGrid({
   count,

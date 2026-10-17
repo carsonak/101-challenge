@@ -117,12 +117,13 @@ export default function AccountScreen({
       <h1>Account settings</h1>
       {account.provisional && (
         <p className={uiStyles.notice}>
-          Confirm your username to finish setting up your profile.
+          Choose a username to finish signing up. You need one before using the
+          tracker.
         </p>
       )}
       <Profile {...context} />
-      <SignIns {...context} />
       <Recovery {...context} />
+      <SignIns {...context} />
       <Devices {...context} />
       <Privacy {...context} />
       <Deletion {...context} />

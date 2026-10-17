@@ -149,7 +149,7 @@ test("password change rechecks current proof, signs out and accepts only the new
     await page.getByLabel("Current password").fill(password);
     await page.getByRole("button", { name: "Confirm and continue" }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await page.getByLabel("Email address").fill(f.email);
+    await page.getByLabel("Username or recovery email").fill(f.email);
     await page
       .getByLabel("Password", { exact: true })
       .fill(`${password} changed`);
@@ -368,58 +368,21 @@ test("completion remains on Home and setup names its reporting timezone", async 
   }
 });
 
-test("provider owners can unlink an unverified email without an unusable password prompt", async ({
+test("provider-only owners can set a password without an email", async ({
   page,
 }) => {
   const f = await fixture(page);
   try {
-    const browser = randomBytes(32).toString("hex"),
-      subject = randomUUID();
-
-    const initial = await f.auth.beginOAuth(
-      "discord",
-      browser,
-      f.login.token,
-      f.login.csrf,
-      true
-    );
-
-    const initialState = await f.auth.oauthState(
-      "discord",
-      initial.state,
-      browser
-    );
-
-    const linked = await f.auth.completeOAuth(
-      initialState.id,
-      browser,
-      { provider: "discord", subject },
-      f.login.token
-    );
-
-    await f.auth.execute(
-      { action: "unlink", provider: "email" },
-      linked.token,
-      linked.csrf
-    );
-
-    const next = await f.auth.beginOAuth("discord", browser);
-    const nextState = await f.auth.oauthState("discord", next.state, browser);
-    const login = await f.auth.completeOAuth(nextState.id, browser, {
+    const browser = randomBytes(32).toString("hex");
+    const begin = await f.auth.beginOAuth("discord", browser);
+    const state = await f.auth.oauthState("discord", begin.state, browser);
+    const login = await f.auth.completeOAuth(state.id, browser, {
       provider: "discord",
-      subject,
+      subject: randomUUID(),
+      username: `provider-${randomUUID().slice(0, 15)}`,
     });
 
-    await f.auth.execute(
-      {
-        action: "add_email",
-        email: `unverified-${randomUUID()}@example.invalid`,
-        password,
-      },
-      login.token,
-      login.csrf
-    );
-
+    const account = await f.auth.account(login.token);
     await page.context().addCookies([
       {
         name: "challenge_session",
@@ -436,28 +399,124 @@ test("provider owners can unlink an unverified email without an unusable passwor
 
     await page.goto("/account");
     await expect(
-      page.getByText("Verification needed.", { exact: false })
+      page.getByText("No password set.", { exact: false })
     ).toBeVisible();
 
-    await capture(page, "unverified-email");
+    await expect(
+      page.getByText("Recommended: verify a recovery email", { exact: false })
+    ).toBeVisible();
+
+    await capture(page, "provider-account");
+    await page.getByText("Set password", { exact: true }).first().click();
+    await page.getByLabel("New password", { exact: true }).fill(password);
     await page
-      .getByRole("button", { name: "Unlink email", exact: true })
+      .getByRole("button", { name: "Set password", exact: true })
       .click();
 
     await expect(page.getByLabel("Current password")).toHaveCount(0);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect
-      .poll(async () =>
-        f.db.repository.transaction(
-          async (tx) =>
-            (await tx.list("credentials", { userId: f.account.id })).length
-        )
-      )
-      .toBe(0);
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByLabel("Username or recovery email").fill(account.username);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
+    await expect(page).toHaveURL(/\/home$/);
+  } finally {
+    await f.db.close();
+  }
+});
+
+test("signup without recovery email logs in and always recommends recovery in settings", async ({
+  page,
+}) => {
+  const username = `optional-${randomUUID().slice(0, 16)}`;
+  await page.goto("/signup");
+  const usernameField = page.getByLabel("Username", { exact: true });
+  await usernameField.fill("has space");
+  expect(
+    await usernameField.evaluate(
+      (input: HTMLInputElement) => input.validity.patternMismatch
+    )
+  ).toBe(true);
+
+  await usernameField.fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await capture(page, "optional-signup");
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(
+    page.getByText("Recommended: verify a recovery email", { exact: false })
+  ).toBeVisible();
+
+  await capture(page, "password-account");
+  await page.reload();
+  await expect(
+    page.getByText("Recommended: verify a recovery email", { exact: false })
+  ).toBeVisible();
+});
+
+test("Google signup requires choosing a username before tracker use", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  try {
+    const browser = randomBytes(32).toString("hex"),
+      address = `google-${randomUUID()}@example.invalid`;
+
+    const begin = await f.auth.beginOAuth("google", browser),
+      state = await f.auth.oauthState("google", begin.state, browser);
+
+    const login = await f.auth.completeOAuth(state.id, browser, {
+      provider: "google",
+      subject: randomUUID(),
+      recoveryEmail: address,
+    });
+
+    await page.context().addCookies([
+      {
+        name: "challenge_session",
+        value: login.token,
+        url: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
+        httpOnly: true,
+      },
+      {
+        name: "challenge_csrf",
+        value: login.csrf,
+        url: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
+      },
+    ]);
+
+    await page.goto("/home");
+    await expect(page).toHaveURL(/\/account$/);
+    await expect(
+      page.getByText("Choose a username to finish signing up.", {
+        exact: false,
+      })
+    ).toBeVisible();
+
+    const forbidden = await page.request.post("/api/v1/command", {
+      headers: { "x-csrf-token": login.csrf, "idempotency-key": randomUUID() },
+      data: { command: "Enroll", seasonId: randomUUID() },
+    });
+
+    expect(forbidden.status()).toBe(403);
+    await expect(page.getByText(address, { exact: true })).toBeVisible();
+    await capture(page, "google-onboarding");
+    await page
+      .getByLabel("Username", { exact: true })
+      .fill(`google-${randomUUID()}`.slice(0, 40));
+
+    await page
+      .getByRole("button", { name: "Save username", exact: true })
+      .click();
 
     await expect(
-      page.getByRole("link", { name: "Log in to view your account" })
-    ).toBeVisible();
+      page.getByText("Choose a username to finish signing up.", {
+        exact: false,
+      })
+    ).toHaveCount(0);
   } finally {
     await f.db.close();
   }

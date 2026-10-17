@@ -99,16 +99,18 @@ acceptance as well as replaying erasures. Restrict traffic until this review pas
 
 - Still signed in with another usable method: use Account settings to link/test
   a replacement first, then unlink the incorrect method. All sessions are revoked
-  on unlink. Sign in again with the retained method and add/verify the new email.
-  Recovery email is independent and must be updated and verified separately.
+  on unlink. Change recovery email directly in settings; the old alias stays
+  until the new address is verified. Password sign-in does not require email.
 - Password change: use Account settings with recent proof or `/recover`. Changing
   or resetting a password invalidates sessions and outstanding credential proofs.
   Old verification/reset links cannot authorize a replacement credential.
-- Only email remains and access is lost: there is no ownership-safe self-service
-  replacement. Escalate through the ownership process; do not overwrite email by
-  matching a requester's claim. If ownership cannot be established, refuse transfer.
+- If password sign-in remains, use username/password to change a lost recovery
+  email in settings. If all credentials and providers are lost, there is no
+  ownership-safe automatic replacement. Never overwrite email by matching a
+  requester's claim. If ownership cannot be established, refuse transfer.
 - Provider-only and no recovery address: the provider's own recovery is the first
-  route. A recovery-only email is not automatically a password credential. Keep
+  route. A verified recovery address can receive a password-reset link even before
+  a first password is set. Keep
   an additional usable method linked before access is lost.
 
 ## Two accounts and missing progress
@@ -151,3 +153,11 @@ fictional accounts. Record safe target IDs, reviewed commit and outcome. The
 operator should also explain the email throttle: repeated attempts for the same
 address can temporarily block that address on any network; do not weaken shared
 limits or disclose account existence as a support shortcut.
+
+## Correction scope
+
+There is no participant correction-request or support-ticket interface. Admins
+may issue correction keys through the existing administration controls; owners
+redeem a supplied key themselves. Do not direct participants to a request queue
+or promise staffed ticket handling. Contact/privacy details do not imply a
+correction service or an account-ownership bypass.

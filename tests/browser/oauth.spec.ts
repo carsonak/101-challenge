@@ -36,7 +36,7 @@ test("Google and Discord buttons create bound authorization requests on the cano
 
       expect(authorization.searchParams.get("response_type")).toBe("code");
       expect(authorization.searchParams.get("scope")).toBe(
-        provider === "google" ? "openid profile" : "identify"
+        provider === "google" ? "openid profile email" : "identify"
       );
 
       expect(authorization.searchParams.get("state")).toMatch(/^[a-f0-9]{64}$/);
