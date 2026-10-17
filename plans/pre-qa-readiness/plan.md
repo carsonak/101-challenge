@@ -70,7 +70,7 @@ additive. Readiness never implies all hosted acceptance has passed.
 ## Executed outcome
 
 Application and deployment fixes are committed. Aggregate acceptance passed all
-96 named tests on real PostgreSQL with no skips; all 15 browser tests passed.
+96 named tests on real PostgreSQL with no skips; all 16 browser tests passed.
 Affected-route captures were rechecked after capture-position correction. Four
 production image targets built, fresh operator roles/migrate/grants passed, and
 web/worker/maintenance ran as non-root with read-only roots and working readiness.

@@ -38,6 +38,12 @@ export function SignIns(context: ScreenContext) {
         {account.email ? (
           <p>
             Email sign-in: {account.email}{" "}
+            {!account.emailVerified && (
+              <span>
+                Verification needed.{" "}
+                <a href="/verify">Resend verification email</a>
+              </span>
+            )}{" "}
             <button
               type="button"
               className={`${uiStyles.button} ${uiStyles.secondary}`}

@@ -32,6 +32,10 @@ These adjustments keep the supplied guide aligned with the current application.
 - Get two unused verification links for one credential. Verify one, link/test a
   provider, unlink email, add another email. Neither old verification nor old reset
   links may verify/reset the replacement credential.
+- On a provider-owned account, add an email without verifying it, then unlink
+  that email. Confirmation uses the working provider proof; it must not require
+  a password for the unverified credential. Verified email still uses password
+  confirmation.
 - Open a reset link, then change/reset the password through another session. The
   stale reset link rejects; sessions revoked before the operation stay revoked.
 - Start an admin participant lookup, change the selection before its response

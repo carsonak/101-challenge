@@ -1,6 +1,6 @@
 /** @file Synthetic acceptance for resend, password change, named correction recipients and completion acknowledgement. */
 import { test, expect, type Page } from "@playwright/test";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createRepository } from "../../packages/db/dist/index.js";
@@ -363,6 +363,101 @@ test("completion remains on Home and setup names its reporting timezone", async 
     ).toHaveAttribute("href", `/challenge/${enrollment.resourceId}`);
 
     await capture(page, "completion");
+  } finally {
+    await f.db.close();
+  }
+});
+
+test("provider owners can unlink an unverified email without an unusable password prompt", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  try {
+    const browser = randomBytes(32).toString("hex"),
+      subject = randomUUID();
+
+    const initial = await f.auth.beginOAuth(
+      "discord",
+      browser,
+      f.login.token,
+      f.login.csrf,
+      true
+    );
+
+    const initialState = await f.auth.oauthState(
+      "discord",
+      initial.state,
+      browser
+    );
+
+    const linked = await f.auth.completeOAuth(
+      initialState.id,
+      browser,
+      { provider: "discord", subject },
+      f.login.token
+    );
+
+    await f.auth.execute(
+      { action: "unlink", provider: "email" },
+      linked.token,
+      linked.csrf
+    );
+
+    const next = await f.auth.beginOAuth("discord", browser);
+    const nextState = await f.auth.oauthState("discord", next.state, browser);
+    const login = await f.auth.completeOAuth(nextState.id, browser, {
+      provider: "discord",
+      subject,
+    });
+
+    await f.auth.execute(
+      {
+        action: "add_email",
+        email: `unverified-${randomUUID()}@example.invalid`,
+        password,
+      },
+      login.token,
+      login.csrf
+    );
+
+    await page.context().addCookies([
+      {
+        name: "challenge_session",
+        value: login.token,
+        url: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
+        httpOnly: true,
+      },
+      {
+        name: "challenge_csrf",
+        value: login.csrf,
+        url: process.env.QA_BASE_URL ?? "http://127.0.0.1:3101",
+      },
+    ]);
+
+    await page.goto("/account");
+    await expect(
+      page.getByText("Verification needed.", { exact: false })
+    ).toBeVisible();
+
+    await capture(page, "unverified-email");
+    await page
+      .getByRole("button", { name: "Unlink email", exact: true })
+      .click();
+
+    await expect(page.getByLabel("Current password")).toHaveCount(0);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect
+      .poll(async () =>
+        f.db.repository.transaction(
+          async (tx) =>
+            (await tx.list("credentials", { userId: f.account.id })).length
+        )
+      )
+      .toBe(0);
+
+    await expect(
+      page.getByRole("link", { name: "Log in to view your account" })
+    ).toBeVisible();
   } finally {
     await f.db.close();
   }

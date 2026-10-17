@@ -49,3 +49,8 @@ Operator-only account suspension blocks existing/new sessions, linked Discord
 lookup and tracker actions without deleting history or transferring identities.
 Only privileged operators may change suspension records; runtime roles can read
 them. See [support](support.md). Suspension does not defer a pending erasure.
+
+Sensitive-action confirmation uses password proof only for verified credentials.
+An unverified email is not a usable sign-in method; accounts with a retained
+provider can still use recent provider proof to unlink it. Account settings show
+verification status and link the resend path.

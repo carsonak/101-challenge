@@ -43,6 +43,15 @@ legal statements, real account verification or sending community messages.
 | A8  | Encryption could rename a partial archive before pg_dump's failing exit was known.                  | Await producer success before publication; a failing producer leaves no final archive or success marker. Real encrypted restore and failure regressions pass.                        |
 | A9  | A synthetic burst tool could point its web URL at a different database than its fixture URL.        | Before any HTTP signup, prove the server recognizes an independently generated disposable account; mismatch aborts after a fictional failed login.                                   |
 
+## Account verification follow-up
+
+A10: An account with a working provider and a newly added unverified email was
+asked to confirm an unusable email password before unlinking it. Confirmation now
+uses password proof only when the email is verified; otherwise it retains the
+recent provider proof path. Account settings label unverified email explicitly
+and link resend. The added browser regression unlinks the unverified credential
+through the provider path and confirms session revocation.
+
 ## Final dispositions
 
 G1–G4, G8–G11 and G15–G19 have repository fixes or documented safe supported

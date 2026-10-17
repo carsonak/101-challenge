@@ -255,3 +255,15 @@ manual QA pass across reporting-day boundaries. See [the checklist](pilot-readin
 [manual QA](manual-qa.md), [support](support.md) and [VPS runbook](../deploy/runbook.md).
 No production deployment, provider-console mutation, invitation, merge or release
 tag is claimed by this record.
+
+Before review, the account-flow audit additionally found the unverified-email
+confirmation dead end (A10). The follow-up uses working provider proof until the
+email credential is verified, and labels its status. Production build and all
+16 browser tests passed, including a direct unlink/session-revocation regression;
+its synthetic account screenshots were inspected. The original pushed PR revision
+also passed GitHub CI.
+
+The follow-up web image rebuild encountered HTTP 503 from the package registry.
+The successful four-image/bootstrap/read-only acceptance above predates this
+UI-only follow-up; the Dockerfile is unchanged. Repeat the final web image build
+after package connectivity recovers, before VPS acceptance.
