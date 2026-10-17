@@ -43,6 +43,7 @@ export function createAuthenticationRoutes(context: ApiContext) {
           "login",
           "signup",
           "recover",
+          "resend_verification",
           "verify",
           "reset",
           "verify_recovery_email",
@@ -91,7 +92,13 @@ export function createAuthenticationRoutes(context: ApiContext) {
         });
 
       if (
-        ["logout", "unlink", "reset", "request_erasure"].includes(c.data.action)
+        [
+          "logout",
+          "unlink",
+          "reset",
+          "request_erasure",
+          "change_password",
+        ].includes(c.data.action)
       ) {
         setCookie(response, cookieNames.session, "", secure, true, 0);
         setCookie(response, cookieNames.csrf, "", secure, false, 0);

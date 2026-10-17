@@ -15,6 +15,12 @@ function build() {
   const config = parseServerConfig(process.env);
   if (!config.DATABASE_URL) throw new Error("Database not configured");
 
+  if (
+    config.APP_ORIGIN.startsWith("https:") &&
+    (!config.TRUSTED_PROXY_HEADER || !config.TRUSTED_PROXY_HOPS)
+  )
+    logBackend("web", "proxy_trust_unconfigured");
+
   const database = createRepository(
     config.DATABASE_URL,
     true,

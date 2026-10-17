@@ -40,6 +40,10 @@ export default async function Home() {
           days. Your reports and retained history stay private.
         </p>
         <p>
+          Artwork comes in a later release. Streak credits are recorded, but
+          cannot yet be spent.
+        </p>
+        <p>
           <a className={uiStyles.button} href="/seasons">
             Explore seasons
           </a>{" "}

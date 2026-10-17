@@ -51,7 +51,7 @@ export function createTrackerBackdate(context: {
         c.registeredDate >=
           reportingDate(new Date(season.publishedAt), defaultZone) &&
           c.registeredDate <= reportingDate(new Date(now), defaultZone),
-        "VALIDATION"
+        "BACKDATE_DATE_INVALID"
       );
 
       requireRule(
@@ -61,10 +61,10 @@ export function createTrackerBackdate(context: {
             seasonId: season.id,
           })
         ).length,
-        "VALIDATION"
+        "ALREADY_ENROLLED"
       );
 
-      requireRule(season.goals.length > 0, "VALIDATION");
+      requireRule(season.goals.length > 0, "BACKDATE_REQUIRES_TEMPLATE");
       const result = await dispatch(
         tx,
         target,

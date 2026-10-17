@@ -91,9 +91,40 @@ export function createReadsRoutes(context: ApiContext) {
       return response;
     }
 
+    if (request.method === "GET" && path === "/api/v1/admin/participants") {
+      const actor = await auth.authenticate(token);
+      return json(
+        await tracker.adminParticipants(
+          actor.userId,
+          url.searchParams.get("prefix") ?? "",
+          url.searchParams.get("cursor") ?? undefined,
+          Number(url.searchParams.get("limit") ?? 25)
+        )
+      );
+    }
+
     if (request.method === "GET" && path === "/api/v1/admin/stats") {
       const actor = await auth.authenticate(token);
-      return json(await tracker.adminStats(actor.userId));
+      const participantId = url.searchParams.get("participantId");
+      const after = url.searchParams.get("cursor") ?? undefined;
+      if (
+        participantId &&
+        (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+          participantId
+        ) ||
+          (after &&
+            !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+              after
+            )))
+      )
+        throw new DomainError("VALIDATION");
+
+      return json(
+        await tracker.adminStats(
+          actor.userId,
+          participantId ? { participantId, after } : undefined
+        )
+      );
     }
 
     if (request.method === "GET" && path === "/api/v1/admin/seasons") {

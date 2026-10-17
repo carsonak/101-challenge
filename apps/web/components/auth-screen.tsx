@@ -4,6 +4,7 @@ import uiStyles from "./../styles/ui.module.css";
 
 import { useEffect, useState, useCallback } from "react";
 import { errorMessage } from "@challenge/contracts";
+import { VerificationResend } from "./verification-resend";
 import { WaitingMessage } from "./waiting-message";
 import { Field, PasswordInput, Toast } from "./ui";
 
@@ -80,8 +81,14 @@ export default function AuthScreen({
         body: JSON.stringify(payload),
       });
 
-      if (!r.ok)
-        throw new Error("Please check your details or request a new link.");
+      if (!r.ok) {
+        const data = await r.json();
+        throw new Error(
+          data.code === "RATE_LIMITED"
+            ? errorMessage(data.code)
+            : "Please check your details or request a new link."
+        );
+      }
 
       setError(false);
       if (view === "login") window.location.assign("/home");
@@ -95,9 +102,13 @@ export default function AuthScreen({
         setMessage(
           "If this account exists, a recovery link will arrive in your email."
         );
-    } catch {
+    } catch (error) {
       setError(true);
-      setMessage("Please check your details or request a new link.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Please check your details or request a new link."
+      );
     } finally {
       setBusy(false);
     }
@@ -203,6 +214,7 @@ export default function AuthScreen({
           </fieldset>
         </form>
       )}
+      {view === "verify" && <VerificationResend />}
       {(view === "login" || view === "signup") && (
         <>
           {(["google", "discord"] as const).map(
@@ -219,6 +231,13 @@ export default function AuthScreen({
                 </button>
               )
           )}
+          {(providers.google || providers.discord) && (
+            <p>
+              Already have an account? Log in with your existing method first,
+              then link Google or Discord in Account settings. A new provider
+              sign-in creates a separate account.
+            </p>
+          )}
           <p>
             {view === "login" ? (
               <>
@@ -232,7 +251,14 @@ export default function AuthScreen({
           </p>
         </>
       )}
-      {view === "login" && <a href="/recover">Forgot your password?</a>}
+      {view === "login" && (
+        <>
+          <a href="/recover">Forgot your password?</a>
+          <p>
+            <a href="/verify">Resend verification email</a>
+          </p>
+        </>
+      )}
     </main>
   );
 }

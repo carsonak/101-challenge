@@ -8,11 +8,16 @@ export function createAuthDiscordActor(context: {
   return {
     /** Map signed guild actors solely through a linked Discord subject. */
     async discordActor(subject: string) {
-      return repository.transaction(
-        async (tx) =>
-          (await tx.list("identities", { provider: "discord", subject }))[0]
-            ?.userId
-      );
+      return repository.transaction(async (tx) => {
+        const identity = (
+          await tx.list("identities", { provider: "discord", subject })
+        )[0];
+
+        if (!identity || (await tx.get("account_suspensions", identity.userId)))
+          return undefined;
+
+        return identity.userId;
+      });
     },
   };
 }

@@ -2,16 +2,16 @@ post:
   operationId: executeAuth
   summary: executeAuth
   description: >-
-    Anonymous actions: signup, login, recover, verify, reset,
+    Anonymous actions: signup, login, recover, resend_verification, verify, reset,
     verify_recovery_email. All other actions require the session cookie and
-    x-csrf-token. add_email, unlink, request_erasure and recovery_email also
+    x-csrf-token. add_email, unlink, request_erasure recovery_email and change_password also
     require authentication within the last ten minutes. Usernames are trimmed
-    and lowercased; email addresses are lowercased. Payload limit: 2 MiB. Avatar
+    and lowercased; email addresses are trimmed and lowercased. Payload limit: 2 MiB. Avatar
     accepts null or a PNG/JPEG/WebP base64 data URL (max 400000 characters);
     decoding is limited to 16 million pixels and output is sanitized WebP up to
     256×256. Accepted signup/recovery does not disclose whether an address
-    exists. Login and restore_account set session cookies; logout, unlink, reset
-    and request_erasure clear them.
+    exists. Resend shares the fifteen-minute verification-mail cooldown and never creates an account. Password changes revoke all sessions and outstanding credential proofs. Login and restore_account set session cookies; logout, unlink, reset
+    request_erasure and change_password clear them.
   security:
     - {}
     - sessionCookie: []

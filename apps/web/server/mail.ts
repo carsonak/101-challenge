@@ -64,9 +64,13 @@ export function createMailer(
           from: config.SMTP_FROM,
           to: mail.recipient,
           subject:
-            mail.kind === "verify"
-              ? "Verify your challenge account"
-              : "Recover your challenge account",
+            mail.kind === "deletion"
+              ? "Account deletion scheduled"
+              : mail.kind === "recover"
+                ? "Recover your challenge account"
+                : mail.kind === "recovery_email"
+                  ? "Verify your recovery email"
+                  : "Verify your challenge account",
           text:
             mail.kind === "deletion"
               ? `Account deletion has been requested. You have seven days from the request to recover it. Sign in at ${config.APP_ORIGIN}/login to see the exact deadline and restore your account.`

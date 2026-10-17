@@ -4,6 +4,7 @@ export type BackendEvent =
   | "http_request"
   | "mail_accepted"
   | "mail_failed"
+  | "proxy_trust_unconfigured"
   | "runtime_ready"
   | "startup_failed"
   | "listening"

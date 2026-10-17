@@ -114,6 +114,7 @@ export function createTrackerDispatch(context: {
       reorder,
     }),
     createTrackerReportEdit({
+      defaultZone,
       report,
       hasBackfill,
       clock,

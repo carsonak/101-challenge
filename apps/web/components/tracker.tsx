@@ -38,7 +38,9 @@ export default function TrackerScreen(
         <HomeView {...context} />
         <NotificationsView {...context} />
         <AdminSeasonsView {...context} />
-        <AdminCorrectionsView {...context} />
+        {props.view === "admin-corrections" && (
+          <AdminCorrectionsView {...context} />
+        )}
       </fieldset>
       {!loaded && <p role="status">Loading…</p>}
     </main>

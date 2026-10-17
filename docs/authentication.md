@@ -29,3 +29,23 @@ Deletion emails contain a sign-in recovery method rather than a stored bearer ke
 Anonymous auth actions have independent buckets; normalized email controls and authenticated-user limits are separate. Counters are bounded; production uses database time and shared opaque reservations, while isolated fixtures can inject clocks. Throttled responses provide Retry-After. Verification and recovery each reserve a fifteen-minute mail cooldown without revealing address existence. Production counters and mail cooldowns survive web replicas and restarts. The private database salt and opaque expiring keys are not readable by the application role; no plaintext identity or proof is stored. Expired buckets are removed by bounded housekeeping. Database failures fail closed. Instance/ingress caps still limit aggregate resource consumption; see [elastic hosting](elastic-hosting.md).
 
 Forwarded client addresses are ignored unless TRUSTED_PROXY_HEADER and TRUSTED_PROXY_HOPS explicitly describe a trusted ingress. That ingress must overwrite the chosen header and prevent direct public access to the application port. With trust disabled, anonymous requests share conservative per-action local buckets; supply a verified ingress before a public pilot.
+
+## Verification resend and credential changes
+
+Anonymous resend_verification accepts only an address, never creates an account
+and shares signup/add-email verification cooldowns across replicas. Accepted
+responses do not disclose existence, verified state or SMTP failure. Addresses
+are trimmed and lowercased. The verification page explains the fifteen-minute
+cooldown and links from login. A failed delivery consumes its cooldown.
+
+Authenticated change_password requires CSRF and authentication in the last ten
+minutes. The account UI rechecks the current password. A successful change revokes
+all sessions and outstanding credential verification/reset proofs. Reset also
+invalidates outstanding credential proofs. Unlinking/replacing email invalidates
+old proofs before another address is installed. Email replacement keeps the
+proof-based link/unlink/add/verify workflow; recovery email remains independent.
+
+Operator-only account suspension blocks existing/new sessions, linked Discord
+lookup and tracker actions without deleting history or transferring identities.
+Only privileged operators may change suspension records; runtime roles can read
+them. See [support](support.md). Suspension does not defer a pending erasure.

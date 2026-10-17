@@ -250,9 +250,31 @@ anyOf:
       - confirmed
       - username
     additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: resend_verification
+      email:
+        type: string
+        format: email
+        maxLength: 254
+    required: [action, email]
+    additionalProperties: false
+  - type: object
+    properties:
+      action:
+        type: string
+        const: change_password
+      password:
+        type: string
+        minLength: 12
+        maxLength: 128
+    required: [action, password]
+    additionalProperties: false
 description: >-
-  Anonymous actions: signup, login, recover, verify, reset,
+  Anonymous actions: signup, login, recover, resend_verification, verify, reset,
   verify_recovery_email. All other actions require the session cookie and
-  x-csrf-token. add_email, unlink, request_erasure and recovery_email also
+  x-csrf-token. add_email, unlink, request_erasure recovery_email and change_password also
   require authentication within the last ten minutes. Usernames are trimmed and
   lowercased; email addresses are lowercased.

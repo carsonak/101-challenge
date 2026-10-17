@@ -21,7 +21,7 @@ export function logBackend(
       (details.failed ?? 0) > 0 ||
       (details.status === undefined && error !== undefined)
         ? "error"
-        : (details.status ?? 0) >= 400
+        : event === "proxy_trust_unconfigured" || (details.status ?? 0) >= 400
           ? "warn"
           : "info";
 

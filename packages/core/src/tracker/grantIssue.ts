@@ -24,12 +24,15 @@ export function createTrackerGrantIssue(context: {
           ? await tx.get("reports", c.reportId)
           : undefined;
 
+      if (c.kind === "single_report") requireRule(saved, "NOT_FOUND");
+
       const target = await tx.get(
         "attempts",
         c.kind === "single_report" ? (saved?.attemptId ?? "") : c.attemptId
       );
 
       requireRule(target, "NOT_FOUND");
+      requireRule(!target.erased, "ATTEMPT_CLOSED");
       const owner = await tx.get("enrollments", target.enrollmentId);
       requireRule(owner, "NOT_FOUND");
       const rawKey = secret();

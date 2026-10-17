@@ -111,9 +111,13 @@ export default function HomeScreen({
                   </div>
                   <div>
                     <strong>{a?.rerollCredits ?? 0}</strong>
-                    <span>Reroll credits</span>
+                    <span>Banked credits</span>
                   </div>
                 </div>
+                <p>
+                  Credits are recorded for future artwork. Spending is not
+                  available yet.
+                </p>
                 <h3>Upcoming milestones</h3>
                 {!a?.milestones.some((m) => !m.archived && !m.locked) && (
                   <p className={"muted"}>
@@ -151,6 +155,26 @@ export default function HomeScreen({
           </section>
         );
       })}
+      {history.some((e) => e.completion) && (
+        <section className={uiStyles.card}>
+          <h2>Completed seasons</h2>
+          <p>
+            You showed up for 101 reporting days. Your seasonal completion is
+            saved, even when you start again. Artwork comes in a later release.
+          </p>
+          {history
+            .filter((e) => e.completion)
+            .map((e) => (
+              <p key={e.id}>
+                <a href={`/challenge/${e.id}`}>
+                  {seasons.find((s) => s.id === e.seasonId)?.title ??
+                    "Completed season"}
+                </a>{" "}
+                · 101 reporting days complete
+              </p>
+            ))}
+        </section>
+      )}
       <section className={uiStyles.card}>
         <label className={uiStyles.check}>
           <input

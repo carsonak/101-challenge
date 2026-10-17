@@ -543,3 +543,9 @@ Table throttle_buckets {
   count integer [not null]
   expiresAt timestamptz [not null]
 }
+
+// Operator-only reversible suspension; runtime can SELECT, never mutate.
+Table account_suspensions {
+  id uuid [pk, ref: > users.id, note: 'Cascades on account erasure']
+  suspendedAt timestamptz [not null, default: `now()`]
+}

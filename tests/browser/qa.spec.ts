@@ -91,7 +91,10 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
     page.getByRole("heading", { name: "Verify your email" })
   ).toBeVisible();
 
-  await expect(page.locator("form")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Resend verification email" })
+  ).toBeVisible();
+
   await expect(page.getByText("Forgot your password?")).toHaveCount(0);
   await page.goto("/login");
   await page.getByText("Forgot your password?").click();
@@ -700,6 +703,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       "/admin/seasons",
       `/admin/seasons/${season.resourceId}`,
       "/admin/corrections",
+      "/help",
       "/privacy",
       "/terms",
       "/fictional-missing-route",

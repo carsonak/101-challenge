@@ -86,6 +86,7 @@ export const safeRoutes = new Set([
   "/api/v1/history",
   "/api/v1/export",
   "/api/v1/admin/stats",
+  "/api/v1/admin/participants",
   "/api/v1/admin/seasons",
   "/api/v1/auth",
   "/api/v1/command",

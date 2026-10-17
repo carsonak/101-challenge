@@ -1,0 +1,44 @@
+get:
+  operationId: getAdminParticipants
+  summary: Find participant handles for support and correction grants
+  description: Administrator-only bounded username-prefix lookup. Excludes emails, provider identities, report text and seeds. IDs are stable keyset cursors.
+  security:
+    - sessionCookie: []
+  parameters:
+    - name: prefix
+      in: query
+      schema: { type: string, maxLength: 32 }
+    - name: cursor
+      in: query
+      schema: { type: string, format: uuid }
+    - name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+  responses:
+    "200":
+      description: Bounded participant page
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, nextCursor]
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+                  required: [id, username]
+                  properties:
+                    id: { type: string, format: uuid }
+                    username: { type: string }
+                  additionalProperties: false
+              nextCursor: { type: [string, "null"] }
+            additionalProperties: false
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "401":
+      $ref: ../components/responses/Error401.yaml
+    "403":
+      $ref: ../components/responses/Error403.yaml
+    "503":
+      $ref: ../components/responses/ServiceUnavailable.yaml

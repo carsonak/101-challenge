@@ -57,3 +57,13 @@ Season identifiers are unique lowercase hyphenated URL identifiers and freeze on
 Account deletion requires a verified recovery email, recent sign-in and typed username. It suspends ordinary access and revokes sessions immediately, retaining private data for seven days. Fresh sign-in during the grace period permits recovery only. Recovery and deadline erasure serialize on the account. Privileged maintenance retries the recovery notice and erases due accounts; recovery is forbidden at or after the deadline even if maintenance is delayed.
 
 Inbox notifications describe system/admin actions the participant did not just initiate; routine owner actions use transient feedback. Inbox reads and bounded worker housekeeping apply the shared `notificationRetention` policy: acknowledged notices age from first read/dismissal, unread notices from creation. Retained report and revision history is independent of inbox retention.
+
+## Operator access suspension
+
+An operator may reversibly suspend account access for a confirmed incident without
+deleting history, freeing slots or changing identity ownership. Suspended accounts
+cannot create/use sessions, use linked Discord commands or execute tracker actions.
+The runtime can only read the content-free suspension flag; only a privileged
+operator can change it. Suspension does not cancel a pending erasure or extend its
+deadline. Recovery requires separately verified ownership and explicit operator
+removal of suspension; never transfer a provider identity by matching email.

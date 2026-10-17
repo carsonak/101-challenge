@@ -1,12 +1,6 @@
 import { errorMessages } from "@challenge/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type {
-  Account,
-  Enrollment,
-  History,
-  Season,
-  Stats,
-} from "../tracker-types";
+import type { Account, Enrollment, History, Season } from "../tracker-types";
 import { useTrackerActions } from "./actions";
 import { readResponse } from "./requests";
 /** Own session-scoped projections and targeted refreshes without storing private browser data. */
@@ -44,7 +38,6 @@ export function useTrackerController({
     [providers, setProviders] = useState({ google: false, discord: false }),
     [history, setHistory] = useState<History>([]),
     [seasons, setSeasons] = useState<Season[]>([]),
-    [stats, setStats] = useState<Stats | null>(null),
     [message, setMessage] = useState(""),
     [error, setError] = useState(false),
     [busy, setBusy] = useState(false),
@@ -125,16 +118,8 @@ export function useTrackerController({
 
         if (["home", "challenge", "season", "setup", "history"].includes(view))
           setHistory(await pages<Enrollment>("/api/v1/history"));
-
-        if (context.account.admin && view === "admin-corrections")
-          setStats(
-            await readResponse(
-              await fetch("/api/v1/admin/stats", { cache: "no-store" })
-            )
-          );
       } else {
         setHistory([]);
-        setStats(null);
       }
 
       setLoaded(true);
@@ -186,7 +171,6 @@ export function useTrackerController({
     /** Current providers controller value. */ providers,
     /** Current history controller value. */ history,
     /** Current seasons controller value. */ seasons,
-    /** Current stats controller value. */ stats,
     /** Current message controller value. */ message,
     /** Current error controller value. */ error,
     /** Current busy controller value. */ busy,

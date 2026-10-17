@@ -164,6 +164,8 @@ test(
           "SELECT * FROM event_receipts",
           "SELECT * FROM source_projections",
           "UPDATE users SET admin=true",
+          "INSERT INTO account_suspensions(id) SELECT id FROM users LIMIT 1",
+          "DELETE FROM account_suspensions",
           "SELECT erase_tracker_account($1,$2,NULL)",
         ])
           await assert.rejects(
@@ -265,9 +267,23 @@ test(
         })
       );
 
+      await migration.repository.transaction((tx) =>
+        tx.insert("account_suspensions", {
+          id: user,
+          suspendedAt: instant.toISOString(),
+        })
+      );
+
       const maintenance = createRepository(loginUrl("maintenance"));
       handles.push(maintenance);
       await maintenance.maintainAccounts(async () => {}, "topology_queue");
+      assert.equal(
+        await migration.repository.transaction((tx) =>
+          tx.get("account_suspensions", user)
+        ),
+        undefined
+      );
+
       assert.equal(
         (await migration.deletionLedger()).some((row) => row.userId === user),
         true

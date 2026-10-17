@@ -100,7 +100,10 @@ export function useTrackerActions(context: {
       if ((payload as { action?: string }).action === "reauthenticate")
         return true;
 
-      if (result.requestId) {
+      if (
+        result.requestId ||
+        (payload as { action?: string }).action === "change_password"
+      ) {
         window.location.assign("/login");
         return true;
       }

@@ -2,8 +2,9 @@ import { z } from "./validation.js";
 
 /** Normalize independently verified credential addresses; never use email to merge accounts. */
 const email = z
-  .email()
-  .max(254)
+  .string()
+  .trim()
+  .pipe(z.email().max(254))
   .transform((value) => value.toLowerCase());
 
 /** Passwords preserve spaces and Unicode; impose bounded hashing work. */
@@ -29,6 +30,8 @@ export const authCommandSchema = z.union([
   }),
   z.strictObject({ action: z.literal("login"), email, password }),
   z.strictObject({ action: z.literal("recover"), email }),
+  z.strictObject({ action: z.literal("resend_verification"), email }),
+  z.strictObject({ action: z.literal("change_password"), password }),
   z.strictObject({ action: z.literal("verify"), token }),
   z.strictObject({ action: z.literal("reset"), token, password }),
   z.strictObject({ action: z.literal("logout") }),

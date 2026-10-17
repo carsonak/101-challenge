@@ -3,6 +3,14 @@ export const errorMessages: Record<string, string> = {
   UNAUTHENTICATED: "Please sign in again.",
   FORBIDDEN: "This action requires permission or a recent sign-in.",
   NOT_FOUND: "This item is unavailable.",
+  SEASON_UNAVAILABLE:
+    "This season is unavailable or needs its publication date reconciled before backdating.",
+  BACKDATE_DATE_INVALID:
+    "Choose a registration date from first publication through today in the reporting timezone.",
+  ALREADY_ENROLLED:
+    "This participant is already enrolled in that season. Choose their existing attempt for corrections.",
+  BACKDATE_REQUIRES_TEMPLATE:
+    "Add at least one recommended goal to the season before creating backdated participation.",
   VALIDATION: "Check the fields and try again.",
   VERSION_CONFLICT:
     "The challenge changed. Your text is retained; review the latest progress before trying again.",

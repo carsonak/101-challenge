@@ -1,5 +1,8 @@
 type: object
 properties:
+  nextCursor:
+    type: [string, "null"]
+    description: Next attempt ID for a participant-scoped page, or null.
   attempts:
     type: array
     items:

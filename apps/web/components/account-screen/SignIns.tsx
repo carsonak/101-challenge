@@ -80,6 +80,43 @@ export function SignIns(context: ScreenContext) {
             </form>
           </details>
         )}
+        {account.emailVerified && (
+          <details>
+            <summary>Change password</summary>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPending({
+                  action: "change_password",
+                  password: new FormData(event.currentTarget).get("password"),
+                });
+              }}
+            >
+              <Field label="New password">
+                <PasswordInput
+                  required
+                  name="password"
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                />
+              </Field>
+              <p>
+                Confirm your current password next. All devices will be signed
+                out after saving.
+              </p>
+              <button type="submit" className={uiStyles.button}>
+                Change password
+              </button>
+            </form>
+          </details>
+        )}
+        <p>
+          To replace your sign-in email, first link and test Google or Discord.
+          Unlink email, sign in with that linked provider, then add and verify
+          the new email. Update your recovery email separately.{" "}
+          <a href="/help">Account help</a>
+        </p>
         <Help>
           Linking proves ownership of both accounts. At least one usable sign-in
           method must remain.

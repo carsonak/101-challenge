@@ -2,6 +2,7 @@ import type { AuthCommand } from "@challenge/contracts";
 import type { Transaction } from "../model.js";
 import { digest } from "../rules.js";
 import type { ActionContext, Delivery } from "./action-context.js";
+import { invalidateCredentialProofs } from "./credentialProofs.js";
 import { ensure, hashPassword, verifyPassword } from "./shared.js";
 /** Execute anonymous actions inside the caller's transaction. */
 export function createAuthAnonymous(context: ActionContext) {
@@ -25,7 +26,11 @@ export function createAuthAnonymous(context: ActionContext) {
     _token?: string,
     _csrf?: string
   ) {
-    if (c.action === "signup" || c.action === "recover") {
+    if (
+      c.action === "signup" ||
+      c.action === "recover" ||
+      c.action === "resend_verification"
+    ) {
       await tx.serializeKey(`email:${c.email}`);
       let credential = (await tx.list("credentials", { email: c.email }))[0];
       if (c.action === "signup" && !credential) {
@@ -40,6 +45,12 @@ export function createAuthAnonymous(context: ActionContext) {
         };
 
         await tx.insert("credentials", credential);
+      }
+
+      if (credential) {
+        ensure(await tx.get("users", credential.userId, true));
+        credential = await tx.get("credentials", credential.id, true);
+        if (credential?.email !== c.email) credential = undefined;
       }
 
       if (
@@ -123,6 +134,7 @@ export function createAuthAnonymous(context: ActionContext) {
       if (c.action === "verify") credential.verified = true;
       else {
         ensure(computedHash, "VALIDATION");
+        await invalidateCredentialProofs(tx, user.id, now);
         credential.passwordHash = computedHash;
         credential.verified = true;
         await revokeSessions(tx, user.id);
