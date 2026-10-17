@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily challenge backup (UTC)
+
+[Timer]
+OnCalendar=*-*-* 00:15:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=challenge-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Read-only challenge operations checks
+OnFailure=challenge-alert@%n.service
+
+[Service]
+Type=oneshot
+User=challenge-backup
+WorkingDirectory=/opt/101-challenge
+EnvironmentFile=/etc/challenge/operations.env
+ExecStart=/usr/bin/env node scripts/operations-check.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

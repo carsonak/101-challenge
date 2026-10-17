@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh challenge deletion ledger every minute
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+Unit=challenge-ledger.service
+
+[Install]
+WantedBy=timers.target

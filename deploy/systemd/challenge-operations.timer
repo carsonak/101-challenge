@@ -1,0 +1,10 @@
+[Unit]
+Description=Check challenge operational deadlines and backup freshness
+
+[Timer]
+OnBootSec=120
+OnUnitActiveSec=60
+Unit=challenge-operations.service
+
+[Install]
+WantedBy=timers.target

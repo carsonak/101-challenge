@@ -1,8 +1,8 @@
 # Production preparation
 
-These assets are for review after [local acceptance](../docs/live-testing.md). They are not a deployment or provisioning instruction to execute now. Follow [deployment gates](../docs/deployment.md).
+These assets are for review after [local acceptance](../docs/live-testing.md). They are not a deployment or provisioning instruction to execute now. Follow [deployment gates](../docs/deployment.md) and the numbered [installation/rehearsal runbook](runbook.md).
 
-Copy private configuration into ignored `secrets/`: `web.env`, `worker.env`, `maintenance.env`, and a PostgreSQL operator password in `postgres-password`. Give each runtime its own database URL and only its required provider settings. Only maintenance receives ERASURE_DATABASE_URL. Registration credentials, operator/migrator credentials and age identities stay outside runtime images. Set APP_DOMAIN privately for Compose and the exact HTTPS APP_ORIGIN in runtime files. Provision roles, migrate, then provision grants before bringing up application services.
+Copy private configuration into ignored `secrets/`: `web.env`, `worker.env`, `maintenance.env`, `operator.env`, and a PostgreSQL operator password in `postgres-password`. Give each runtime its own database URL and only its required provider settings. Only maintenance receives ERASURE_DATABASE_URL. Registration credentials, operator/migrator credentials and age identities stay outside runtime images. Set APP_DOMAIN privately for Compose and the exact HTTPS APP_ORIGIN in runtime files. Provision roles, migrate, then provision grants before bringing up application services.
 
 The database network has no host port. Only Caddy publishes ports; it overwrites the client address header. Enable the documented proxy trust only with this topology and a verified firewall. Web and maintenance need outbound provider access; the worker needs only its database. The default resource limits require measurement on the eventual VPS. Validate the rendered topology without printing private values using `docker compose -f deploy/compose.yaml config --quiet`.
 
@@ -13,3 +13,5 @@ Rehearse off-server with an empty database whose name ends in `_restore_test`, R
 Pin tested image digests during release review; provider delivery, encrypted S3 durability, resource sizing and server restore acceptance remain external gates.
 
 For sleeping workers, private wake keys and PaaS scheduling, see [elastic hosting](../docs/elastic-hosting.md). Routine Compose health checks use database-free liveness; run readiness deliberately during rollout.
+
+Private [timer templates](systemd/README.md) cover daily encrypted snapshots, current-ledger publication and read-only operational checks. Install and test alert delivery separately. Production PostgreSQL defaults to the same 17.11 image as local/CI, with its matching data path; never reuse an 18 data volume without a reviewed migration.

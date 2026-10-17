@@ -6,7 +6,7 @@
  */
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir, rename, rm, readFile } from "node:fs/promises";
+import { mkdir, rename, rm, readFile, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { join, resolve } from "node:path";
@@ -41,7 +41,7 @@ function command(binary, args, env = process.env) {
   return { child, done };
 }
 /** Encrypt directly into a private atomic output; no plaintext dump or ledger is written. */
-async function encrypt(source, file) {
+async function encrypt(source, file, producerDone = Promise.resolve()) {
   const recipient = process.env.AGE_RECIPIENT;
   if (!recipient || !/^age1[0-9a-z]+$/.test(recipient)) throw new Error();
   const temporary = `${file}.partial`;
@@ -58,6 +58,7 @@ async function encrypt(source, file) {
         createWriteStream(temporary, { mode: 0o600, flags: "wx" })
       ),
       age.done,
+      producerDone,
     ]);
     await rename(temporary, file);
   } finally {
@@ -203,6 +204,11 @@ try {
     if (!connection || !directory || resolve(directory) !== directory)
       throw new Error();
     await mkdir(directory, { recursive: true, mode: 0o700 });
+    if (
+      process.env.BACKUP_REQUIRE_REMOTE === "true" &&
+      !process.env.BACKUP_S3_BUCKET
+    )
+      throw new Error();
     if (mode === "backup") {
       const name = `database-${new Date().toISOString().replaceAll(/[:.]/g, "-")}.dump.age`;
       const pg = command(
@@ -213,7 +219,7 @@ try {
       pg.child.stdin.end();
       try {
         await Promise.all([
-          encrypt(pg.child.stdout, join(directory, name)),
+          encrypt(pg.child.stdout, join(directory, name), pg.done),
           pg.done,
         ]);
       } finally {
@@ -222,6 +228,18 @@ try {
       await upload(join(directory, name), name);
     }
     await ledger(connection, directory);
+    if (mode === "backup") {
+      const marker = join(directory, "last-backup.json");
+      await writeFile(
+        `${marker}.partial`,
+        JSON.stringify({
+          completedAt: new Date().toISOString(),
+          remote: Boolean(process.env.BACKUP_S3_BUCKET),
+        }),
+        { mode: 0o600 }
+      );
+      await rename(`${marker}.partial`, marker);
+    }
     console.info("Encrypted backup operation completed.");
   } else throw new Error();
 } catch {

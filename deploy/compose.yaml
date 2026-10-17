@@ -9,13 +9,13 @@ x-service: &service
 services:
   postgres:
     <<: *service
-    image: docker.io/library/postgres:18-alpine
+    image: ${POSTGRES_IMAGE:-docker.io/library/postgres:17.11-alpine}
     environment:
       POSTGRES_USER: challenge_operator
       POSTGRES_DB: challenge
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets: [postgres_password]
-    volumes: ["postgres:/var/lib/postgresql"]
+    volumes: ["postgres:/var/lib/postgresql/data"]
     networks: [database]
     mem_limit: 768m
     cpus: 1
@@ -31,6 +31,8 @@ services:
     environment:
       HOSTNAME: 0.0.0.0
       PORT: 3000
+      TRUSTED_PROXY_HEADER: x-forwarded-for
+      TRUSTED_PROXY_HOPS: 1
     expose: ["3000"]
     networks: [database, ingress]
     depends_on: { postgres: { condition: service_healthy } }
@@ -70,6 +72,15 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+  operator:
+    profiles: [operator]
+    build: { context: .., target: operator }
+    env_file: [secrets/operator.env]
+    networks: [database]
+    depends_on: { postgres: { condition: service_healthy } }
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
   maintenance:
     <<: *service
     build: { context: .., target: maintenance }
@@ -85,7 +96,7 @@ services:
     tmpfs: [/tmp]
   caddy:
     <<: *service
-    image: docker.io/library/caddy:2-alpine
+    image: ${CADDY_IMAGE:-docker.io/library/caddy:2.11.2-alpine}
     environment: { APP_DOMAIN: "${APP_DOMAIN:?Set the production domain}" }
     ports: ["80:80", "443:443"]
     volumes:
