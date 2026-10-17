@@ -56,3 +56,6 @@ remains for compatibility.
 UI changes retain the accepted lake/paper semantic tokens, self-hosted type,
 left-aligned forms and existing card structure. New controls use existing fields
 and buttons; no independent visual system or speculative reward feature was added.
+
+The review handoff is [PR #2](https://github.com/carsonak/101-challenge/pull/2), open
+against main. Review approval remains pending; no merge or deployment is performed.

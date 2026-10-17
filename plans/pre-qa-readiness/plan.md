@@ -55,7 +55,7 @@
 - [x] Record dated evidence and unexecuted hosted checks, reconcile the QA guide
       with current behavior and provide a reusable results template.
 - [x] Review the final diff for privacy, compatibility, documentation and scope.
-- [ ] Push conventional commits, create and attach a PR, inspect CI/review status
+- [x] Push conventional commits, create and attach a PR, inspect CI/review status
       and leave it open pending review.
 
 ## Acceptance criteria
@@ -82,3 +82,7 @@ reports and recorded p95 442 ms. This is local evidence; the fifty-user actual-V
 trial, memory/CPU sizing, real providers, inbox placement, legal acceptance, alert
 delivery and off-server restore remain mandatory hosted gates. Runtime deployment,
 console configuration, invitations and release tagging were not performed.
+
+[PR #2](https://github.com/carsonak/101-challenge/pull/2) targets main and remains
+open for review. GitHub CI runs against the pushed head; review approval and
+merge are outstanding. No deployment follows automatically from this handoff.
