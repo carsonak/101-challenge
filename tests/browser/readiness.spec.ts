@@ -82,6 +82,14 @@ async function capture(page: Page, label: string) {
         )
       ).toBe(true);
 
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
+
+        window.scrollTo(0, 0);
+      });
+
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
       await page.screenshot({
         path: join(output, `readiness-${label}-${theme}-${width}.png`),
         fullPage: true,

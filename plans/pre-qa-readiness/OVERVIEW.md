@@ -34,12 +34,25 @@ and reviewer before invitations. Never substitute fixture success for hosted QA.
 
 ## Progress and risks
 
-Audit and implementation are in progress. Current default branch contains the
+Repository implementation and local acceptance are complete; PR review and hosted
+acceptance remain. Current default branch contains the
 idle-worker redesign; PostgreSQL rate buckets already survive process restarts and
 are shared across replicas. Historical pg-boss and single-process assumptions in
 the supplied review must be corrected. The repository integration branch is behind
-the current application; resolve the PR target without rewriting shared history.
+the current application; the owner selected main as this PR target without
+rewriting either long-lived branch.
 
 The first pilot remains gated on the complete manual pass, including day-boundary,
 real provider and operational failure scenarios. No claim of zero bugs follows
 from automated checks.
+
+Local verification found and resolved stale credential proofs, unreadable private
+operator/maintenance sources in non-root images, incomplete dump publication and
+enlarged-text footer overflow. An additive operator-only suspension table supports
+incident containment; read-only role and erasure regressions cover it. The scoped
+admin path reads report metadata only and pages attempts; the legacy global API
+remains for compatibility.
+
+UI changes retain the accepted lake/paper semantic tokens, self-hosted type,
+left-aligned forms and existing card structure. New controls use existing fields
+and buttons; no independent visual system or speculative reward feature was added.

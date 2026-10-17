@@ -9,7 +9,7 @@ x-service: &service
 services:
   postgres:
     <<: *service
-    image: ${POSTGRES_IMAGE:-docker.io/library/postgres:17.11-alpine}
+    image: ${POSTGRES_IMAGE:-docker.io/library/postgres:17.11-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24}
     environment:
       POSTGRES_USER: challenge_operator
       POSTGRES_DB: challenge
@@ -96,7 +96,7 @@ services:
     tmpfs: [/tmp]
   caddy:
     <<: *service
-    image: ${CADDY_IMAGE:-docker.io/library/caddy:2.11.2-alpine}
+    image: ${CADDY_IMAGE:-docker.io/library/caddy:2.11.2-alpine@sha256:834468128c7696cec0ceea6172f7d692daf645ae51983ca76e39da54a97c570d}
     environment: { APP_DOMAIN: "${APP_DOMAIN:?Set the production domain}" }
     ports: ["80:80", "443:443"]
     volumes:

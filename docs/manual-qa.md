@@ -1,6 +1,6 @@
 # Pre-invitation manual QA
 
-Use the supplied **101 Challenge Manual QA Guide** (13 October 2026) as the detailed
+Use the supplied [101 Challenge Manual QA Guide](../plans/pre-qa-readiness/reference/manual-qa-guide.md) (13 October 2026) as the detailed
 scenario inventory. Its checkboxes are test proposals, not evidence or authorization
 to change production. Run it on an isolated staging stack first and repeat hosted
 provider/ingress/operations scenarios on the final domain. Use fictional accounts,

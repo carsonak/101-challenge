@@ -62,3 +62,8 @@ do not change behavior.
 Record deployed version, migration range, verification and recovery evidence
 without credentials or participant text. Production backups and a tested server
 restore remain release gates rather than assumptions implied by local tests.
+
+Migration 0009 adds an operator-only suspension flag with no changes to retained
+participant records. Deploy all web instances with suspension enforcement before
+using the flag. Do not roll back to a version that ignores active suspensions;
+keep access closed or roll forward during an incident. Erasure cascades the flag.

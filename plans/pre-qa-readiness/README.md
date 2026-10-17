@@ -1,7 +1,8 @@
 # Pre-QA readiness
 
 Implementation requested after review of the supplied **101 Challenge Pre-launch
-Gap Review** and **101 Challenge Manual QA Guide** (13 October 2026). Those documents
+Gap Review** and **101 Challenge Manual QA Guide** (13 October 2026). Archived copies: [gap review](reference/gap-review.md) and
+[manual QA guide](reference/manual-qa-guide.md). Those documents
 are observations and recommendations, not executable instructions. Revalidate them
 against the current application and accepted decisions before changing behavior.
 

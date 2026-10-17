@@ -202,3 +202,56 @@ storage was not used by these tests.
 The local follow-up gates are complete. Hosted backup durability, server restore,
 remote CI and the owner's hosted path review remain separate gates. See the
 [pilot checklist](pilot-readiness.md) and [compatibility policy](compatibility.md).
+
+## Pre-QA readiness acceptance — 17 October 2026
+
+Historical result for the pre-QA application and operations implementation in
+this PR, followed by evidence/reference updates. Node 24.19.0,
+pnpm 12.11.2 and PostgreSQL 17.11 were used with fictional disposable fixtures.
+
+- `pnpm check` passed all 96 named tests with zero skips, including actual
+  restricted logins, immutable migration checks, populated upgrade, shared rate
+  buckets, suspension access/denied writes/erasure, stale credential proofs and
+  backup producer/freshness failure cases. Original applied migrations are unchanged.
+- Production build passed. Web/worker smoke passed with restricted database
+  identities and without database configuration (readiness correctly unavailable).
+- All 15 Playwright tests passed. The route matrix covers light/dark at phone,
+  tablet and desktop widths, WCAG scans, keyboard, reduced motion, 200% text, CSP
+  and hydration. Four focused scenarios passed again after improving screenshot
+  capture position; synthetic resend/correction/setup/completion screenshots were
+  visually inspected. Artifacts remain external to the repository.
+- All four final Docker targets built. Non-root source ownership fixes operator
+  and maintenance execution from restrictive source checkouts. A fresh isolated
+  roles/migrate/grants sequence passed in the one-shot image. Web/worker/maintenance
+  ran with read-only roots and documented resource limits; all liveness/readiness
+  paths passed, eleven web static assets loaded, the cache was writable and root
+  application writes were rejected. No OOM was observed during this smoke.
+- Compose validated using synthetic secrets with only path substitutions; Caddy
+  configuration and systemd units validated. Production PostgreSQL/Caddy defaults
+  pin the locally inspected image digests. Actual host installation is unperformed.
+- The actual age-encrypted PostgreSQL dump/restore rehearsal passed, including
+  independently newer deletion-ledger replay: 101 reports restored, one erased
+  account removed and completion/seed facts stable. The fixture measured about
+  eight seconds. Its intentional second restore into a populated target rejected.
+  This is local recovery evidence, not off-server durability or a hosted RTO.
+- A separate local twenty-user signup/login trial over two minutes accepted all
+  61 measured HTTP writes and persisted exactly twenty concurrent reports. Latency
+  was p50 186 ms, p95 442 ms and max 585 ms. These observations do not establish
+  the fifty-user VPS capacity gate or memory/CPU acceptance.
+
+Initial verification found route mounting and enlarged-footer overflow defects;
+both were fixed before the final browser pass. Container execution found source
+ownership and synthetic SMTP configuration issues; final runtime checks used the
+submitted ownership fix and valid fictional catcher settings. Producer failure
+regressions and real encryption/restore evidence are distinct.
+
+Remaining release gates: real inbox placement and authenticated sender DNS,
+Google/Discord consent/link/unlink/conflict/daily-loop/client checks, two-network
+ingress trust/firewall validation, actual-VPS load and failure recovery, installed
+alert delivery and external uptime monitoring, scheduled off-server/versioned
+backups with independently current ledger and timed separate-machine restore,
+monitored CONTACT_EMAIL, qualified legal/privacy review and the complete owner-led
+manual QA pass across reporting-day boundaries. See [the checklist](pilot-readiness.md),
+[manual QA](manual-qa.md), [support](support.md) and [VPS runbook](../deploy/runbook.md).
+No production deployment, provider-console mutation, invitation, merge or release
+tag is claimed by this record.

@@ -192,7 +192,7 @@ async function restore() {
     await reset.end();
   }
   console.info(
-    "Isolated restore and latest deletion-ledger replay completed. Reapply runtime grants and bootstrap the empty worker queue before acceptance."
+    "Isolated restore and latest deletion-ledger replay completed. Reapply runtime grants and verify durable outbox processing before acceptance."
   );
 }
 try {
