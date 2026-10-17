@@ -1,0 +1,32 @@
+# Audit findings and dispositions
+
+Initial audit: 17 October 2026, against the current default-branch application.
+Evidence and final outcomes are updated during execution.
+
+| ID  | Current finding / disposition                                                                            | Planned resolution and acceptance                                                                                                            |
+| --- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1  | Shared PostgreSQL limits exist, but protected ingress lacks explicit trust settings.                     | Set Caddy-specific trust in production Compose; verify spoof protection locally and independent networks on host.                            |
+| G2  | Verification has no resend path; delivery is external.                                                   | Add explicit safe resend and shared cooldown regression; require real inbox/sender-DNS evidence.                                             |
+| G3  | Bootstrap is prose only.                                                                                 | One-shot operator tooling and numbered rehearsal/update/rollback runbook; host rehearsal stays gated.                                        |
+| G4  | Production uses PostgreSQL 18 while local/CI use 17.11.                                                  | Align 17.11 and volume layout; no in-place major downgrade of existing data. Require reviewed release digests.                               |
+| G5  | Backup tooling lacks schedule/install recipe and hosted evidence.                                        | Provide private timers/ledger sequence and stale-backup checks; off-server timed restore remains mandatory.                                  |
+| G6  | Fixture OAuth and Discord coverage does not prove providers.                                             | Run remote CI after PR, retain provider-console and real-client manual gates.                                                                |
+| G7  | Legal/contact acceptance is outstanding.                                                                 | Expose help/contact; require monitored CONTACT_EMAIL and qualified owner review before invitation.                                           |
+| G8  | Credit counters lack spending availability context.                                                      | State artwork is a later release and credits cannot yet be spent. Do not promise paid/redeemable value.                                      |
+| G9  | Independent provider accounts can confuse returning users.                                               | Explain linking before provider choice and in Discord handoff; keep proof-based identity policy.                                             |
+| G10 | Global metadata enumeration and ambiguous correction recipients.                                         | Add bounded participant lookup/detail, recipient-first selection and explicit confirmation; preserve metadata privacy.                       |
+| G11 | Support procedures are incomplete.                                                                       | Reviewed least-privilege support runbook, clear escalation boundaries and public help/contact. No unverifiable ownership bypass.             |
+| G12 | Reminders intentionally deferred.                                                                        | Document owner-run weekly community reminder and pilot metric; do not send messages or create a scheduler without separate direction.        |
+| G13 | No measured signup/report burst.                                                                         | Guarded disposable trial and resource criteria; measure locally where possible and repeat on actual VPS before invitations.                  |
+| G14 | No configured external monitors.                                                                         | Provide actionable readiness/log/overdue-work/backup alert recipe with delivery test gates; avoid claiming a live monitor exists.            |
+| G15 | No ordinary password or sign-in-email change.                                                            | Document supported recovery and proof-based replacement options and limitations; assess safe additive password action during implementation. |
+| G16 | Setup does not name reporting timezone.                                                                  | Display actual configured/frozen IANA zone, never browser-derived reporting dates.                                                           |
+| G17 | Home forgets completed seasons.                                                                          | Show durable completion acknowledgement and history link without taking a slot or changing entitlement.                                      |
+| G18 | Rate-limit finding superseded by ADR 0003; owner history/admin reads remain broad.                       | Correct obsolete assumption; bound new admin path; document history/replica capacity and load evidence.                                      |
+| G19 | Small copy/timezone inconsistencies and absent help.                                                     | Fix subject/fallback/help; keep noindex for pilot and require reviewed release/tag after merge.                                              |
+| A1  | Docker installs pnpm 12.9.1 while manifest requires >=12.9.1 and selects 12.11.2; reproducibility drift. | Match manifest-selected pnpm and runtime Node; verify frozen install/build.                                                                  |
+| A2  | Read-only web image may conflict with Next runtime writes.                                               | Exercise submitted production image/topology; fix only demonstrated cache/static/read-only failures.                                         |
+| A3  | Idle-worker migration makes older queue/bootstrap/runbook text misleading.                               | Reconcile durable outbox and maintenance instructions; old/new workers must not overlap migration 0008.                                      |
+
+No supplied recommendation authorizes modifying provider consoles, infrastructure,
+legal statements, real account verification or sending community messages.
