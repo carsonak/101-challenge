@@ -100,7 +100,7 @@ test("modular YAML resolves, preserves command alternatives and documents stale-
     assert.match(session.description, /invalid.*HTTP 200/i);
     assert.match(session.description, /cookies are cleared/);
     assert.equal(document.openapi, "3.1.0");
-    assert.equal(Object.keys(document.paths).length, 19);
+    assert.equal(Object.keys(document.paths).length, 20);
     const ids = Object.values(document.paths).flatMap((path) =>
       Object.values(path as Record<string, { operationId?: string }>)
         .map((operation) => operation.operationId)

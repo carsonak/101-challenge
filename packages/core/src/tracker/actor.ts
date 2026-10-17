@@ -7,6 +7,7 @@ export function createTrackerActor(_context: Record<string, never>) {
   async function actor(tx: Transaction, userId: string) {
     const user = await tx.get("users", userId, true);
     requireRule(user, "UNAUTHENTICATED");
+    requireRule(!(await tx.get("account_suspensions", user.id)), "FORBIDDEN");
     requireRule(
       !(await tx.list("erasure_requests", { userId, processedAt: null })).some(
         (r) => !r.cancelledAt

@@ -39,6 +39,11 @@ export default async function Home() {
           Join a published season, choose your goals, and record 101 reporting
           days. Your reports and retained history stay private.
         </p>
+        {/* TODO(artwork): Update this unavailable-state copy when artwork and credit spending ship; see plans/artwork-generator. */}
+        <p>
+          Artwork comes in a later release. Streak credits are recorded, but
+          cannot yet be spent.
+        </p>
         <p>
           <a className={uiStyles.button} href="/seasons">
             Explore seasons

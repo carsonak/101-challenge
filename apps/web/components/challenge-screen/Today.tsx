@@ -61,18 +61,22 @@ export function Today(context: ScreenContext) {
           </div>
         </div>
       )}
+      {/* TODO(artwork): Update credit copy when artwork spending ships; see plans/artwork-generator. */}
       {current && (
         <Help>
           Streak perk: every seven consecutive reporting days earns a credit.
           Earned credits survive gaps. Pausing or cancelling removes them.
+          Credits are banked for future artwork; spending is not available yet.
         </Help>
       )}
+      {/* TODO(artwork): Update completion copy when artwork ships; see plans/artwork-generator. */}
       {current?.attemptState === "completed" && (
         <p className={uiStyles.notice}>
-          101 reporting days complete.{" "}
+          You showed up for 101 reporting days. Well done.{" "}
           {current.mode === "progress_only"
             ? "Your original seasonal completion stays fixed."
-            : "Your seasonal completion is recorded."}
+            : "Your seasonal completion is recorded."}{" "}
+          Artwork comes in a later release.
         </p>
       )}
       {!current && enrollment.participation === "active" && (

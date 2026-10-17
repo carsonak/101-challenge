@@ -30,7 +30,7 @@ export function createAuthenticationRoutes(context: ApiContext) {
         60000
       );
 
-      if ("email" in c.data)
+      if ("email" in c.data && c.data.email !== undefined)
         await rates.take(
           `${bucket}-email`,
           c.data.email.trim().toLowerCase(),
@@ -38,11 +38,23 @@ export function createAuthenticationRoutes(context: ApiContext) {
           15 * 60000
         );
 
+      if (c.data.action === "login") {
+        const identifier =
+          "identifier" in c.data
+            ? c.data.identifier
+            : "username" in c.data
+              ? c.data.username
+              : c.data.email;
+
+        await rates.take("auth-login-identifier", identifier, 10, 15 * 60000);
+      }
+
       if (
         ![
           "login",
           "signup",
           "recover",
+          "resend_verification",
           "verify",
           "reset",
           "verify_recovery_email",
@@ -91,7 +103,13 @@ export function createAuthenticationRoutes(context: ApiContext) {
         });
 
       if (
-        ["logout", "unlink", "reset", "request_erasure"].includes(c.data.action)
+        [
+          "logout",
+          "unlink",
+          "reset",
+          "request_erasure",
+          "change_password",
+        ].includes(c.data.action)
       ) {
         setCookie(response, cookieNames.session, "", secure, true, 0);
         setCookie(response, cookieNames.csrf, "", secure, false, 0);

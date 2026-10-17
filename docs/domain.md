@@ -1,10 +1,10 @@
 # Challenge domain
 
-Status: accepted requirements, updated by the QA review on 2026-10-07. These rules are authoritative; implementation evidence is recorded with the tracker plans and tests. They supersede the initial proposals for destructive resets, Discord-only identity, enrollment-level seeds, and unconditional artwork immutability.
+Status: accepted requirements, updated by the owner account review on 2026-10-17. These rules are authoritative; implementation evidence is recorded with the tracker plans and tests. They supersede the initial proposals for destructive resets, Discord-only identity, enrollment-level seeds, and unconditional artwork immutability.
 
 ## Accounts and participation
 
-Email/password, Google and Discord are independent sign-in methods. Linking requires authenticated proof of both accounts; matching email addresses never silently merges identities. Guild membership is not required. Guild commands are a convenience; the browser supports all participant functions.
+Username/password, Google and Discord are independent sign-in methods. Usernames are unique, case-insensitive, 3–40 URL-safe ASCII letters, digits, underscores or hyphens without spaces. Recovery email is optional and recommended; a verified address also works with the account password to log in. Google signup initializes verified recovery email and requires choosing a username; Discord uses an available sanitized username. Provider signups create no password. Settings allow username, recovery email and password updates and always recommend recovery/alternate sign-ins. Linking requires authenticated proof of both accounts; matching email addresses never silently merges identities. Guild membership is not required. Guild commands are a convenience; the browser supports all participant functions.
 
 A user has one enrollment per season. At most one never-completed season may be active for a user. Pause preserves progress but resets current streak and expires credits/perks immediately. It reserves the unfinished-season slot until the next reporting day; the same season can resume immediately. Cancellation is separate, irreversible and frees the slot immediately. It retains current-attempt private history by default, or erases that attempt’s logs, goals, milestones and frozen private inputs when the owner explicitly chooses erasure and types the season identifier. Earlier attempts and completion entitlements remain. Completion frees the slot. Restarts in previously completed seasons may run concurrently with another season. Serialize slot changes on the user, then enrollment, then attempt. One active attempt per enrollment.
 
@@ -28,6 +28,8 @@ Initial goals are required. Goals are editable on active attempts for their life
 
 Private random participant and season seeds feed an attempt base seed together with initial goals, start timestamp and optional initial milestones. Freeze initial inputs and the derivation version; later edits do not alter the base seed. A restarted attempt has new initial inputs/start time and a new base seed. Never expose seeds or private seed inputs through participant/admin UI, public API, logs, or SVG. Source code is inspectable under Apache-2.0; algorithm secrecy is not a security boundary.
 
+<!-- TODO(artwork): Update credit spending and concrete perk availability when the artwork release ships. -->
+
 Current streak is the trailing run when the last report is today or yesterday, otherwise zero. Longest is the maximum run. Every positive multiple of seven consecutive reporting dates grants one attempt-scoped reroll credit, keyed by earning report to avoid collisions across separate runs. Credits survive gaps, expire on pause/cancellation/restart, and cannot transfer. Spending is disabled while paused or cancelled. Streak perk tiers are separate from the credit balance; each seven-day streak increment earns a tier and each missed date reduces it by one, floored at zero. Concrete benefits belong to the artwork release contract. v0.1 records grants/balances and selected perks; artwork release enables spending. No paid, redeemable, transferable, or external-role rewards are included.
 
 ## Corrections and administration
@@ -50,10 +52,20 @@ Keep logs and text private, including from admins. Logs and backups default to 3
 
 ## Profiles, publication and recovery
 
-Usernames are case-insensitively unique, 3–32 ASCII letters, digits, underscores or hyphens. Provider defaults are suggestions, never proof of account ownership. Profile pictures are owner-controlled; uploads are decoded, resized and stripped of metadata. Provider email claims never merge accounts.
+Usernames are case-insensitively unique, 3–40 ASCII letters, digits, underscores or hyphens. Provider defaults are suggestions, never proof of account ownership. Profile pictures are owner-controlled; uploads are decoded, resized and stripped of metadata. Provider email claims never merge accounts.
 
 Season identifiers are unique lowercase hyphenated URL identifiers and freeze on publication. First publication is persisted independently from later edits; unknown legacy timestamps must be explicitly reconciled before historical reporting can use that season.
 
 Account deletion requires a verified recovery email, recent sign-in and typed username. It suspends ordinary access and revokes sessions immediately, retaining private data for seven days. Fresh sign-in during the grace period permits recovery only. Recovery and deadline erasure serialize on the account. Privileged maintenance retries the recovery notice and erases due accounts; recovery is forbidden at or after the deadline even if maintenance is delayed.
 
 Inbox notifications describe system/admin actions the participant did not just initiate; routine owner actions use transient feedback. Inbox reads and bounded worker housekeeping apply the shared `notificationRetention` policy: acknowledged notices age from first read/dismissal, unread notices from creation. Retained report and revision history is independent of inbox retention.
+
+## Operator access suspension
+
+An operator may reversibly suspend account access for a confirmed incident without
+deleting history, freeing slots or changing identity ownership. Suspended accounts
+cannot create/use sessions, use linked Discord commands or execute tracker actions.
+The runtime can only read the content-free suspension flag; only a privileged
+operator can change it. Suspension does not cancel a pending erasure or extend its
+deadline. Recovery requires separately verified ownership and explicit operator
+removal of suspension; never transfer a provider identity by matching email.

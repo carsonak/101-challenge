@@ -66,3 +66,24 @@ username, address, identity subjects or account contents in synthetic artifacts.
 
 No VPS, DNS, provider-console, guild-registration or hosted-storage mutation is
 implied by this document. Those operations need separately authorized targets.
+
+## Pre-QA handoff
+
+The [pre-QA audit and plan](../plans/pre-qa-readiness/README.md) maps every supplied
+finding and additional defects to fixes or explicit hosted acceptance. Use the
+[versioned QA guide and supplements](manual-qa.md), [support procedures](support.md)
+and [numbered VPS runbook](../deploy/runbook.md) for the owner-led pass. Local
+acceptance is recorded in [dated evidence](verification.md); it does not tick any
+of the server gates above. Verify an actual monitored CONTACT_EMAIL before
+invitations, install/test alert delivery and repeat the load/restore trials on the
+selected VPS and off-server storage.
+
+## Account-model release recheck
+
+- [ ] Confirm Google consent permits openid/profile/email; new signup receives a
+      verified recovery default and requires username selection before tracker use.
+- [ ] Confirm Discord supplies an available URL-safe username without a password;
+      verify password addition, recovery email replacement and alternate sign-in
+      recommendations on the final domain.
+- [ ] Repeat email-free signup and username/verified-email password login on the
+      final domain; verify inbox delivery and recovery before invitations.

@@ -32,3 +32,5 @@ Working artifacts are not plans and must remain untracked outside repositories/w
 - [VPS deployment](vps-deployment/README.md): owner-led host setup, restricted agent operations, database selection and recoverable hosted release.
 
 - [Idle workers and elastic hosting](idle-workers/README.md): durable wake-up scheduling, shared abuse controls and low-traffic operation.
+
+- [Pre-QA readiness](pre-qa-readiness/README.md): audited pre-invitation fixes, support/deployment procedures and manual acceptance gates.

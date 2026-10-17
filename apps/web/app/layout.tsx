@@ -66,6 +66,7 @@ export default async function RootLayout({
         <footer className={layoutStyles["site-footer"]}>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
+          <a href="/help">Help and contact</a>
         </footer>
       </body>
     </html>

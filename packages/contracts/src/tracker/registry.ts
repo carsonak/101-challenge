@@ -92,6 +92,9 @@ export const trackerErrorCodeSchema = z.enum([
   "GRANT_INVALID",
   "RATE_LIMITED",
   "IDEMPOTENCY_CONFLICT",
+  "BACKDATE_DATE_INVALID",
+  "ALREADY_ENROLLED",
+  "BACKDATE_REQUIRES_TEMPLATE",
 ]);
 
 /** Typed failure code for service and adapter error mapping. */

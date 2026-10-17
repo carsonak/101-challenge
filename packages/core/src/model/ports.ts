@@ -25,6 +25,11 @@ import type { Attempt, Enrollment, Season, Slot } from "./seasons.js";
 
 /** Typed repository tables; private records remain behind services. */
 export interface Tables {
+  /** Operator-only content-free suspension; runtime may read but cannot change it. */
+  account_suspensions: {
+    /** Suspended account UUID. */ id: string;
+    /** Operator suspension instant. */ suspendedAt: string;
+  };
   /** Owner profiles, unique usernames and private recovery addresses. */
   profiles: Profile;
   /** Owner notification inbox. */
@@ -79,6 +84,34 @@ export interface Tables {
 
 /** Repository transaction port; implementations own persistence, SQL and rollback. */
 export interface Transaction {
+  /** Look up only public account handles with bounded keyset pagination; caller must authorize administration. */
+  participantPage(
+    prefix: string,
+    after: string | undefined,
+    limit: number
+  ): Promise<{ id: string; username: string }[]>;
+  /** Load a bounded page of one participant's attempts, in ID order; caller must authorize administration. */
+  participantAttempts(
+    userId: string,
+    after: string | undefined,
+    limit: number
+  ): Promise<Attempt[]>;
+  /** Read report metadata without loading private body text or values. */
+  reportMetadata(
+    attemptId: string
+  ): Promise<
+    Pick<
+      Report,
+      | "id"
+      | "attemptId"
+      | "reportingDate"
+      | "reportingIndex"
+      | "createdAt"
+      | "updatedAt"
+      | "version"
+      | "streakAtReport"
+    >[]
+  >;
   /** Read report dates/count facts and only today's private report, avoiding history bodies. */
   reportSummary(
     attemptId: string,

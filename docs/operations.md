@@ -68,3 +68,13 @@ If maintenance is unavailable, account access remains suspended and recovery sti
 Migration 0005 recovers first publication from existing PublishSeason audit events. Unknown values remain null and block backdating until an administrator supplies a verified timestamp in the season editor. Existing resumable cancellations migrate to paused without retroactive benefit loss. Apply migrations before application rollout; validate on a restored disposable copy first. Downgrading the application after new lifecycle states are used is unsupported; roll forward with fixes.
 
 LOG_FORMAT accepts auto, pretty or json. Auto pretty-prints sanitized diagnostics only in interactive non-production terminals; redirected and production logs remain JSON. Both formats include the same operator exception details and redaction.
+
+## Pre-invitation procedures
+
+Use [participant support](support.md), [manual QA supplements](manual-qa.md), the
+[numbered VPS runbook](../deploy/runbook.md) and [private timer templates](../deploy/systemd/README.md).
+The operations checker emits fixed outcomes and returns failure for unavailable
+readiness, overdue erasures/mail/outbox work or a remote backup older than 26 hours.
+It sends no alerts itself; install and test operator alert routing and external
+uptime monitoring. Reconcile current account suspensions after restore before
+opening traffic; snapshots can contain an older operational access state.

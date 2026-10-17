@@ -25,11 +25,17 @@ export function Profile(context: ScreenContext) {
             required
             name="username"
             minLength={3}
-            maxLength={32}
-            pattern="[A-Za-z0-9_-]+"
-            defaultValue={account.username}
+            maxLength={40}
+            pattern={"[A-Za-z0-9_\\-]+"}
+            defaultValue={account.provisional ? "" : account.username}
+            autoComplete="username"
+            aria-describedby="username-help"
           />
         </Field>
+        <p id="username-help">
+          3–40 letters, numbers, underscores or hyphens. No spaces. Usernames
+          are case-insensitive.
+        </p>
         <button type="submit" className={uiStyles.button}>
           Save username
         </button>

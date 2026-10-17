@@ -1,14 +1,14 @@
 import type { Row } from "./common.js";
 
-/** Private email credential; ID equals user ID and address uniqueness is database-enforced. */
+/** Private password credential; an optional legacy email alias is unique when present. */
 export interface Credential extends Row {
-  /** Account owning this independently verified sign-in method. */
+  /** Account owning this private password. */
   userId: string;
   /** Normalized private delivery/sign-in address. */
-  email: string;
+  email: string | null;
   /** Versioned salted Argon2id hash; never transport this field. */
   passwordHash: string;
-  /** Verification proof is required before password login. */
+  /** Verification is required for the email alias, never for username/password login. */
   verified: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface ErasureRequest extends Row {
   processedAt: string | null;
 }
 
-/** Owner profile; provider identity claims never establish email ownership. */
+/** Owner profile; recovery requires email proof or a signed verified Google claim. */
 export interface Profile extends Row {
   /** Unique normalized username. */
   username: string;

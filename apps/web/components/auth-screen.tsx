@@ -4,8 +4,10 @@ import uiStyles from "./../styles/ui.module.css";
 
 import { useEffect, useState, useCallback } from "react";
 import { errorMessage } from "@challenge/contracts";
+import { VerificationResend } from "./verification-resend";
 import { WaitingMessage } from "./waiting-message";
-import { Field, PasswordInput, Toast } from "./ui";
+import { AuthFields } from "./auth-fields";
+import { Toast } from "./ui";
 
 /** Dedicated authentication routes; verification/reset proofs never appear in other forms. */
 export default function AuthScreen({
@@ -60,7 +62,11 @@ export default function AuthScreen({
       view === "login" || view === "signup"
         ? {
             action: view,
-            email: data.get("email"),
+            ...(view === "login"
+              ? { identifier: data.get("identifier") }
+              : data.get("email")
+                ? { email: data.get("email") }
+                : {}),
             password: data.get("password"),
             ...(view === "signup" ? { username: data.get("username") } : {}),
           }
@@ -80,13 +86,39 @@ export default function AuthScreen({
         body: JSON.stringify(payload),
       });
 
-      if (!r.ok)
-        throw new Error("Please check your details or request a new link.");
+      if (!r.ok) {
+        const data = await r.json();
+        throw new Error(
+          data.code === "RATE_LIMITED"
+            ? errorMessage(data.code)
+            : view === "signup"
+              ? "Choose an available username using 3–40 letters, numbers, underscores or hyphens, and check your password and optional email."
+              : view === "login"
+                ? "Check your username or verified recovery email and password."
+                : "Please check your details or request a new link."
+        );
+      }
 
       setError(false);
       if (view === "login") window.location.assign("/home");
-      else if (view === "signup") window.location.assign("/verify");
-      else if (view === "verify")
+      else if (view === "signup") {
+        const login = await fetch("/api/v1/auth", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "login",
+            username: data.get("username"),
+            password: data.get("password"),
+          }),
+        });
+
+        if (!login.ok)
+          throw new Error(
+            "Account creation could not finish. Try another username or log in to your existing account."
+          );
+
+        window.location.assign("/account");
+      } else if (view === "verify")
         window.location.replace(
           recoveryEmail ? "/account" : "/login?verified=1"
         );
@@ -95,9 +127,13 @@ export default function AuthScreen({
         setMessage(
           "If this account exists, a recovery link will arrive in your email."
         );
-    } catch {
+    } catch (error) {
       setError(true);
-      setMessage("Please check your details or request a new link.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Please check your details or request a new link."
+      );
     } finally {
       setBusy(false);
     }
@@ -140,8 +176,8 @@ export default function AuthScreen({
       {view === "verify" && !token ? (
         <section className={uiStyles.card}>
           <p>
-            Check your email and follow the verification link to finish creating
-            your account.
+            Check your email and follow the verification link to enable your
+            recovery email. You can already log in with your username.
           </p>
         </section>
       ) : (
@@ -153,42 +189,7 @@ export default function AuthScreen({
           }}
         >
           <fieldset className={"screen"} disabled={busy}>
-            {view === "signup" && (
-              <Field label="Username">
-                <input
-                  required
-                  name="username"
-                  minLength={3}
-                  maxLength={32}
-                  pattern="[A-Za-z0-9_-]+"
-                  autoComplete="username"
-                />
-              </Field>
-            )}
-            {["login", "signup", "recover"].includes(view) && (
-              <Field label="Email address">
-                <input
-                  required
-                  name="email"
-                  type="email"
-                  maxLength={254}
-                  autoComplete="email"
-                />
-              </Field>
-            )}
-            {["login", "signup", "reset"].includes(view) && (
-              <Field label={view === "reset" ? "New password" : "Password"}>
-                <PasswordInput
-                  required
-                  name="password"
-                  minLength={12}
-                  maxLength={128}
-                  autoComplete={
-                    view === "login" ? "current-password" : "new-password"
-                  }
-                />
-              </Field>
-            )}
+            <AuthFields view={view} />
             <button type="submit" className={uiStyles.button}>
               {busy
                 ? "Please wait…"
@@ -203,6 +204,7 @@ export default function AuthScreen({
           </fieldset>
         </form>
       )}
+      {view === "verify" && <VerificationResend />}
       {(view === "login" || view === "signup") && (
         <>
           {(["google", "discord"] as const).map(
@@ -219,6 +221,13 @@ export default function AuthScreen({
                 </button>
               )
           )}
+          {(providers.google || providers.discord) && (
+            <p>
+              Already have an account? Log in with your existing method first,
+              then link Google or Discord in Account settings. A new provider
+              sign-in creates a separate account.
+            </p>
+          )}
           <p>
             {view === "login" ? (
               <>
@@ -232,7 +241,14 @@ export default function AuthScreen({
           </p>
         </>
       )}
-      {view === "login" && <a href="/recover">Forgot your password?</a>}
+      {view === "login" && (
+        <>
+          <a href="/recover">Forgot your password?</a>
+          <p>
+            <a href="/verify">Resend verification email</a>
+          </p>
+        </>
+      )}
     </main>
   );
 }

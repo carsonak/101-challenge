@@ -1,171 +1,246 @@
 "use client";
-import uiStyles from "./../../styles/ui.module.css";
-
+import { useEffect, useState } from "react";
+import uiStyles from "../../styles/ui.module.css";
 import { Field } from "../ui";
+import type { Stats } from "../tracker-types";
 import type { TrackerViewContext } from "./context";
-/** Render admin-corrections using current controller state and explicit actions. */
-export function AdminCorrectionsView(context: TrackerViewContext) {
-  const { account, seasons, stats, loaded, rawKey, run, view } = context;
+import { readResponse } from "./requests";
+import { CorrectionForms } from "./correction-forms";
+
+/** Find one recipient before loading bounded metadata; account handles and report timestamps never include private text. */
+export function AdminCorrectionsView({
+  account,
+  seasons,
+  loaded,
+  rawKey,
+  run,
+  busy,
+}: TrackerViewContext) {
+  const [lookupRevision, setLookupRevision] = useState(0);
+  const [prefix, setPrefix] = useState("");
+  const [cursor, setCursor] = useState("");
+  const [people, setPeople] = useState<{
+    items: { id: string; username: string }[];
+    nextCursor: string | null;
+  }>({ items: [], nextCursor: null });
+
+  const [participant, setParticipant] = useState("");
+  const [attemptCursor, setAttemptCursor] = useState("");
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [error, setError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [issuedTo, setIssuedTo] = useState("");
+  useEffect(() => {
+    if (!account?.admin) return;
+
+    const abort = new AbortController();
+    setPeople({ items: [], nextCursor: null });
+    setParticipant("");
+    setError("");
+    void fetch(
+      `/api/v1/admin/participants?_refresh=${lookupRevision}&prefix=${encodeURIComponent(prefix)}${cursor ? `&cursor=${cursor}` : ""}`,
+      { cache: "no-store", signal: abort.signal }
+    )
+      .then(readResponse)
+      .then((data) => {
+        if (!abort.signal.aborted) setPeople(data);
+      })
+      .catch(() => {
+        if (!abort.signal.aborted)
+          setError("Participant lookup failed. Search again to retry.");
+      });
+
+    return () => abort.abort();
+  }, [account?.admin, prefix, cursor, lookupRevision]);
+
+  useEffect(() => {
+    setStats(null);
+    if (!participant) return;
+
+    const abort = new AbortController();
+    setError("");
+    void fetch(
+      `/api/v1/admin/stats?_refresh=${revision}&participantId=${participant}${attemptCursor ? `&cursor=${attemptCursor}` : ""}`,
+      { cache: "no-store", signal: abort.signal }
+    )
+      .then(readResponse)
+      .then((data) => {
+        if (!abort.signal.aborted) setStats(data);
+      })
+      .catch(() => {
+        if (!abort.signal.aborted)
+          setError(
+            "Participant details failed. Choose the participant again or retry."
+          );
+      });
+
+    return () => abort.abort();
+  }, [participant, attemptCursor, revision]);
+
+  const person = people.items.find((p) => p.id === participant);
   return (
     <>
-      {view === "admin-corrections" && (
+      <h1>Correction grants</h1>
+      <p>
+        Choose a participant, then an attempt and report. Keys let owners
+        correct their own history; completion stays fixed. Report text remains
+        private.
+      </p>
+      {loaded && !account?.admin && (
+        <p>Administrator permission is required.</p>
+      )}
+      {account?.admin && (
         <>
-          <h1>Correction grants</h1>
-          <p>
-            Grant keys let owners correct existing reports and eligible dates.
-            Existing completion entitlements remain fixed.
-          </p>
-          {account?.admin && stats ? (
+          <form
+            className={uiStyles.card}
+            onSubmit={(event) => {
+              event.preventDefault();
+              setCursor("");
+              setPrefix(
+                String(new FormData(event.currentTarget).get("prefix") ?? "")
+                  .trim()
+                  .toLowerCase()
+              );
+
+              setLookupRevision((value) => value + 1);
+            }}
+          >
+            <Field label="Find participant by username prefix">
+              <input name="prefix" maxLength={40} />
+            </Field>
+            <button type="submit" className={uiStyles.button}>
+              Search participants
+            </button>
+          </form>
+          {error && (
+            <p role="alert">
+              {error}{" "}
+              <button
+                type="button"
+                onClick={() => setRevision((value) => value + 1)}
+              >
+                Retry details
+              </button>
+            </p>
+          )}
+          <Field label="Participant">
+            <select
+              value={participant}
+              disabled={busy}
+              onChange={(event) => {
+                setParticipant(event.target.value);
+                setAttemptCursor("");
+                setIssuedTo("");
+              }}
+            >
+              <option value="">Choose a participant</option>
+              {people.items.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.username}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {!people.items.length && (
+            <p>
+              No participants on this page. Search by username or return to the
+              first page.
+            </p>
+          )}
+          {people.nextCursor && (
+            <button
+              disabled={busy}
+              type="button"
+              onClick={() => setCursor(people.nextCursor ?? "")}
+            >
+              Next participants
+            </button>
+          )}
+          {cursor && (
+            <button disabled={busy} type="button" onClick={() => setCursor("")}>
+              First participants
+            </button>
+          )}
+          {person && stats && stats.users[0]?.id === person.id && (
             <>
-              <form
-                className={uiStyles.card}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const d = new FormData(e.currentTarget);
-                  void run({
-                    command: "BackdateEnrollment",
-                    userId: d.get("userId"),
-                    seasonId: d.get("seasonId"),
-                    registeredDate: d.get("date"),
-                  });
+              <h2>Participant: {person.username}</h2>
+              <CorrectionForms
+                key={`${participant}-${attemptCursor}`}
+                person={person}
+                stats={stats}
+                seasons={seasons}
+                busy={busy}
+                run={async (payload) => {
+                  const ok = await run(payload);
+                  if (ok) {
+                    setIssuedTo(person.id);
+                    setRevision((value) => value + 1);
+                  }
+
+                  return ok;
                 }}
-              >
-                <h2>Backdated participation</h2>
-                <Field label="Participant">
-                  <select name="userId" required>
-                    {stats.users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.username}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Season">
-                  <select required name="seasonId">
-                    {seasons
-                      .filter((s) => s.publishedAt)
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.title}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <Field label="Effective registration date">
-                  <input required name="date" type="date" />
-                </Field>
-                <p>
-                  The participant has 24 hours to fill missing reports. Unfilled
-                  dates do not count.
-                </p>
-                <button type="submit" className={uiStyles.button}>
-                  Create backdated participation
-                </button>
-              </form>
-              <form
-                className={uiStyles.card}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const data = new FormData(e.currentTarget);
-                  const kind = data.get("kind");
-                  void run(
-                    kind === "single_report"
-                      ? {
-                          command: "IssueCorrectionGrant",
-                          kind,
-                          reportId: data.get("reportId"),
-                        }
-                      : {
-                          command: "IssueCorrectionGrant",
-                          kind: "attempt_window",
-                          attemptId: data.get("attemptId"),
-                          durationMinutes: Number(data.get("minutes")),
-                        }
-                  );
-                }}
-              >
-                <Field label="Grant scope">
-                  <select name="kind">
-                    <option value="single_report">
-                      One report, one use, expires in 24 hours
-                    </option>
-                    <option value="attempt_window">
-                      Attempt window, up to one hour
-                    </option>
-                  </select>
-                </Field>
-                <Field label="Report">
-                  <select name="reportId">
-                    {stats.reports.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        Day {r.reportingIndex} · {r.reportingDate} · {r.id}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Attempt">
-                  <select name="attemptId">
-                    {stats.attempts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.startedAt} · {a.reportingDays} reports · {a.id}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Window minutes">
-                  <input
-                    name="minutes"
-                    type="number"
-                    min={1}
-                    max={60}
-                    defaultValue={60}
-                  />
-                </Field>
-                <button type="submit" className={uiStyles.button}>
-                  Issue correction key
-                </button>
-              </form>
-              {rawKey && (
+              />
+              {rawKey && issuedTo === person.id && (
                 <div className={uiStyles.notice}>
                   <p>
-                    Copy this key now and give it privately to the owner. It is
-                    shown once.
+                    Key for {person.username}. Copy it now and share privately
+                    with this participant. It is shown once.
                   </p>
                   <output className={uiStyles.key}>{rawKey}</output>
                 </div>
               )}
+              <h2>Attempt metadata for {person.username}</h2>
+              {stats.attempts.map((a) => (
+                <p key={a.id}>
+                  {a.startedAt} · {a.status} · {a.reportingDays} reports ·
+                  Streak {a.currentStreak}, longest {a.longestStreak}
+                </p>
+              ))}
               {stats.grants.map((g) => (
                 <article key={g.id} className={uiStyles.card}>
                   <p>
-                    {g.kind} · Expires {g.expiresAt} ·{" "}
+                    {person.username} · {g.kind} · Expires {g.expiresAt} ·{" "}
                     {g.usedAt ? "Used" : g.revokedAt ? "Revoked" : "Available"}
                   </p>
                   <button
                     type="button"
-                    className={`${uiStyles.button} ${uiStyles.secondary}`}
-                    disabled={Boolean(g.usedAt || g.revokedAt)}
-                    onClick={() =>
-                      run({ command: "RevokeCorrectionGrant", grantId: g.id })
-                    }
+                    disabled={busy || Boolean(g.usedAt || g.revokedAt)}
+                    onClick={async () => {
+                      if (
+                        await run({
+                          command: "RevokeCorrectionGrant",
+                          grantId: g.id,
+                        })
+                      )
+                        setRevision((value) => value + 1);
+                    }}
                   >
                     Revoke grant {g.id}
                   </button>
                 </article>
               ))}
-              <h2>Metadata</h2>
-              {stats.attempts.map((a) => (
-                <p key={a.id}>
-                  {a.id} · {a.status} · {a.reportingDays} reports · Streak{" "}
-                  {a.currentStreak}, longest {a.longestStreak} ·{" "}
-                  {a.rerollCredits} credits
-                </p>
-              ))}
+              {stats.nextCursor && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAttemptCursor(stats.nextCursor ?? "")}
+                >
+                  Next attempts
+                </button>
+              )}
+              {attemptCursor && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAttemptCursor("")}
+                >
+                  First attempts
+                </button>
+              )}
             </>
-          ) : (
-            loaded && <p>Administrator permission is required.</p>
           )}
         </>
-      )}{" "}
+      )}
     </>
   );
 }

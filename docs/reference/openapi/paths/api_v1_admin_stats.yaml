@@ -3,7 +3,16 @@ get:
   summary: getAdminStats
   description: >-
     Administrator access required; private participant report bodies and goal
-    values are excluded.
+    values are excluded. Pass participantId to select one participant and read at most 20 attempts. Without it the legacy unbounded response is retained for compatibility.
+  parameters:
+    - name: participantId
+      in: query
+      schema: { type: string, format: uuid }
+      description: Return metadata for this participant only.
+    - name: cursor
+      in: query
+      schema: { type: string, format: uuid }
+      description: Last attempt ID from a previous scoped page.
   security:
     - sessionCookie: []
   responses:
@@ -13,6 +22,10 @@ get:
         application/json:
           schema:
             $ref: ../components/schemas/AdminStats.yaml
+    "400":
+      $ref: ../components/responses/Error400.yaml
+    "404":
+      $ref: ../components/responses/Error404.yaml
     "401":
       $ref: ../components/responses/Error401.yaml
     "403":

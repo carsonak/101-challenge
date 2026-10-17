@@ -15,6 +15,7 @@ export function createAuthIssueSession(context: {
     userId: string,
     device = "Unknown browser"
   ) {
+    ensure(!(await tx.get("account_suspensions", userId)));
     const deletion = (
       await tx.list("erasure_requests", { userId, processedAt: null })
     ).find((r) => !r.cancelledAt);

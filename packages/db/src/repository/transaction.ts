@@ -22,6 +22,34 @@ export function transactionPort(
   }
 
   return {
+    async participantPage(prefix, after, limit) {
+      const result = await client.query(
+        "SELECT id,username FROM profiles WHERE starts_with(username,$1) AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3",
+        [prefix, after ?? null, limit]
+      );
+
+      return result.rows;
+    },
+    async participantAttempts(userId, after, limit) {
+      const result = await client.query(
+        'SELECT a.* FROM attempts a JOIN enrollments e ON e.id=a."enrollmentId" WHERE e."userId"=$1 AND ($2::uuid IS NULL OR a.id>$2) ORDER BY a.id LIMIT $3',
+        [userId, after ?? null, limit]
+      );
+
+      return result.rows.map((row) => decode("attempts", row));
+    },
+    async reportMetadata(attemptId) {
+      const result = await client.query(
+        'SELECT id,"attemptId","reportingDate"::text,"reportingIndex","createdAt","updatedAt",version,"streakAtReport" FROM reports WHERE "attemptId"=$1 ORDER BY "reportingIndex"',
+        [attemptId]
+      );
+
+      return result.rows.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      }));
+    },
     async reportSummary(attemptId, date) {
       const metadata = await client.query(
         'SELECT "reportingDate"::text,"streakAtReport" FROM reports WHERE "attemptId"=$1 ORDER BY "reportingDate"',

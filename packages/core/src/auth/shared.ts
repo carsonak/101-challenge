@@ -86,6 +86,8 @@ export interface ProviderProof {
   subject: string;
   /** Optional provider-owned profile defaults; never identity proof. */
   username?: string;
+  /** Verified Google email claim; optional recovery default, never account-linking proof. */
+  recoveryEmail?: string;
   /** HTTPS picture from a trusted provider host. */
   avatar?: string;
 }

@@ -25,6 +25,8 @@ paths:
     $ref: paths/api_v1_history.yaml
   /api/v1/export:
     $ref: paths/api_v1_export.yaml
+  /api/v1/admin/participants:
+    $ref: paths/api_v1_admin_participants.yaml
   /api/v1/admin/stats:
     $ref: paths/api_v1_admin_stats.yaml
   /api/v1/admin/seasons:

@@ -10,7 +10,10 @@ import {
   type OAuthState,
   type ProviderProof,
 } from "@challenge/core";
-import type { parseServerConfig } from "@challenge/contracts";
+import {
+  authCommandSchema,
+  type parseServerConfig,
+} from "@challenge/contracts";
 
 /** Accept only credential-free HTTPS image URLs on provider-owned hosts. */
 export function googleAvatar(value: unknown): string | undefined {
@@ -87,7 +90,7 @@ export function createProviders(
         client_id: s.clientId,
         redirect_uri: s.redirect,
         response_type: "code",
-        scope: provider === "google" ? "openid profile" : "identify",
+        scope: provider === "google" ? "openid profile email" : "identify",
         state: state.state,
       }).toString();
 
@@ -103,7 +106,7 @@ export function createProviders(
 
       return url.toString();
     },
-    /** Exchange a code and validate stable subject proof; ignore all provider email claims. */
+    /** Validate provider subject proof; only signed Google email_verified claims initialize recovery. */
     async exchange(state: OAuthState, code: string): Promise<ProviderProof> {
       const s = settings(state.provider);
       try {
@@ -158,9 +161,19 @@ export function createProviders(
           )
             throw new Error("Invalid proof");
 
+          const recovery = authCommandSchema.safeParse({
+            action: "recover",
+            email: payload.email,
+          });
+
           return {
             provider: "google",
             subject: payload.sub,
+            ...(payload.email_verified === true &&
+            recovery.success &&
+            "email" in recovery.data
+              ? { recoveryEmail: recovery.data.email }
+              : {}),
             ...(googleAvatar(payload.picture)
               ? { avatar: googleAvatar(payload.picture) }
               : {}),

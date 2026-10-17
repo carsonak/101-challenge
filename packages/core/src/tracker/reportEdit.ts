@@ -16,6 +16,7 @@ export function createTrackerReportEdit(context: {
   /** Shared service dependency. */ hasBackfill: ReturnType<
     typeof createTrackerHasBackfill
   >;
+  /** Default reporting zone for legacy enrollments without a frozen zone. */ defaultZone: string;
   /** Shared service dependency. */ clock: () => Date;
   /** Shared service dependency. */ eligibleDate: ReturnType<
     typeof createTrackerEligibleDate
@@ -27,8 +28,15 @@ export function createTrackerReportEdit(context: {
     typeof createTrackerReorder
   >;
 }) {
-  const { report, hasBackfill, clock, eligibleDate, validateValues, reorder } =
-    context;
+  const {
+    report,
+    hasBackfill,
+    defaultZone,
+    clock,
+    eligibleDate,
+    validateValues,
+    reorder,
+  } = context;
 
   async function reportEdit(
     tx: Transaction,
@@ -49,7 +57,7 @@ export function createTrackerReportEdit(context: {
         requireRule(
           (row.status === "active" || row.status === "completed") &&
             saved.reportingDate ===
-              reportingDate(new Date(now), owner.timezone ?? "UTC"),
+              reportingDate(new Date(now), owner.timezone ?? defaultZone),
           "ATTEMPT_CLOSED"
         );
       else if (c.key || !(await hasBackfill(tx, row))) {

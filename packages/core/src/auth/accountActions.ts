@@ -1,9 +1,10 @@
-import type { Credential } from "../model.js";
 import type { AuthCommand } from "@challenge/contracts";
 import { randomUUID } from "node:crypto";
 import type { Transaction } from "../model.js";
 import { digest } from "../rules.js";
 import type { ActionContext, Delivery } from "./action-context.js";
+import { reserveEmail } from "./emailOwnership.js";
+import { credentialAction } from "./credentialActions.js";
 import { ensure, verifyPassword } from "./shared.js";
 /** Execute accountActions actions inside the caller's transaction. */
 export function createAuthAccountActions(context: ActionContext) {
@@ -23,6 +24,7 @@ export function createAuthAccountActions(context: ActionContext) {
     ensure(
       c.action !== "signup" &&
         c.action !== "recover" &&
+        c.action !== "resend_verification" &&
         c.action !== "login" &&
         c.action !== "verify_recovery_email" &&
         c.action !== "verify" &&
@@ -35,9 +37,13 @@ export function createAuthAccountActions(context: ActionContext) {
       tx,
       token,
       csrf,
-      ["add_email", "unlink", "request_erasure", "recovery_email"].includes(
-        c.action
-      )
+      [
+        "add_email",
+        "unlink",
+        "request_erasure",
+        "recovery_email",
+        "change_password",
+      ].includes(c.action)
     );
 
     const { user, saved } = context;
@@ -101,6 +107,8 @@ export function createAuthAccountActions(context: ActionContext) {
       if (c.action === "recovery_email") {
         if (!mayMail) return { accepted: true };
 
+        await reserveEmail(tx, c.email, user.id);
+
         for (const t of await tx.list("auth_tokens", {
           userId: user.id,
           kind: "recovery_email",
@@ -158,7 +166,7 @@ export function createAuthAccountActions(context: ActionContext) {
     if (c.action === "reauthenticate") {
       const credential = await tx.get("credentials", user.id);
       ensure(
-        credential?.verified &&
+        credential &&
           (await verifyPassword(c.password, credential.passwordHash))
       );
 
@@ -167,53 +175,17 @@ export function createAuthAccountActions(context: ActionContext) {
       return { accepted: true };
     }
 
-    if (c.action === "add_email") {
-      await tx.serializeKey(`email:${c.email}`);
-      const old = await tx.get("credentials", user.id);
-      ensure(!old, "FORBIDDEN");
-      ensure(
-        !(await tx.list("credentials", { email: c.email })).length,
-        "FORBIDDEN"
-      );
+    const credentialResult = await credentialAction(
+      tx,
+      c,
+      user.id,
+      computedHash,
+      mayMail,
+      deliveryState,
+      { clock, mailToken, revokeSessions }
+    );
 
-      ensure(computedHash, "VALIDATION");
-      const credential: Credential = {
-        id: user.id,
-        userId: user.id,
-        email: c.email,
-        passwordHash: computedHash,
-        verified: false,
-      };
-
-      await tx.insert("credentials", credential);
-      if (mayMail)
-        deliveryState.mail = await mailToken(tx, credential, "verify");
-
-      return { accepted: true };
-    }
-
-    if (c.action === "unlink") {
-      const credential = await tx.get("credentials", user.id);
-      const identities = await tx.list("identities", { userId: user.id });
-      const usable = Number(credential?.verified ?? false) + identities.length;
-      const removedUsable =
-        c.provider === "email"
-          ? Number(credential?.verified ?? false)
-          : Number(identities.some((i) => i.provider === c.provider));
-
-      ensure(usable - removedUsable >= 1, "FORBIDDEN");
-      if (c.provider === "email") {
-        ensure(credential, "NOT_FOUND");
-        await tx.remove("credentials", credential.id);
-      } else {
-        const identity = identities.find((i) => i.provider === c.provider);
-        ensure(identity, "NOT_FOUND");
-        await tx.remove("identities", identity.id);
-      }
-
-      await revokeSessions(tx, user.id);
-      return { accepted: true };
-    }
+    if (credentialResult) return credentialResult;
 
     const profile = await tx.get("profiles", user.id, true);
     ensure(

@@ -19,7 +19,7 @@ export function Confirmation(context: ScreenContext) {
         >
           <h2 id="confirm-title">Confirm it’s you</h2>
           <p>This sensitive change requires a recent sign-in.</p>
-          {account.email ? (
+          {account.hasPassword ? (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();

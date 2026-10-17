@@ -93,7 +93,7 @@ test("OAuth initiation rejects alternative origins before creating state and bin
 
     assert.equal(
       authorization.searchParams.get("scope"),
-      provider === "google" ? "openid profile" : "identify"
+      provider === "google" ? "openid profile email" : "identify"
     );
 
     assert.equal(authorization.searchParams.get("state"), "fictional-state");

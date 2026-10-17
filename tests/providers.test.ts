@@ -98,11 +98,25 @@ test("Google validates issuer, audience, nonce, expiry and signature; Discord us
   );
 
   assert.equal(authURL.searchParams.get("code_challenge_method"), "S256");
-  assert.equal(authURL.searchParams.get("scope"), "openid profile");
+  assert.equal(authURL.searchParams.get("scope"), "openid profile email");
   assert.deepEqual(await providers.exchange(state, "code"), {
     provider: "google",
     subject: "stable-google-subject",
   });
+
+  claims = { email: "VERIFIED@example.invalid", email_verified: true };
+  assert.equal(
+    (await providers.exchange(state, "code")).recoveryEmail,
+    "verified@example.invalid"
+  );
+
+  for (const value of [false, "true", undefined]) {
+    claims = { email: "ignored@example.invalid", email_verified: value };
+    assert.equal(
+      (await providers.exchange(state, "code")).recoveryEmail,
+      undefined
+    );
+  }
 
   for (const invalid of [
     { iss: "https://evil.invalid" },

@@ -2,6 +2,7 @@ import type { Tables } from "@challenge/core";
 
 /** Fixed typed-column encodings used by the private repository mapper. */
 export const columns = {
+  account_suspensions: { id: "uuid", suspendedAt: "instant" },
   profiles: {
     id: "uuid",
     username: "text",
@@ -196,7 +197,7 @@ export const columns = {
   credentials: {
     id: "uuid",
     userId: "uuid",
-    email: "text",
+    email: "text?",
     passwordHash: "text",
     verified: "boolean",
   },

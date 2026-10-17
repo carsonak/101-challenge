@@ -40,6 +40,7 @@ export function createTrackerHistory(context: {
             hasCompleted: e.hasCompleted,
             version: e.version,
           }),
+          reportingTimezone: e.timezone ?? defaultZone,
           earliestReportingDate:
             [
               e.registeredDate,
@@ -115,7 +116,7 @@ export function createTrackerHistory(context: {
                   ? a.backfillUntil
                   : null,
                 erased: a.erased,
-                today: reportingDate(clock(), e.timezone ?? "UTC"),
+                today: reportingDate(clock(), e.timezone ?? defaultZone),
                 goals: await tx.list("goals", { attemptId: a.id }),
                 goalRevisions: await tx.list("goal_revisions", {
                   attemptId: a.id,

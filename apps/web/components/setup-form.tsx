@@ -62,6 +62,12 @@ export function Setup({
           ? "Your previous attempts and reports stay in history. The new attempt starts at zero reporting days, and unspent credits from the previous attempt expire."
           : "Custom goals are equally welcome. Your timezone becomes fixed when you start."}
       </p>
+      <p>
+        Your reporting days follow{" "}
+        <strong>{enrollment.reportingTimezone}</strong>, including while
+        travelling. The day changes at midnight there. This timezone is fixed
+        when your first attempt starts.
+      </p>
       {season && season.goals.length > 0 && (
         <button
           type="button"

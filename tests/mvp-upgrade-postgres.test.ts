@@ -9,6 +9,7 @@ import {
   createAuth,
   createTracker,
   type AuthMail,
+  type Repository,
 } from "../packages/core/src/index.js";
 
 /** Explicit operator URL only for disposable PostgreSQL fixtures. */
@@ -57,8 +58,23 @@ test(
         ]);
       }
 
+      // Fixture construction emulates the historical absence of suspensions. Final
+      // post-migration assertions use fresh services on the unwrapped repository.
+      const historical: Repository = {
+        transaction: (callback) =>
+          db.repository.transaction((tx) =>
+            callback({
+              ...tx,
+              get: async (table, id, lock) =>
+                table === "account_suspensions"
+                  ? undefined
+                  : tx.get(table, id, lock),
+            })
+          ),
+      };
+
       const mail: AuthMail[] = [];
-      const auth = createAuth(db.repository, {
+      let auth = createAuth(historical, {
         now: () => new Date("2026-01-01T09:00:00Z"),
         sendMail: async (message) => {
           mail.push(message);
@@ -102,7 +118,7 @@ test(
       }
 
       let instant = new Date("2026-01-01T09:00:00Z");
-      const tracker = createTracker(db.repository, { now: () => instant });
+      let tracker = createTracker(historical, { now: () => instant });
       const admin = await tracker.createUser(true);
       const season = await tracker.execute(
         admin,
@@ -175,6 +191,21 @@ test(
       assert.ok(legacy.rowCount > 0);
       await db.migrate();
       await db.migrate();
+      tracker = createTracker(db.repository, { now: () => instant });
+      auth = createAuth(db.repository, {
+        now: () => new Date("2026-01-01T09:00:00Z"),
+        sendMail: async () => {},
+      });
+
+      assert.equal(
+        (
+          await sql.query(
+            "SELECT count(*)::int AS count FROM account_suspensions"
+          )
+        ).rows[0].count,
+        0
+      );
+
       assert.equal(
         (
           await sql.query(
@@ -207,6 +238,24 @@ test(
       const after = await auth.execute({ action: "login", email, password });
       assert.ok("token" in after && after.token);
       assert.deepEqual(await auth.account(after.token), linkedAccount);
+      const usernameOnly = `upgrade-${randomUUID()}`.slice(0, 40);
+      await auth.execute({
+        action: "signup",
+        username: usernameOnly,
+        password,
+      });
+
+      const fresh = await auth.execute({
+        action: "login",
+        username: usernameOnly,
+        password,
+      });
+
+      assert.ok(fresh.token);
+      const freshAccount = await auth.account(fresh.token);
+      assert.equal(freshAccount.username.length, 40);
+      assert.equal(freshAccount.recoveryEmail, null);
+      assert.equal(freshAccount.hasPassword, true);
     } finally {
       await db.close();
       await sql.end();

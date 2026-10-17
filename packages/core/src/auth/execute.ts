@@ -46,7 +46,8 @@ export function createAuthExecute(
       const computedHash =
         c.action === "signup" ||
         c.action === "reset" ||
-        c.action === "add_email"
+        c.action === "add_email" ||
+        c.action === "change_password"
           ? await hashPassword(c.password)
           : undefined;
 
@@ -64,7 +65,14 @@ export function createAuthExecute(
 
       const mayMail =
         "email" in c &&
-        ["signup", "recover", "add_email", "recovery_email"].includes(c.action)
+        c.email !== undefined &&
+        [
+          "signup",
+          "recover",
+          "resend_verification",
+          "add_email",
+          "recovery_email",
+        ].includes(c.action)
           ? await cooldown.allow(
               c.action === "recover" ? "recovery-mail" : "verification-mail",
               c.email.trim().toLowerCase(),

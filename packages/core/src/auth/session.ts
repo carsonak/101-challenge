@@ -19,6 +19,7 @@ export function createAuthSession(context: {
     ensure(found);
     const user = await tx.get("users", found.userId, true);
     ensure(user);
+    ensure(!(await tx.get("account_suspensions", user.id)));
     const saved = await tx.get("sessions", found.id, true);
     const now = clock().toISOString();
     ensure(saved && !saved.revokedAt && saved.expiresAt > now);

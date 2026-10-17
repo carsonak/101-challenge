@@ -63,10 +63,12 @@ export function createMailer(
         await transport.sendMail({
           from: config.SMTP_FROM,
           to: mail.recipient,
-          subject:
-            mail.kind === "verify"
-              ? "Verify your challenge account"
-              : "Recover your challenge account",
+          subject: {
+            verify: "Verify your challenge account",
+            recover: "Recover your challenge account",
+            recovery_email: "Verify your recovery email",
+            deletion: "Account deletion scheduled",
+          }[mail.kind],
           text:
             mail.kind === "deletion"
               ? `Account deletion has been requested. You have seven days from the request to recover it. Sign in at ${config.APP_ORIGIN}/login to see the exact deadline and restore your account.`

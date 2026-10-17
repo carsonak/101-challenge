@@ -9,6 +9,9 @@ test(
   async () => {
     const f = await fixture();
     try {
+      const firstEmail = `${randomUUID()}@example.test`,
+        secondEmail = `${randomUUID()}@example.test`;
+
       const browser = "a".repeat(64),
         begin = await f.auth.beginOAuth("discord", browser),
         state = await f.auth.oauthState("discord", begin.state, browser);
@@ -37,7 +40,7 @@ test(
       );
 
       await f.auth.execute(
-        { action: "recovery_email", email: "first@example.test" },
+        { action: "recovery_email", email: firstEmail },
         provider.token,
         provider.csrf
       );
@@ -45,7 +48,7 @@ test(
       const first = f.mails.at(-1);
       assert.ok(first);
       await f.auth.execute(
-        { action: "recovery_email", email: "second@example.test" },
+        { action: "recovery_email", email: secondEmail },
         provider.token,
         provider.csrf
       );
@@ -64,7 +67,7 @@ test(
 
       assert.equal(
         (await f.auth.account(provider.token)).recoveryEmail,
-        "second@example.test"
+        secondEmail
       );
 
       const other = await f.signup();

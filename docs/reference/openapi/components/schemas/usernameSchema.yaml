@@ -1,4 +1,4 @@
 type: string
 minLength: 3
-maxLength: 32
+maxLength: 40
 pattern: ^[a-zA-Z0-9_-]+$

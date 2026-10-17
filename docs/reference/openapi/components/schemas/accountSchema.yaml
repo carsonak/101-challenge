@@ -47,6 +47,9 @@ properties:
         - discord
   admin:
     type: boolean
+  hasPassword:
+    type: boolean
+    description: Whether username/password sign-in is enabled independently of optional email.
 required:
   - id
   - username
@@ -58,4 +61,5 @@ required:
   - emailVerified
   - providers
   - admin
+  - hasPassword
 additionalProperties: false

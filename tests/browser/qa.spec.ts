@@ -91,7 +91,10 @@ test("dedicated authentication, reveal controls, themes and mobile layout", asyn
     page.getByRole("heading", { name: "Verify your email" })
   ).toBeVisible();
 
-  await expect(page.locator("form")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Resend verification email" })
+  ).toBeVisible();
+
   await expect(page.getByText("Forgot your password?")).toHaveCount(0);
   await page.goto("/login");
   await page.getByText("Forgot your password?").click();
@@ -256,7 +259,7 @@ test("account menu, provider placeholders, devices, typed deletion and recovery"
     await page.getByLabel("Current password").fill(password);
     await page.getByRole("button", { name: "Confirm and continue" }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await page.getByLabel("Email address").fill(f.email);
+    await page.getByLabel("Username or recovery email").fill(f.email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Log in", exact: true }).click();
     await expect(
@@ -405,18 +408,18 @@ test("signup mail verification and password recovery change pages and credential
 
   await page.goto("/signup");
   await page.getByLabel("Username", { exact: true }).fill(username);
-  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Recovery email (optional)").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
 
-  await expect(page).toHaveURL(/\/verify$/);
+  await expect(page).toHaveURL(/\/account$/);
   await page.goto(await link("Verify"));
   await page.getByRole("button", { name: "Verify my email" }).click();
   await expect(page).toHaveURL(/\/login\?verified=1$/);
   await expect(page.getByRole("status")).toContainText("Email verified");
-  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Username or recovery email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(
@@ -436,7 +439,7 @@ test("signup mail verification and password recovery change pages and credential
 
   await page.getByRole("button", { name: "Save password" }).click();
   await expect(page).toHaveURL(/\/login\?reset=1$/);
-  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Username or recovery email").fill(email);
   await page
     .getByLabel("Password", { exact: true })
     .fill(`${password} changed`);
@@ -700,6 +703,7 @@ test("route review covers both themes, responsive layouts, CSP, enlarged text an
       "/admin/seasons",
       `/admin/seasons/${season.resourceId}`,
       "/admin/corrections",
+      "/help",
       "/privacy",
       "/terms",
       "/fictional-missing-route",
