@@ -267,3 +267,48 @@ The follow-up web image rebuild encountered HTTP 503 from the package registry.
 The successful four-image/bootstrap/read-only acceptance above predates this
 UI-only follow-up; the Dockerfile is unchanged. Repeat the final web image build
 after package connectivity recovers, before VPS acceptance.
+
+## 2026-10-17: Owner account-model follow-up
+
+The owner confirmed username/password as the default with optional recovery email,
+40-character URL-safe usernames, provider defaults/onboarding and no participant
+correction-request UI. The implementation follows the carsonak workflow and its
+new adjacent `TODO(feature-name):` convention. ADR 0004 and the current domain,
+authentication, privacy, support, OpenAPI/database and manual-QA references agree.
+
+Local acceptance passed on fictional disposable data:
+
+- Aggregate checks: 104 tests passed, none skipped, including populated MVP
+  upgrade with retained account/provider/history/completion/seeds, nullable email
+  and a new 40-character username account. Formatting, typechecking, lint, source
+  limits, docs and modular OpenAPI checks passed.
+- Production build and all 18 Playwright scenarios passed. Coverage includes
+  email-free signup, email verification/recovery, password changes/addition,
+  Google username setup and mutation denial before setup, provider initiation,
+  account recommendations, correction scoping and existing participant flows.
+  Browser username-pattern rejection, both themes, 320/768/1440px layouts,
+  accessibility/CSP, reduced motion and enlarged text passed; affected synthetic
+  screenshots were inspected outside the repository.
+- Email ownership races have one winner; ambiguous legacy recovery addresses fail
+  closed. Recovery alias replacement and password changes invalidate outstanding
+  email/reset proofs. Reset cannot verify a different pending legacy address.
+  Google email defaults never merge identities or overwrite another owner.
+- All four final container targets rebuilt successfully. The operator image
+  migrated/granted an isolated previously populated bootstrap database; non-root
+  read-only web, worker and maintenance services returned readiness 200. This
+  closes the earlier registry-503 final-image rebuild gate.
+- A separate five-user default-account container trial authenticated all five
+  accounts without signup email, persisted five reports and returned HTTP 200 for
+  all 16 measured requests (p95/max 275 ms). This is local functional evidence,
+  not VPS capacity acceptance.
+
+The initial browser run exposed one stale email-label selector; it was corrected
+before the complete successful run. The container fixture initially omitted its
+queue schema and used an invalid external-SMTP placeholder sender; correcting
+only the fictional fixture configuration restored readiness. Runtime guards were
+retained. No participant/owner data or external provider accounts were used.
+
+Hosted Google consent must be rechecked for the email scope and verified recovery
+default, alongside Discord, real inbox delivery, manual QA and the existing VPS
+acceptance checklist. PR #2 remains targeted at main and awaits review; no merge,
+deployment, invitation or release tag is performed.

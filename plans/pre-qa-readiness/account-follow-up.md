@@ -1,6 +1,6 @@
 # Account model and review follow-up
 
-Status: accepted owner requirements; implementation in progress. Continues
+Status: accepted owner requirements; implementation and local acceptance complete; PR review pending. Continues
 [PR #2](https://github.com/carsonak/101-challenge/pull/2) against main using the
 [carsonak workflow](../../docs/workflows/carsonak.md).
 
@@ -30,14 +30,31 @@ Keep verification mail kinds explicit; verification remains supported.
 
 ## Execution and acceptance
 
-- [ ] Append migration and align contracts/OpenAPI, service and provider adapters.
-- [ ] Implement optional-email signup, username login, provider setup and settings.
-- [ ] Align durable account/privacy/manual-QA/support documentation and TODOs.
-- [ ] Test absent/unverified/verified emails, email collisions, stale proofs,
+- [x] Append migration and align contracts/OpenAPI, service and provider adapters.
+- [x] Implement optional-email signup, username login, provider setup and settings.
+- [x] Align durable account/privacy/manual-QA/support documentation and TODOs.
+- [x] Test absent/unverified/verified emails, email collisions, stale proofs,
       provider setup, password additions, username changes and populated upgrades.
-- [ ] Run aggregate PostgreSQL checks, production build and focused browser tests;
+- [x] Run aggregate PostgreSQL checks, production build and focused browser tests;
       inspect both themes and mobile/desktop screenshots using synthetic data.
-- [ ] Commit conventional changes, update the existing PR, await review.
+- [x] Record conventional commits and prepare the existing PR update.
+- [ ] Receive review approval; leave the PR open without merging or deploying.
 
 Hosted OAuth/inbox and VPS acceptance remain separate release gates; no merge or
 deployment is authorized by completion of this follow-up.
+
+## Verified outcome
+
+Username/password, optional verified email aliases, provider defaults, required
+Google username setup and account settings are implemented. Verification mail
+retains all four explicit kinds. Adjacent TODO markers cover deferred artwork
+copy and contracts; no correction-request UI was added. The carsonak workflow
+records the marker convention.
+
+Security review additionally closed a provisional-account mutation bypass,
+modern HTML pattern syntax failure, recovery-address races/legacy ambiguity and
+a reset path that could mark a different pending legacy email verified.
+
+See the dated [verification record](../../docs/verification.md) for aggregate,
+browser, image, bootstrap and default-account trial evidence. Hosted provider
+consent/inbox and VPS/manual acceptance still require their documented pass.

@@ -19,4 +19,4 @@ console changes, production account changes and invitations are separate actions
 ## Account review follow-up
 
 [Account model follow-up](account-follow-up.md) records the owner's revised account
-requirements and remaining implementation/verification work.
+requirements, implementation and local verification, with PR review pending.

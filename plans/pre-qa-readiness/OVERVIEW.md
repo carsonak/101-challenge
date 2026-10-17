@@ -63,4 +63,5 @@ against main. Review approval remains pending; no merge or deployment is perform
 ## Account review follow-up
 
 [Account model follow-up](account-follow-up.md) records the owner's revised account
-requirements and remaining implementation/verification work.
+requirements, implementation and local verification. PR review and hosted
+acceptance remain pending.
